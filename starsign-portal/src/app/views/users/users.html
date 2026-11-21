@@ -1,0 +1,164 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Users</span>
+      </nav>
+      <h1 class="page-title">Users</h1>
+      <p class="page-subtitle">
+        {{ users().length }} {{ users().length === 1 ? 'user' : 'users' }}{{ filtered() ? ' found' : '' }}
+        @if (canListInvitations()) {
+          · {{ invitations().length }} pending {{ invitations().length === 1 ? 'invitation' : 'invitations' }}
+        }
+      </p>
+    </div>
+    <a *appCan="'invitations:manage'" class="btn btn--primary" routerLink="invite"
+      ><i class="bi bi-person-plus" aria-hidden="true"></i> Invite user</a
+    >
+  </header>
+
+  <form
+    class="card grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+    (submit)="$event.preventDefault()"
+    aria-label="Search users"
+  >
+    <div class="field xl:col-span-2">
+      <label for="usr-text">Name, email or username</label>
+      <input id="usr-text" class="field-control" type="search" [formField]="filterForm.text" />
+    </div>
+    <div class="field">
+      <label for="usr-status">Status</label>
+      <select id="usr-status" class="field-control" [formField]="filterForm.status">
+        <option value="">Any status</option>
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ statusLabel(status) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="usr-role">Role</label>
+      <select id="usr-role" class="field-control" [formField]="filterForm.roleCode">
+        <option value="">Any role</option>
+        @for (role of roleOptions(); track role.code) {
+          <option [value]="role.code">{{ role.name }}</option>
+        }
+      </select>
+    </div>
+    @if (filtered()) {
+      <div class="md:col-span-2 xl:col-span-4 flex justify-end">
+        <button type="button" class="btn btn--ghost" (click)="clearFilter()">
+          <i class="bi bi-x-lg" aria-hidden="true"></i> Clear filters
+        </button>
+      </div>
+    }
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Users" [attr.aria-busy]="loading()">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Roles</th>
+            <th scope="col">Status</th>
+            <th scope="col">Last sign-in</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr>
+              <td>
+                <a class="cell-title" [routerLink]="[user.id]">{{ fullName(user) }}</a>
+                <div class="mono text-ink-muted">{{ user.emailAddress }}</div>
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  @for (role of user.roles ?? []; track role) {
+                    <span class="chip chip--neutral">{{ role }}</span>
+                  }
+                </div>
+              </td>
+              <td><app-status-chip [status]="user.status" /></td>
+              <td class="mono text-ink-muted">{{ (user.lastLoginAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="text-center text-ink-muted">
+                {{ loading() ? 'Loading users…' : filtered() ? 'No users match the filters.' : 'No users yet.' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (canListInvitations()) {
+    <section class="table-panel" aria-labelledby="pending-title">
+      <h2 id="pending-title" class="m-0 px-5 pt-4 text-headline-sm">Pending invitations</h2>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Invitee</th>
+              <th scope="col">Roles</th>
+              <th scope="col">Invited by</th>
+              <th scope="col">Expires</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (invitation of invitations(); track invitation.id) {
+              <tr>
+                <td>
+                  <span class="cell-title">{{ fullName(invitation) }}</span>
+                  <div class="mono text-ink-muted">{{ invitation.emailAddress }}</div>
+                </td>
+                <td>
+                  <div class="flex flex-wrap gap-1">
+                    @for (role of invitation.roleCodes ?? []; track role) {
+                      <span class="chip chip--progress">{{ role }}</span>
+                    }
+                  </div>
+                </td>
+                <td>{{ invitation.invitedByName || '—' }}</td>
+                <td class="mono text-ink-muted">{{ (invitation.expiresAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+                <td>
+                  <div *appCan="'invitations:manage'" class="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      class="btn btn--secondary"
+                      [disabled]="busyId() === invitation.id"
+                      (click)="resend(invitation)"
+                    >
+                      <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Resend
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [disabled]="busyId() === invitation.id"
+                      (click)="revoke(invitation)"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="text-center text-ink-muted">
+                  {{ loading() ? 'Loading invitations…' : 'No pending invitations.' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

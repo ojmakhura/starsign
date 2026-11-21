@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "starsign",
+      "credentials": [{ "accessKey": "starsign", "secretKey": "starsign-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

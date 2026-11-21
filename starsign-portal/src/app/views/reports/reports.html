@@ -1,0 +1,387 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Reports</span>
+      </nav>
+      <h1 class="page-title">Reports</h1>
+      <p class="page-subtitle">Signing activity, performance and storage for your organisation.</p>
+    </div>
+    <div *appCan="'reports:export'" class="page-actions">
+      <button
+        type="button"
+        class="btn btn--secondary"
+        [disabled]="!!exporting() || !organisationId()"
+        (click)="export('CSV')"
+      >
+        @if (exporting() === 'CSV') {
+          <span class="spinner" aria-hidden="true"></span>
+        } @else {
+          <i class="bi bi-filetype-csv" aria-hidden="true"></i>
+        }
+        Export CSV
+      </button>
+      <button
+        type="button"
+        class="btn btn--secondary"
+        [disabled]="!!exporting() || !organisationId()"
+        (click)="export('PDF')"
+      >
+        @if (exporting() === 'PDF') {
+          <span class="spinner" aria-hidden="true"></span>
+        } @else {
+          <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
+        }
+        Export PDF
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (dashboard(); as d) {
+    <section class="stat-grid" aria-label="Dashboard summary">
+      <div class="stat-card">
+        <span class="stat-card__label">Documents</span>
+        <span class="stat-card__value">{{ d.totalDocuments ?? 0 | number }}</span>
+        <span class="stat-card__sub">{{ d.pendingActionsForMe ?? 0 }} waiting on you</span>
+        <i class="bi bi-file-earmark-text stat-card__icon" aria-hidden="true"></i>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__label">Awaiting signatures</span>
+        <span class="stat-card__value">{{ d.awaitingSignatures ?? 0 | number }}</span>
+        <span class="stat-card__sub">{{ d.partiallySigned ?? 0 }} partially signed</span>
+        <i class="bi bi-hourglass-split stat-card__icon" aria-hidden="true"></i>
+      </div>
+      <div class="stat-card stat-card--gold">
+        <span class="stat-card__label">Completed</span>
+        <span class="stat-card__value">{{ d.completed ?? 0 | number }}</span>
+        <span class="stat-card__sub">
+          Avg. {{ d.averageSigningDurationHours ?? 0 | number: '1.0-1' }} h to sign
+        </span>
+        <i class="bi bi-patch-check stat-card__icon" aria-hidden="true"></i>
+      </div>
+      <div class="stat-card">
+        <span class="stat-card__label">Declined · expired · cancelled</span>
+        <span class="stat-card__value"
+          >{{ d.declined ?? 0 }} · {{ d.expired ?? 0 }} · {{ d.cancelledWorkflows ?? 0 }}</span
+        >
+        <span class="stat-card__sub">Workflows that did not complete</span>
+        <i class="bi bi-x-octagon stat-card__icon" aria-hidden="true"></i>
+      </div>
+    </section>
+  }
+
+  <form
+    class="card grid gap-4 md:grid-cols-3"
+    (submit)="$event.preventDefault()"
+    aria-label="Report period"
+  >
+    <div class="field">
+      <label for="rep-from">From</label>
+      <input id="rep-from" class="field-control" type="date" [formField]="filterForm.from" />
+    </div>
+    <div class="field">
+      <label for="rep-to">To</label>
+      <input id="rep-to" class="field-control" type="date" [formField]="filterForm.to" />
+      <app-field-errors [field]="filterForm.to" />
+    </div>
+    <div class="field">
+      <label for="rep-grouping">Group by</label>
+      <select id="rep-grouping" class="field-control" [formField]="filterForm.grouping">
+        @for (g of groupings; track g) {
+          <option [value]="g">{{ g.charAt(0) + g.slice(1).toLowerCase() }}</option>
+        }
+      </select>
+      <span class="field__hint">Applies to document volume and signing performance.</span>
+    </div>
+  </form>
+
+  <div class="segmented self-start" role="tablist" aria-label="Report">
+    @for (t of tabs; track t.type) {
+      <label role="tab" [attr.aria-selected]="tab() === t.type">
+        <input
+          type="radio"
+          name="report-tab"
+          [checked]="tab() === t.type"
+          (change)="selectTab(t.type)"
+        />{{ t.label }}
+      </label>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="m-0 text-ink-muted" role="status">
+      <span class="spinner" aria-hidden="true"></span> Loading report…
+    </p>
+  }
+
+  @switch (tab()) {
+    @case (ReportType.DOCUMENT_VOLUME) {
+      <section class="card" aria-labelledby="volume-title">
+        <h2 id="volume-title" class="card__title mb-4">Document volume</h2>
+        <app-trend-chart
+          [labels]="volumeLabels()"
+          [series]="volumeSeries()"
+          label="Documents created, signed and declined per period. The table below lists every value."
+        />
+      </section>
+      <section class="table-panel" aria-label="Document volume table">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Created</th>
+                <th scope="col">Sent</th>
+                <th scope="col">Signed</th>
+                <th scope="col">Pending</th>
+                <th scope="col">Declined</th>
+                <th scope="col">Expired</th>
+                <th scope="col">Cancelled</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of volume(); track row.period) {
+                <tr class="mono">
+                  <th scope="row">{{ row.period }}</th>
+                  <td>{{ row.created ?? 0 }}</td>
+                  <td>{{ row.sent ?? 0 }}</td>
+                  <td>{{ row.signed ?? 0 }}</td>
+                  <td>{{ row.pending ?? 0 }}</td>
+                  <td>{{ row.declined ?? 0 }}</td>
+                  <td>{{ row.expired ?? 0 }}</td>
+                  <td>{{ row.cancelled ?? 0 }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="text-center text-ink-muted">No documents in this period.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @case (ReportType.SIGNING_PERFORMANCE) {
+      @if (performance(); as p) {
+        <section class="stat-grid" aria-label="Signing performance">
+          <div class="stat-card stat-card--gold">
+            <span class="stat-card__label">Completion rate</span>
+            <span class="stat-card__value">{{ p.completionRate ?? 0 | percent: '1.0-1' }}</span>
+            <span class="stat-card__sub">of workflows sent in the period</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__label">Decline · expiry rate</span>
+            <span class="stat-card__value"
+              >{{ p.declineRate ?? 0 | percent: '1.0-1' }} ·
+              {{ p.expiryRate ?? 0 | percent: '1.0-1' }}</span
+            >
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__label">Signing duration</span>
+            <span class="stat-card__value"
+              >{{ p.averageSigningDurationHours ?? 0 | number: '1.0-1' }} h</span
+            >
+            <span class="stat-card__sub"
+              >Median {{ p.medianSigningDurationHours ?? 0 | number: '1.0-1' }} h</span
+            >
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__label">Time to first view</span>
+            <span class="stat-card__value"
+              >{{ p.averageTimeToFirstViewHours ?? 0 | number: '1.0-1' }} h</span
+            >
+            <span class="stat-card__sub">Average</span>
+          </div>
+        </section>
+      }
+      <section class="card" aria-labelledby="perf-title">
+        <h2 id="perf-title" class="card__title mb-4">Workflows sent and signed</h2>
+        <app-trend-chart
+          kind="line"
+          [labels]="performanceLabels()"
+          [series]="performanceSeries()"
+          label="Workflows sent and signed per period. The table below lists every value."
+        />
+      </section>
+      <section class="table-panel" aria-label="Signing performance table">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Sent</th>
+                <th scope="col">Signed</th>
+                <th scope="col">Pending</th>
+                <th scope="col">Declined</th>
+                <th scope="col">Expired</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of performanceRows(); track row.period) {
+                <tr class="mono">
+                  <th scope="row">{{ row.period }}</th>
+                  <td>{{ row.sent ?? 0 }}</td>
+                  <td>{{ row.signed ?? 0 }}</td>
+                  <td>{{ row.pending ?? 0 }}</td>
+                  <td>{{ row.declined ?? 0 }}</td>
+                  <td>{{ row.expired ?? 0 }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="text-center text-ink-muted">No workflows in this period.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @case (ReportType.SIGNATORY_ACTIVITY) {
+      <section class="card" aria-labelledby="sig-title">
+        <h2 id="sig-title" class="card__title mb-4">Most invited signatories</h2>
+        <app-trend-chart
+          [labels]="signatoryLabels()"
+          [series]="signatorySeries()"
+          label="Invitations and signatures for the ten most invited signatories. The table below lists every signatory."
+        />
+      </section>
+      <section class="table-panel" aria-label="Signatory activity table">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Signatory</th>
+                <th scope="col">Invited</th>
+                <th scope="col">Signed</th>
+                <th scope="col">Declined</th>
+                <th scope="col">Avg. response</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of signatories(); track row.signatoryEmail) {
+                <tr>
+                  <td>
+                    <span class="cell-title">{{ row.signatoryName || '—' }}</span>
+                    <div class="mono text-ink-muted">{{ row.signatoryEmail }}</div>
+                  </td>
+                  <td class="mono">{{ row.invited ?? 0 }}</td>
+                  <td class="mono">{{ row.signed ?? 0 }}</td>
+                  <td class="mono">{{ row.declined ?? 0 }}</td>
+                  <td class="mono">
+                    @if (row.averageResponseHours != null) {
+                      {{ row.averageResponseHours | number: '1.0-1' }} h
+                    } @else {
+                      —
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="text-center text-ink-muted">No signatory activity in this period.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @case (ReportType.USER_ACTIVITY) {
+      <section class="card" aria-labelledby="user-title">
+        <h2 id="user-title" class="card__title mb-4">Most active users</h2>
+        <app-trend-chart
+          [labels]="userLabels()"
+          [series]="userSeries()"
+          label="Documents uploaded and workflows initiated by the ten most active users. The table below lists every user."
+        />
+      </section>
+      <section class="table-panel" aria-label="User activity table">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Documents uploaded</th>
+                <th scope="col">Workflows initiated</th>
+                <th scope="col">Workflows completed</th>
+                <th scope="col">Last activity</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of userActivity(); track row.userId) {
+                <tr>
+                  <td class="cell-title">{{ row.userName || '—' }}</td>
+                  <td class="mono">{{ row.documentsUploaded ?? 0 }}</td>
+                  <td class="mono">{{ row.workflowsInitiated ?? 0 }}</td>
+                  <td class="mono">{{ row.workflowsCompleted ?? 0 }}</td>
+                  <td class="mono text-ink-muted">
+                    {{ (row.lastActivityAt | date: 'dd MMM yyyy, HH:mm') || '—' }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="text-center text-ink-muted">No user activity in this period.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @case (ReportType.STORAGE_UTILISATION) {
+      @if (storage(); as s) {
+        <section class="stat-grid" aria-label="Storage totals">
+          <div class="stat-card">
+            <span class="stat-card__label">Total stored</span>
+            <span class="stat-card__value">{{ megabytes(s.totalBytes) | number: '1.0-1' }} MB</span>
+            <span class="stat-card__sub">{{ s.objectCount ?? 0 | number }} objects</span>
+            <i class="bi bi-hdd-stack stat-card__icon" aria-hidden="true"></i>
+          </div>
+        </section>
+      }
+      <section class="card" aria-labelledby="storage-title">
+        <h2 id="storage-title" class="card__title mb-4">Storage by kind (MB)</h2>
+        <p class="m-0 mb-2 field__hint">Storage is the current total; the period does not apply.</p>
+        <app-trend-chart
+          [labels]="storageLabels()"
+          [series]="storageSeries()"
+          label="Megabytes stored per kind of file. The table below lists every value."
+        />
+      </section>
+      <section class="table-panel" aria-label="Storage table">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Kind</th>
+                <th scope="col">Size (MB)</th>
+                <th scope="col">Bytes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of storageRows(); track row.label) {
+                <tr>
+                  <th scope="row">{{ row.label }}</th>
+                  <td class="mono">{{ megabytes(row.bytes) | number: '1.0-2' }}</td>
+                  <td class="mono text-ink-muted">{{ row.bytes | number }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3" class="text-center text-ink-muted">No storage figures yet.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</div>

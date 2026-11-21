@@ -1,0 +1,14 @@
+{
+  "/api/**": {
+    "target": "http://localhost:8785",
+    "secure": false,
+    "pathRewrite": {
+      "^/api": ""
+    },
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "cookiePathRewrite": {
+      "/signing/invitations": "/api/signing/invitations"
+    }
+  }
+}

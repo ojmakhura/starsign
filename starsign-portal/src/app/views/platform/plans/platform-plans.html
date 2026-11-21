@@ -1,0 +1,214 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Plans</span>
+      </nav>
+      <h1 class="page-title">Subscription plans</h1>
+      <p class="page-subtitle">
+        Prices and limits. Plans are referred to by code, so a code cannot change; retire a plan by making it
+        inactive.
+      </p>
+    </div>
+    @if (!editorOpen()) {
+      <button type="button" class="btn btn--primary" (click)="create()">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> New plan
+      </button>
+    }
+  </header>
+
+  @if (editorOpen()) {
+    <form class="card flex flex-col gap-5" [formRoot]="planForm" aria-labelledby="plan-editor-title">
+      <h2 id="plan-editor-title" class="m-0 text-headline-sm">
+        {{ editing() ? 'Edit ' + (editing()!.name || editing()!.code) : 'New plan' }}
+      </h2>
+
+      <div class="grid gap-5 md:grid-cols-3">
+        <div class="field">
+          <label for="plan-code">Code *</label>
+          <input id="plan-code" class="field-control mono uppercase" [formField]="planForm.code" />
+          @if (editing()) {
+            <span class="field__hint">The code of a plan cannot be changed.</span>
+          }
+          <app-field-errors [field]="planForm.code" />
+        </div>
+        <div class="field md:col-span-2">
+          <label for="plan-name">Name *</label>
+          <input id="plan-name" class="field-control" [formField]="planForm.name" />
+          <app-field-errors [field]="planForm.name" />
+        </div>
+        <div class="field md:col-span-3">
+          <label for="plan-description">Description</label>
+          <textarea id="plan-description" class="field-control" [formField]="planForm.description"></textarea>
+          <app-field-errors [field]="planForm.description" />
+        </div>
+      </div>
+
+      <fieldset class="m-0 grid gap-5 border-0 p-0 md:grid-cols-4">
+        <legend class="eyebrow mb-3">Pricing</legend>
+        <div class="field">
+          <label for="plan-currency">Currency *</label>
+          <input id="plan-currency" class="field-control mono uppercase" [formField]="planForm.currency" />
+          <app-field-errors [field]="planForm.currency" />
+        </div>
+        <div class="field">
+          <label for="plan-monthly">Monthly price *</label>
+          <input id="plan-monthly" class="field-control" type="number" step="0.01" [formField]="planForm.monthlyPrice" />
+          <app-field-errors [field]="planForm.monthlyPrice" />
+        </div>
+        <div class="field">
+          <label for="plan-annual">Annual price *</label>
+          <input id="plan-annual" class="field-control" type="number" step="0.01" [formField]="planForm.annualPrice" />
+          <app-field-errors [field]="planForm.annualPrice" />
+        </div>
+        <div class="field">
+          <label for="plan-trial">Trial days</label>
+          <input id="plan-trial" class="field-control" type="number" step="1" [formField]="planForm.trialDays" />
+          <app-field-errors [field]="planForm.trialDays" />
+        </div>
+      </fieldset>
+
+      <fieldset class="m-0 grid gap-5 border-0 p-0 md:grid-cols-3 xl:grid-cols-5">
+        <legend class="eyebrow mb-1">Limits</legend>
+        <p class="field__hint m-0 md:col-span-3 xl:col-span-5">Leave a limit empty for unlimited.</p>
+        <div class="field">
+          <label for="plan-users">Users</label>
+          <input id="plan-users" class="field-control" type="number" step="1" placeholder="Unlimited" [formField]="planForm.maxUsers" />
+          <app-field-errors [field]="planForm.maxUsers" />
+        </div>
+        <div class="field">
+          <label for="plan-docs">Documents / month</label>
+          <input id="plan-docs" class="field-control" type="number" step="1" placeholder="Unlimited" [formField]="planForm.maxDocumentsPerMonth" />
+          <app-field-errors [field]="planForm.maxDocumentsPerMonth" />
+        </div>
+        <div class="field">
+          <label for="plan-workflows">Workflows / month</label>
+          <input id="plan-workflows" class="field-control" type="number" step="1" placeholder="Unlimited" [formField]="planForm.maxWorkflowsPerMonth" />
+          <app-field-errors [field]="planForm.maxWorkflowsPerMonth" />
+        </div>
+        <div class="field">
+          <label for="plan-storage">Storage (GB)</label>
+          <input id="plan-storage" class="field-control" type="number" step="0.5" placeholder="Unlimited" [formField]="planForm.maxStorageGb" />
+          <app-field-errors [field]="planForm.maxStorageGb" />
+        </div>
+        <div class="field">
+          <label for="plan-sms">SMS / month</label>
+          <input id="plan-sms" class="field-control" type="number" step="1" placeholder="Unlimited" [formField]="planForm.maxSmsPerMonth" />
+          <app-field-errors [field]="planForm.maxSmsPerMonth" />
+        </div>
+      </fieldset>
+
+      <fieldset class="m-0 flex flex-wrap gap-x-8 gap-y-3 border-0 p-0">
+        <legend class="eyebrow mb-3">Features and visibility</legend>
+        <label class="check"><input type="checkbox" [formField]="planForm.digitalSignaturesEnabled" /> Digital (PKI) signatures</label>
+        <label class="check"><input type="checkbox" [formField]="planForm.templatesEnabled" /> Templates</label>
+        <label class="check"><input type="checkbox" [formField]="planForm.apiAccessEnabled" /> API access</label>
+        <label class="check"><input type="checkbox" [formField]="planForm.active" /> Active (can be subscribed to)</label>
+        <label class="check"><input type="checkbox" [formField]="planForm.publicPlan" /> Public (listed at sign-up)</label>
+      </fieldset>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="close()">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="planForm().submitting()">
+          @if (planForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check-lg" aria-hidden="true"></i> Save plan
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Plans">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Plan</th>
+            <th scope="col" class="text-right">Monthly</th>
+            <th scope="col" class="text-right">Annual</th>
+            <th scope="col">Limits</th>
+            <th scope="col">Features</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (plan of plans(); track plan.id) {
+            <tr [class.opacity-60]="plan.active === false">
+              <td>
+                <span class="cell-title">{{ plan.name }}</span>
+                <div class="cell-note mono">{{ plan.code }}</div>
+                @if (plan.description) {
+                  <div class="cell-note">{{ plan.description }}</div>
+                }
+              </td>
+              <td class="mono text-right">{{ plan.currency }} {{ plan.monthlyPrice ?? 0 | number: '1.2-2' }}</td>
+              <td class="mono text-right">{{ plan.currency }} {{ plan.annualPrice ?? 0 | number: '1.2-2' }}</td>
+              <td class="text-body-sm">
+                <div>{{ formatLimit(plan.maxUsers) }} users</div>
+                <div>{{ formatLimit(plan.maxDocumentsPerMonth) }} documents / {{ formatLimit(plan.maxWorkflowsPerMonth) }} workflows a month</div>
+                <div>{{ plan.maxStorageBytes === null || plan.maxStorageBytes === undefined ? 'Unlimited' : formatBytes(plan.maxStorageBytes) }} storage · {{ formatLimit(plan.maxSmsPerMonth) }} SMS</div>
+                @if (plan.trialDays) {
+                  <div class="text-ink-muted">{{ plan.trialDays }}-day trial</div>
+                }
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  @if (plan.digitalSignaturesEnabled) {
+                    <span class="chip chip--sealed">PKI</span>
+                  }
+                  @if (plan.templatesEnabled) {
+                    <span class="chip chip--progress">Templates</span>
+                  }
+                  @if (plan.apiAccessEnabled) {
+                    <span class="chip chip--progress">API</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  <span class="chip" [class]="plan.active === false ? 'chip--voided' : 'chip--sealed'">{{
+                    plan.active === false ? 'Inactive' : 'Active'
+                  }}</span>
+                  <span class="chip chip--neutral">{{ plan.publicPlan === false ? 'Private' : 'Public' }}</span>
+                </div>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--icon"
+                  [attr.aria-label]="'Edit ' + plan.name"
+                  (click)="edit(plan)"
+                >
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <i class="bi bi-tags" aria-hidden="true"></i>
+                  <span>{{ loading() ? 'Loading plans…' : 'No plans yet.' }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

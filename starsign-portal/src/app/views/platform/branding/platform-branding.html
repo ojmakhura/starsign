@@ -1,0 +1,225 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Platform branding</span>
+      </nav>
+      <h1 class="page-title">Platform branding</h1>
+      <p class="page-subtitle">
+        The defaults every portal, signing page and email inherits unless an organisation sets its own.
+        @if (branding()?.modifiedAt) {
+          Last changed {{ branding()!.modifiedAt | date: 'dd MMM yyyy, HH:mm' }}.
+        }
+      </p>
+    </div>
+    <button type="button" class="btn btn--danger" [disabled]="resetting() || loading()" (click)="reset()">
+      @if (resetting()) {
+        <span class="spinner" aria-hidden="true"></span>
+      } @else {
+        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+      }
+      Reset to defaults
+    </button>
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <form class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]" [formRoot]="brandingForm" aria-label="Platform branding">
+    <div class="flex flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="identity-title">
+        <h2 id="identity-title" class="eyebrow m-0">Identity and support</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field md:col-span-2">
+            <label for="brand-name">App name</label>
+            <input id="brand-name" class="field-control" placeholder="StarSign" [formField]="brandingForm.appName" />
+            <app-field-errors [field]="brandingForm.appName" />
+          </div>
+          <div class="field">
+            <label for="brand-email">Support email</label>
+            <input id="brand-email" class="field-control" type="email" [formField]="brandingForm.supportEmail" />
+            <app-field-errors [field]="brandingForm.supportEmail" />
+          </div>
+          <div class="field">
+            <label for="brand-url">Support URL</label>
+            <input id="brand-url" class="field-control" type="url" placeholder="https://" [formField]="brandingForm.supportUrl" />
+            <app-field-errors [field]="brandingForm.supportUrl" />
+          </div>
+          <div class="field md:col-span-2">
+            <label for="brand-signing">Signing portal message</label>
+            <textarea id="brand-signing" class="field-control" [formField]="brandingForm.signingPortalMessage"></textarea>
+            <span class="field__hint">Shown to external signatories on the signing pages.</span>
+            <app-field-errors [field]="brandingForm.signingPortalMessage" />
+          </div>
+          <div class="field md:col-span-2">
+            <label for="brand-footer">Email footer</label>
+            <textarea id="brand-footer" class="field-control" [formField]="brandingForm.emailFooter"></textarea>
+            <app-field-errors [field]="brandingForm.emailFooter" />
+          </div>
+        </div>
+      </section>
+
+      <fieldset class="card m-0 flex flex-col gap-5">
+        <legend class="sr-only">Colour seeds</legend>
+        <div>
+          <h2 class="eyebrow m-0">Colour seeds</h2>
+          <p class="m-0 text-body-sm text-ink-muted">
+            The full light and dark palettes are generated from these. Leave a seed empty for the StarSign default.
+          </p>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          @for (key of seedKeys; track key) {
+            <div class="field">
+              <label [for]="'seed-' + key" class="capitalize">{{ key }}</label>
+              <div class="flex items-center gap-2">
+                <input
+                  type="color"
+                  class="h-9 w-10 flex-none cursor-pointer rounded border-0 bg-transparent p-0"
+                  [value]="seedValue(key)"
+                  [attr.aria-label]="key + ' colour picker'"
+                  (input)="setSeed(key, $any($event.target).value)"
+                />
+                <input
+                  [id]="'seed-' + key"
+                  class="field-control mono"
+                  [placeholder]="defaults[key]"
+                  [formField]="seedField(key)"
+                />
+                @if (model().seeds[key]) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon flex-none"
+                    [attr.aria-label]="'Use the default ' + key + ' colour'"
+                    (click)="setSeed(key, '')"
+                  >
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
+              <app-field-errors [field]="seedField(key)" />
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="assets-title">
+        <div>
+          <h2 id="assets-title" class="eyebrow m-0">Logos and icons</h2>
+          <p class="m-0 text-body-sm text-ink-muted">Files are saved as soon as they are uploaded.</p>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          @for (slot of assets; track slot.slug) {
+            <div class="flex flex-col gap-3 rounded-[var(--radius-panel)] border border-hairline p-4">
+              <span class="font-medium text-ink">{{ slot.label }}</span>
+              <div
+                class="grid h-24 place-items-center rounded p-3"
+                [style.background]="slot.surface === 'light' ? '#f8fafc' : '#0a0d14'"
+              >
+                @if (assetImages()[slot.slug]; as src) {
+                  <img [src]="src" [alt]="slot.label" class="max-h-full max-w-full object-contain" />
+                } @else {
+                  <span class="text-body-sm" [style.color]="slot.surface === 'light' ? '#475569' : '#94a3b8'">
+                    Not set
+                  </span>
+                }
+              </div>
+              <span class="field__hint">{{ slot.hint }}</span>
+              <div class="flex flex-wrap gap-2">
+                <label class="btn btn--secondary cursor-pointer" [class.opacity-50]="assetBusy() === slot.slug">
+                  @if (assetBusy() === slot.slug) {
+                    <span class="spinner" aria-hidden="true"></span>
+                  } @else {
+                    <i class="bi bi-upload" aria-hidden="true"></i>
+                  }
+                  {{ assetImages()[slot.slug] ? 'Replace' : 'Upload' }}
+                  <input
+                    type="file"
+                    class="sr-only"
+                    [accept]="slot.accept"
+                    [disabled]="assetBusy() === slot.slug"
+                    [attr.aria-label]="'Upload ' + slot.label"
+                    (change)="upload(slot, $event)"
+                  />
+                </label>
+                @if (assetImages()[slot.slug]) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost"
+                    [disabled]="assetBusy() === slot.slug"
+                    (click)="removeAsset(slot)"
+                  >
+                    Remove
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <section class="glass flex flex-col gap-4 p-5" aria-labelledby="preview-title">
+        <div class="flex items-center justify-between gap-2">
+          <h2 id="preview-title" class="eyebrow m-0">Generated palette</h2>
+          <div class="segmented" role="group" aria-label="Colour mode">
+            <label><input type="radio" name="preview-mode" [checked]="previewMode() === 'light'" (change)="previewMode.set('light')" />Light</label>
+            <label><input type="radio" name="preview-mode" [checked]="previewMode() === 'dark'" (change)="previewMode.set('dark')" />Dark</label>
+          </div>
+        </div>
+        @if (previewError()) {
+          <div class="alert alert--danger" role="alert">{{ previewError() }}</div>
+        }
+        @if (preview()?.issues?.length) {
+          <div class="alert alert--danger" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <div class="flex flex-col gap-1">
+              <strong>Contrast below WCAG AA</strong>
+              @for (issue of preview()!.issues!; track $index) {
+                <span class="text-body-sm">
+                  {{ issue.mode }}: <span class="mono">{{ issue.foreground }}</span> on
+                  <span class="mono">{{ issue.background }}</span> is {{ issue.ratio?.toFixed(2) }}:1 (needs
+                  {{ issue.minimum }}:1)
+                </span>
+              }
+              <span class="text-body-sm">Saving is refused until the seeds give enough contrast.</span>
+            </div>
+          </div>
+        } @else if (preview()) {
+          <p class="m-0 text-body-sm text-ink-muted" role="status">
+            <i class="bi bi-check-circle text-cyan" aria-hidden="true"></i> Every text and background pair meets WCAG AA.
+          </p>
+        }
+        <ul class="m-0 grid max-h-96 list-none grid-cols-2 gap-2 overflow-auto p-0">
+          @for (t of previewTokens(); track t.name) {
+            <li class="flex items-center gap-2 text-body-sm">
+              <span class="h-5 w-5 flex-none rounded border border-hairline" [style.background]="t.value"></span>
+              <span class="mono truncate" [title]="t.name + ': ' + t.value">{{ t.name }}</span>
+            </li>
+          } @empty {
+            <li class="col-span-2 text-ink-muted">{{ previewError() ? '' : 'Building the preview…' }}</li>
+          }
+        </ul>
+      </section>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      <button type="submit" class="btn btn--primary btn--block min-h-11" [disabled]="brandingForm().submitting() || loading()">
+        @if (brandingForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Saving…
+        } @else {
+          <i class="bi bi-check-lg" aria-hidden="true"></i> Save branding
+        }
+      </button>
+      <button type="button" class="btn btn--secondary btn--block" [disabled]="!brandingForm().dirty()" (click)="discard()">
+        Discard changes
+      </button>
+    </aside>
+  </form>
+</div>

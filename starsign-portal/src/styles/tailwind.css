@@ -1,0 +1,190 @@
+@import 'tailwindcss';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* ====================================================
+   STARSIGN PRECISION TRUST — DESIGN TOKENS
+   ----------------------------------------------------
+   Single source of truth for the palette in DESIGN.md.
+   Declared as a Tailwind theme so every value is both a
+   CSS variable (var(--color-primary-container)) for the
+   SCSS component layer and a utility (bg-obsidian,
+   text-cyan, border-outline-variant, font-mono ...) for
+   templates.
+
+   `static` makes Tailwind always emit every variable,
+   since component stylesheets are compiled separately
+   and Tailwind cannot see which ones they reference.
+   ==================================================== */
+
+@theme static {
+  /* ---- Typography ---- */
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-display: 56px;
+  --text-display--line-height: 64px;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+  --text-display-mobile: 36px;
+  --text-display-mobile--line-height: 44px;
+  --text-display-mobile--letter-spacing: -0.02em;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg-mobile: 26px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 24px;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 26px;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 22px;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 18px;
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 20px;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.04em;
+  --text-label-sm: 10px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.06em;
+
+  /* ---- Brand surfaces (Elevation & Depth) ---- */
+  --color-abyss: #0a0d14; /* Layer 0 — base canvas */
+  --color-obsidian: #101622; /* Layer 1 — cards & module slabs */
+  --color-slate: #172033; /* Layer 2 — floating reviewers & popovers */
+  --color-navy: #1e2a4a; /* Secondary — structural boundaries */
+  --color-glass: rgb(23 32 51 / 0.75);
+  --color-paper: #f8fafc; /* PDF plate */
+  --color-ink: #f0f4fc;
+  --color-ink-muted: #94a3b8;
+
+  /* ---- Brand accents ---- */
+  --color-cyan: #00e5ff; /* Celestial Cyan — active, interactive, signing */
+  --color-gold: #e5b94c; /* Starlight Gold — seals & verification only */
+  --color-crimson: #ff5c6c; /* Voided / revoked */
+
+  /* ---- Material-style roles from DESIGN.md ---- */
+  --color-surface: #10131a;
+  --color-surface-dim: #10131a;
+  --color-surface-bright: #363941;
+  --color-surface-container-lowest: #0b0e15;
+  --color-surface-container-low: #191b23;
+  --color-surface-container: #1d1f27;
+  --color-surface-container-high: #272a32;
+  --color-surface-container-highest: #32353d;
+  --color-on-surface: #e1e2ec;
+  --color-on-surface-variant: #bac9cc;
+  --color-inverse-surface: #e1e2ec;
+  --color-inverse-on-surface: #2d3038;
+  --color-outline: #849396;
+  --color-outline-variant: #3b494c;
+  --color-surface-tint: #00daf3;
+  --color-primary: #c3f5ff;
+  --color-on-primary: #00363d;
+  --color-primary-container: #00e5ff;
+  --color-on-primary-container: #00626e;
+  --color-inverse-primary: #006875;
+  --color-secondary: #bac5ee;
+  --color-on-secondary: #232f50;
+  --color-secondary-container: #3c486a;
+  --color-on-secondary-container: #acb7df;
+  --color-tertiary: #ffebc4;
+  --color-on-tertiary: #3f2e00;
+  --color-tertiary-container: #f8cb5c;
+  --color-on-tertiary-container: #715500;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed: #9cf0ff;
+  --color-primary-fixed-dim: #00daf3;
+  --color-on-primary-fixed: #001f24;
+  --color-on-primary-fixed-variant: #004f58;
+  --color-secondary-fixed: #dae2ff;
+  --color-secondary-fixed-dim: #bac5ee;
+  --color-on-secondary-fixed: #0d1a39;
+  --color-on-secondary-fixed-variant: #3a4667;
+  --color-tertiary-fixed: #ffdf99;
+  --color-tertiary-fixed-dim: #edc153;
+  --color-on-tertiary-fixed: #251a00;
+  --color-on-tertiary-fixed-variant: #5a4300;
+  --color-background: #0a0d14;
+  --color-on-background: #e1e2ec;
+  --color-surface-variant: #32353d;
+
+  /* ---- Hairlines ---- */
+  --color-hairline: rgb(255 255 255 / 0.08);
+  --color-hairline-strong: rgb(255 255 255 / 0.15);
+  --color-hairline-cyan: rgb(0 229 255 / 0.25);
+
+  /* ---- Shape ---- */
+  --radius-control: 0.25rem;
+  --radius-panel: 0.5rem;
+  --radius-stage: 0.75rem;
+
+  /* ---- Spacing ---- */
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+  --spacing-margin: 2.5rem;
+  --spacing-margin-mobile: 1.25rem;
+
+  /* ---- Elevation ---- */
+  --shadow-float: 0 20px 40px -10px rgb(0 0 0 / 0.7);
+  --shadow-modal: 0 0 50px rgb(0 229 255 / 0.12), 0 25px 50px rgb(0 0 0 / 0.8);
+  --shadow-seal: 0 0 12px rgb(229 185 76 / 0.2);
+  --shadow-focus: 0 0 0 1px #00e5ff, 0 0 16px rgb(0 229 255 / 0.35);
+
+  /* ---- Motion ---- */
+  --animate-sign-pulse: sign-pulse 2.4s ease-in-out infinite;
+
+  @keyframes sign-pulse {
+    0%,
+    100% {
+      background-color: rgb(0 229 255 / 0.08);
+      box-shadow: 0 0 0 0 rgb(0 229 255 / 0);
+    }
+    50% {
+      background-color: rgb(0 229 255 / 0.16);
+      box-shadow: 0 0 18px 0 rgb(0 229 255 / 0.18);
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-abyss);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-md);
+    line-height: var(--text-body-md--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background: rgb(0 229 255 / 0.3);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-cyan);
+    outline-offset: 0;
+  }
+}

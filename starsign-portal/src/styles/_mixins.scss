@@ -1,0 +1,59 @@
+// SCSS helpers over the Tailwind theme variables (see tailwind.css).
+// Components reference the CSS variables, so the palette has one source.
+
+$breakpoints: (
+  mobile: 767px,
+  tablet: 1199px,
+);
+
+@mixin below($name) {
+  @media (max-width: map-get($breakpoints, $name)) {
+    @content;
+  }
+}
+
+/// Layer 1 — card & module slab.
+@mixin slab {
+  background: var(--color-obsidian);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-panel);
+}
+
+/// Layer 2 — floating reviewer / popover (frosted glass).
+@mixin glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-hairline-cyan);
+  box-shadow: var(--shadow-float);
+}
+
+/// Layer 3 — modal & signing overlay.
+@mixin stage {
+  background: var(--color-slate);
+  border: 1px solid var(--color-hairline-cyan);
+  border-radius: var(--radius-stage);
+  box-shadow: var(--shadow-modal);
+}
+
+/// JetBrains Mono uppercase label used for hashes, timestamps and chips.
+@mixin mono-label($size: md) {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  @if $size == sm {
+    font-size: var(--text-label-sm);
+    line-height: var(--text-label-sm--line-height);
+    letter-spacing: var(--text-label-sm--letter-spacing);
+  } @else {
+    font-size: var(--text-label-md);
+    line-height: var(--text-label-md--line-height);
+    letter-spacing: var(--text-label-md--letter-spacing);
+  }
+}
+
+@mixin focus-ring {
+  outline: none;
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 1px var(--color-cyan);
+}

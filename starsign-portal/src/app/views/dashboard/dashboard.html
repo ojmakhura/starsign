@@ -1,0 +1,165 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">{{ session.organisationName() || 'StarSign' }}</span>
+      <h1 class="page-title mt-1">{{ greeting() }}</h1>
+      <p class="page-subtitle">
+        Your signing command centre — every action sealed to the audit chain.
+      </p>
+    </div>
+    <div class="page-actions">
+      <a *appCan="'documents:edit'" class="btn btn--secondary" routerLink="/documents/upload">
+        <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload PDF
+      </a>
+      <a *appCan="'workflows:edit'" class="btn btn--primary" routerLink="/workflows/new">
+        <i class="bi bi-send-plus" aria-hidden="true"></i> New signing workflow
+      </a>
+    </div>
+  </header>
+
+  @if (summary.error()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+      The organisation summary could not be loaded.
+    </div>
+  }
+
+  <section class="stat-grid" aria-label="Signing summary">
+    @for (tile of tiles(); track tile.label) {
+      <article class="stat-card" [class.stat-card--gold]="tile.gold">
+        <i class="bi stat-card__icon" [class]="tile.icon" aria-hidden="true"></i>
+        <span class="stat-card__label">{{ tile.label }}</span>
+        <strong class="stat-card__value" [class.text-gold]="tile.gold">
+          {{ tile.value === null ? (summary.isLoading() ? '…' : '—') : (tile.value | number) }}
+        </strong>
+        <span class="stat-card__sub">{{ tile.sub }}</span>
+      </article>
+    }
+  </section>
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <section class="card" aria-labelledby="inbox-title">
+      <div class="card__header">
+        <h2 class="card__title" id="inbox-title">
+          <i class="bi bi-pen" aria-hidden="true"></i> Awaiting your signature
+        </h2>
+        <a class="btn btn--ghost" routerLink="/signing"
+          >Open inbox <i class="bi bi-arrow-right" aria-hidden="true"></i
+        ></a>
+      </div>
+
+      @if (signing.dataList().length === 0) {
+        <div class="empty-state">
+          <i class="bi bi-inbox" aria-hidden="true"></i>
+          <span>{{
+            signing.loading() ? 'Checking your inbox…' : 'Nothing is waiting for your signature.'
+          }}</span>
+        </div>
+      } @else {
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          @for (item of signing.dataList().slice(0, 5); track item.signatoryId) {
+            <li>
+              <a
+                class="flex items-center gap-4 rounded-[var(--radius-panel)] border border-hairline p-4 no-underline transition-colors hover:border-hairline-cyan hover:bg-cyan/5"
+                [routerLink]="['/signing', item.workflowId, item.signatoryId]"
+              >
+                <span class="grid h-10 w-10 place-items-center rounded-full bg-cyan/10 text-cyan"
+                  ><i class="bi bi-file-earmark-text" aria-hidden="true"></i
+                ></span>
+                <span class="min-w-0 flex-1">
+                  <span class="cell-title block truncate">{{ item.workflowTitle }}</span>
+                  <span class="cell-note"
+                    >{{ item.requestedBy || 'Unknown sender' }} ·
+                    {{ item.requestedAt | date: 'dd MMM, HH:mm' }}</span
+                  >
+                </span>
+                @if (item.deadline) {
+                  <span class="chip chip--pending">Due {{ item.deadline | date: 'dd MMM' }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <aside class="flex flex-col gap-6">
+      <section class="card" aria-labelledby="rate-title">
+        <h2 class="card__title mb-4" id="rate-title">
+          <i class="bi bi-activity" aria-hidden="true"></i> Completion rate
+        </h2>
+        <div class="flex items-end justify-between">
+          <strong class="font-display text-headline-lg text-gold"
+            >{{ completionRate() ?? '—' }}{{ completionRate() !== null ? '%' : '' }}</strong
+          >
+          <span class="mono text-ink-muted"
+            >AVG {{ summary.value()?.averageSigningDurationHours ?? 0 | number: '1.0-1' }} H</span
+          >
+        </div>
+        <div class="progress progress--gold mt-3">
+          <div class="progress__bar" [style.width.%]="completionRate() ?? 0"></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="expiring-title">
+        <h2 class="card__title mb-4" id="expiring-title">
+          <i class="bi bi-alarm" aria-hidden="true"></i> Expiring soon
+        </h2>
+        @for (workflow of summary.value()?.expiringSoons ?? []; track workflow.id) {
+          <a
+            class="flex items-center justify-between gap-3 border-b border-hairline py-2.5 no-underline last:border-0"
+            [routerLink]="['/workflows', workflow.id]"
+          >
+            <span class="min-w-0">
+              <span class="cell-title block truncate">{{ workflow.title }}</span>
+              <span class="cell-note"
+                >{{ workflow.signedCount ?? 0 }}/{{ workflow.signatoryCount ?? 0 }} signed</span
+              >
+            </span>
+            <span class="mono text-cyan">{{ workflow.expiresAt | date: 'dd MMM' }}</span>
+          </a>
+        } @empty {
+          <p class="m-0 text-ink-muted">No workflows expire in the next few days.</p>
+        }
+      </section>
+    </aside>
+  </div>
+
+  @if (summary.value()?.recentDocuments?.length) {
+    <section class="table-panel" aria-label="Recent documents">
+      <div class="flex items-center justify-between px-6 pt-5 pb-3">
+        <h2 class="card__title">
+          <i class="bi bi-clock-history" aria-hidden="true"></i> Recent documents
+        </h2>
+        <a class="btn btn--ghost" routerLink="/documents"
+          >Document vault <i class="bi bi-arrow-right" aria-hidden="true"></i
+        ></a>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Document</th>
+              <th scope="col">Status</th>
+              <th scope="col">Signatures</th>
+              <th scope="col">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of summary.value()?.recentDocuments ?? []; track doc.id) {
+              <tr>
+                <td>
+                  <a class="cell-title" [routerLink]="['/documents', doc.id]">{{ doc.title }}</a>
+                  <div class="cell-note mono">{{ doc.referenceNumber }}</div>
+                </td>
+                <td><app-status-chip [status]="doc.status" /></td>
+                <td class="mono">{{ doc.signedCount ?? 0 }}/{{ doc.signatoryCount ?? 0 }}</td>
+                <td class="cell-note">{{ doc.createdAt | date: 'dd MMM yyyy' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

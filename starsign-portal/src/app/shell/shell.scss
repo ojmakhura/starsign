@@ -1,0 +1,227 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(0 229 255 / 0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(30 42 74 / 0.5), transparent 60%),
+    var(--color-abyss);
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0.875rem;
+  box-sizing: border-box;
+  background: var(--color-obsidian);
+  border-right: 1px solid var(--color-hairline);
+
+  @include below(mobile) {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-float);
+
+    &--open {
+      transform: none;
+    }
+  }
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgb(5 7 12 / 0.7);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.5rem;
+}
+
+.brand-name {
+  font: 700 20px / 24px var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.nav-menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+
+.nav-group-title {
+  @include mono-label(sm);
+  padding: 0 0.75rem 0.375rem;
+  color: var(--color-outline);
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-control);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+
+  i {
+    font-size: 1rem;
+  }
+
+  &:hover {
+    color: var(--color-ink);
+    background: rgb(255 255 255 / 0.04);
+  }
+
+  &--active {
+    color: var(--color-cyan);
+    background: rgb(0 229 255 / 0.08);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -0.875rem;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--color-cyan);
+      box-shadow: 0 0 10px var(--color-cyan);
+    }
+  }
+}
+
+.sidebar-footer {
+  padding: 0 0.5rem;
+}
+
+.main-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-left: 264px;
+
+  @include below(mobile) {
+    margin-left: 0;
+  }
+
+  &--full {
+    margin-left: 0;
+  }
+}
+
+.top-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 60px;
+  padding: 0 var(--spacing-margin);
+  background: rgb(10 13 20 / 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-hairline);
+
+  @include below(mobile) {
+    padding: 0 var(--spacing-margin-mobile);
+  }
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-hairline-cyan);
+  background: var(--color-navy);
+  color: var(--color-cyan);
+  font: 600 13px / 1 var(--font-display);
+  cursor: pointer;
+}
+
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 260px;
+  padding: 0.25rem 0;
+  z-index: 50;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 0.05);
+  }
+
+  &--danger {
+    color: var(--color-crimson);
+  }
+}
+
+.content-body {
+  flex: 1;
+}
+
+.login-screen {
+  min-height: calc(100vh - 60px);
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-margin-mobile);
+}
+
+.login-card {
+  width: min(520px, 100%);
+  padding: 2.5rem;
+  box-sizing: border-box;
+
+  @include below(mobile) {
+    padding: 1.5rem;
+  }
+}
+
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem var(--spacing-margin);
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+
+  @include below(mobile) {
+    padding: 1rem var(--spacing-margin-mobile);
+  }
+}

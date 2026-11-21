@@ -1,0 +1,116 @@
+<div class="page max-w-5xl">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/users">Users</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Invite</span>
+      </nav>
+      <h1 class="page-title">Invite a user</h1>
+      <p class="page-subtitle">
+        They get an email to set a password and a link to join, with the roles you choose.
+      </p>
+    </div>
+  </header>
+
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="inviteForm"
+    aria-label="Invite user"
+  >
+    <div class="flex flex-col gap-6">
+      <div class="card flex flex-col gap-5">
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="inv-first">First name *</label>
+            <input id="inv-first" class="field-control" [formField]="inviteForm.firstName" />
+            <app-field-errors [field]="inviteForm.firstName" />
+          </div>
+          <div class="field">
+            <label for="inv-last">Last name *</label>
+            <input id="inv-last" class="field-control" [formField]="inviteForm.lastName" />
+            <app-field-errors [field]="inviteForm.lastName" />
+          </div>
+          <div class="field">
+            <label for="inv-email">Email *</label>
+            <input id="inv-email" class="field-control" type="email" [formField]="inviteForm.emailAddress" />
+            <app-field-errors [field]="inviteForm.emailAddress" />
+          </div>
+          <div class="field">
+            <label for="inv-job">Job title</label>
+            <input id="inv-job" class="field-control" [formField]="inviteForm.jobTitle" />
+            <app-field-errors [field]="inviteForm.jobTitle" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="inv-message">Personal message</label>
+          <textarea
+            id="inv-message"
+            class="field-control"
+            [formField]="inviteForm.message"
+            placeholder="Optional note included in the invitation email"
+          ></textarea>
+          <app-field-errors [field]="inviteForm.message" />
+        </div>
+      </div>
+
+      <fieldset class="card flex flex-col gap-3">
+        <legend class="eyebrow">Roles *</legend>
+        @if (rolesError()) {
+          <div class="alert alert--danger" role="alert">{{ rolesError() }}</div>
+        }
+        @for (role of roles(); track role.code) {
+          <label class="flex items-start gap-3 rounded-md p-2 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-1"
+              [checked]="isChosen(role.code!)"
+              (change)="toggleRole(role.code!, $any($event.target).checked)"
+            />
+            <span class="flex flex-col">
+              <span class="font-medium text-ink">{{ role.name || role.code }}</span>
+              @if (role.description) {
+                <span class="text-body-sm text-ink-muted">{{ role.description }}</span>
+              }
+            </span>
+          </label>
+        } @empty {
+          @if (!rolesError()) {
+            <p class="m-0 text-ink-muted">Loading roles…</p>
+          }
+        }
+        <app-field-errors [field]="inviteForm.roleCodes" />
+      </fieldset>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <div class="glass flex flex-col gap-3 p-5">
+        <span class="eyebrow">What happens next</span>
+        <ol class="m-0 flex flex-col gap-2 pl-5">
+          <li>Their account is created and they're emailed to set a password.</li>
+          <li>They get a StarSign email with a link to accept.</li>
+          <li>Accepting gives them the roles chosen here.</li>
+        </ol>
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn btn--primary btn--block min-h-11"
+        [disabled]="inviteForm().submitting()"
+      >
+        @if (inviteForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Sending…
+        } @else {
+          <i class="bi bi-send" aria-hidden="true"></i> Send invitation
+        }
+      </button>
+      <a class="btn btn--secondary btn--block" routerLink="/users">Cancel</a>
+    </aside>
+  </form>
+</div>

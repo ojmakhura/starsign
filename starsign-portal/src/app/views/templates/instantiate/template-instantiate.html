@@ -1,0 +1,250 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/templates">Signing templates</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <a [routerLink]="['/templates', id()]">{{ tpl()?.name || 'Template' }}</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span class="breadcrumb__current">Use</span>
+      </nav>
+      <h1 class="page-title">Use template{{ tpl()?.name ? ': ' + tpl()?.name : '' }}</h1>
+      <p class="page-subtitle">
+        Choose the document and say who signs in each role. The template's stages and field layout
+        are applied to the new workflow.
+      </p>
+    </div>
+  </header>
+
+  @if (loadError()) {
+    <div class="alert alert--danger" role="alert">{{ loadError() }}</div>
+  }
+  @if (inactive()) {
+    <div class="alert alert--danger" role="alert">
+      Only active templates can be used. This one is {{ tpl()?.status }}.
+    </div>
+  }
+
+  @if (tpl()) {
+    <form
+      class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
+      [formRoot]="useForm"
+      aria-label="Create workflow from template"
+    >
+      <div class="flex min-w-0 flex-col gap-6">
+        <!-- 1 · Document -->
+        <section class="card flex flex-col gap-5" aria-labelledby="use-doc-title">
+          <h2 class="card__title" id="use-doc-title">
+            <span class="eyebrow">01</span> Document &amp; message
+          </h2>
+          <div class="field">
+            <label for="use-document">Document *</label>
+            <select id="use-document" class="field-control" [formField]="useForm.documentId">
+              <option value="">
+                {{
+                  documents.isLoading()
+                    ? 'Loading documents…'
+                    : documentList().length
+                      ? 'Choose a document…'
+                      : 'No documents are ready for signing'
+                }}
+              </option>
+              @for (doc of documentList(); track doc.id) {
+                <option [value]="doc.id">
+                  {{ doc.title }} · {{ doc.referenceNumber }} · {{ doc.pageCount ?? 0 }} pp
+                </option>
+              }
+            </select>
+            <app-field-errors [field]="useForm.documentId" />
+            <span class="field__hint">
+              Only documents without a workflow in progress are listed.
+              @if (minPages()) {
+                The document needs at least {{ minPages() }} page(s).
+              }
+              <a class="text-cyan" routerLink="/documents/upload">Upload a new PDF</a>.
+            </span>
+          </div>
+          <div class="field">
+            <label for="use-title">Workflow title</label>
+            <input
+              id="use-title"
+              class="field-control"
+              [formField]="useForm.title"
+              [placeholder]="tpl()?.name ?? ''"
+            />
+            <app-field-errors [field]="useForm.title" />
+          </div>
+          <div class="field">
+            <label for="use-message">Message to signatories</label>
+            <textarea id="use-message" class="field-control" [formField]="useForm.message"></textarea>
+            <span class="field__hint text-right">{{ model().message.length }}/2000</span>
+            <app-field-errors [field]="useForm.message" />
+          </div>
+          <div class="field md:max-w-xs">
+            <label for="use-expires">Expires on *</label>
+            <input id="use-expires" class="field-control" type="date" [formField]="useForm.expiresAt" />
+            <app-field-errors [field]="useForm.expiresAt" />
+          </div>
+        </section>
+
+        <!-- 2 · Signatories -->
+        <section class="card flex flex-col gap-5" aria-labelledby="use-sig-title">
+          <h2 class="card__title" id="use-sig-title">
+            <span class="eyebrow">02</span> Signatories
+          </h2>
+          @if (users.error()) {
+            <div class="alert alert--danger" role="alert">
+              The organisation's users could not be loaded, so internal roles cannot be filled.
+            </div>
+          }
+
+          @for (row of useForm.bindings; track row; let i = $index) {
+            @let b = model().bindings[i];
+            <fieldset
+              class="m-0 flex flex-col gap-4 rounded-[var(--radius-panel)] border border-hairline bg-abyss/60 p-4"
+              [attr.aria-label]="b.roleName"
+            >
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="eyebrow">Stage {{ b.stageNumber }}</span>
+                <span class="flex-1 font-medium">{{ b.roleName }}</span>
+                <span class="chip chip--neutral">{{ signatoryTypeLabel(b.signatoryType) }}</span>
+                @if (b.verificationMethod) {
+                  <span class="chip chip--neutral">{{ verificationLabel(b.verificationMethod || null) }}</span>
+                }
+                @if (!row.skip().hidden()) {
+                  <label class="check"><input type="checkbox" [formField]="row.skip" /> Leave out</label>
+                }
+              </div>
+
+              @if (!b.skip) {
+                <div class="grid gap-4 md:grid-cols-2">
+                  @if (!row.internalUserId().hidden()) {
+                    <div class="field md:col-span-2">
+                      <label [for]="'use-user-' + i">User *</label>
+                      <select [id]="'use-user-' + i" class="field-control" [formField]="row.internalUserId">
+                        <option value="">{{ users.isLoading() ? 'Loading users…' : 'Choose a user…' }}</option>
+                        @for (user of activeUsers(); track user.id) {
+                          <option [value]="user.id">
+                            {{ user.firstName }} {{ user.lastName }} · {{ user.emailAddress }}
+                          </option>
+                        }
+                      </select>
+                      <app-field-errors [field]="row.internalUserId" />
+                    </div>
+                  }
+                  @if (!row.fullName().hidden()) {
+                    <div class="field">
+                      <label [for]="'use-name-' + i">Full name *</label>
+                      <input [id]="'use-name-' + i" class="field-control" autocomplete="off" [formField]="row.fullName" />
+                      <app-field-errors [field]="row.fullName" />
+                    </div>
+                  }
+                  @if (!row.emailAddress().hidden()) {
+                    <div class="field">
+                      <label [for]="'use-email-' + i">Email *</label>
+                      <input
+                        [id]="'use-email-' + i"
+                        class="field-control"
+                        type="email"
+                        autocomplete="off"
+                        [formField]="row.emailAddress"
+                      />
+                      <app-field-errors [field]="row.emailAddress" />
+                    </div>
+                  }
+                  @if (!row.organisationName().hidden()) {
+                    <div class="field md:col-span-2">
+                      <label [for]="'use-org-' + i">Represents organisation *</label>
+                      <input [id]="'use-org-' + i" class="field-control" [formField]="row.organisationName" />
+                      <app-field-errors [field]="row.organisationName" />
+                    </div>
+                  }
+                  <div class="field">
+                    <label [for]="'use-designation-' + i">Designation</label>
+                    <input [id]="'use-designation-' + i" class="field-control" [formField]="row.designation" />
+                  </div>
+                  <div class="field">
+                    <label [for]="'use-phone-' + i">Mobile {{ row.phoneNumber().required() ? '*' : '' }}</label>
+                    <input
+                      [id]="'use-phone-' + i"
+                      class="field-control font-mono"
+                      type="tel"
+                      placeholder="+26771234567"
+                      [formField]="row.phoneNumber"
+                    />
+                    <app-field-errors [field]="row.phoneNumber" />
+                  </div>
+                </div>
+              } @else {
+                <p class="m-0 text-body-sm text-ink-muted">
+                  Left out: this optional role and its fields are not part of the workflow.
+                </p>
+              }
+            </fieldset>
+          } @empty {
+            <p class="m-0 text-ink-muted">The template has no roles.</p>
+          }
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-4 xl:sticky xl:top-20 xl:self-start">
+        <div class="glass flex flex-col gap-4 p-5">
+          <span class="eyebrow">Summary</span>
+          <div>
+            <p class="m-0 font-medium">{{ selectedDocument()?.title || 'No document selected' }}</p>
+            <p class="m-0 mono text-ink-muted">{{ selectedDocument()?.referenceNumber || '—' }}</p>
+          </div>
+          <ol class="m-0 flex list-none flex-col gap-2 p-0">
+            @for (b of model().bindings; track b.roleId) {
+              <li class="flex items-center gap-2" [class.opacity-50]="b.skip">
+                <span
+                  class="grid h-6 w-6 place-items-center rounded-full border border-hairline-cyan font-mono text-label-sm text-cyan"
+                  >{{ b.stageNumber }}</span
+                >
+                <span class="truncate">{{ b.roleName }}: {{ b.fullName || b.emailAddress || '—' }}</span>
+              </li>
+            }
+          </ol>
+          <hr class="divider" />
+          <dl class="m-0 grid grid-cols-2 gap-2 text-body-sm">
+            <dt class="text-ink-muted">Expires</dt>
+            <dd class="m-0 text-right mono">{{ model().expiresAt || '—' }}</dd>
+            <dt class="text-ink-muted">Mode</dt>
+            <dd class="m-0 text-right mono">{{ tpl()?.executionMode }}</dd>
+            <dt class="text-ink-muted">Fields</dt>
+            <dd class="m-0 text-right mono">{{ tpl()?.fields?.length ?? 0 }}</dd>
+          </dl>
+        </div>
+
+        @if (formError()) {
+          <div class="alert alert--danger" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ formError() }}
+          </div>
+        }
+
+        <label class="check glass p-4"
+          ><input type="checkbox" [formField]="useForm.initiateImmediately" />
+          <span>Send invitations immediately</span></label
+        >
+
+        <button
+          type="submit"
+          class="btn btn--primary btn--block min-h-11"
+          [disabled]="useForm().submitting() || inactive()"
+        >
+          @if (useForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Creating workflow…
+          } @else {
+            <i
+              class="bi"
+              [class]="model().initiateImmediately ? 'bi-send' : 'bi-save'"
+              aria-hidden="true"
+            ></i>
+            {{ model().initiateImmediately ? 'Create & send for signing' : 'Create draft workflow' }}
+          }
+        </button>
+        <a class="btn btn--secondary btn--block" [routerLink]="['/templates', id()]">Cancel</a>
+      </aside>
+    </form>
+  }
+</div>

@@ -1,0 +1,62 @@
+<form class="flex flex-col gap-5" [formRoot]="profileForm" aria-label="Profile">
+  <div class="grid gap-5 md:grid-cols-2">
+    <div class="field">
+      <label for="up-first">First name *</label>
+      <input id="up-first" class="field-control" autocomplete="given-name" [formField]="profileForm.firstName" />
+      <app-field-errors [field]="profileForm.firstName" />
+    </div>
+    <div class="field">
+      <label for="up-last">Last name *</label>
+      <input id="up-last" class="field-control" autocomplete="family-name" [formField]="profileForm.lastName" />
+      <app-field-errors [field]="profileForm.lastName" />
+    </div>
+    <div class="field">
+      <label for="up-job">Job title</label>
+      <input id="up-job" class="field-control" autocomplete="organization-title" [formField]="profileForm.jobTitle" />
+      <app-field-errors [field]="profileForm.jobTitle" />
+    </div>
+    <div class="field">
+      <label for="up-phone">Phone number</label>
+      <input id="up-phone" class="field-control" type="tel" autocomplete="tel" [formField]="profileForm.phoneNumber" />
+      <app-field-errors [field]="profileForm.phoneNumber" />
+    </div>
+    <div class="field">
+      <label for="up-locale">Locale</label>
+      <input
+        id="up-locale"
+        class="field-control mono"
+        [formField]="profileForm.locale"
+        placeholder="en-BW"
+        aria-describedby="up-locale-hint"
+      />
+      <span id="up-locale-hint" class="field__hint">Language for emails, e.g. en or en-BW.</span>
+      <app-field-errors [field]="profileForm.locale" />
+    </div>
+  </div>
+
+  @if (serverError()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+    </div>
+  }
+
+  @if (editable()) {
+    <div class="flex justify-end gap-2">
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [disabled]="profileForm().submitting() || !profileForm().dirty()"
+        (click)="reset()"
+      >
+        Undo changes
+      </button>
+      <button type="submit" class="btn btn--primary" [disabled]="profileForm().submitting()">
+        @if (profileForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Saving…
+        } @else {
+          <i class="bi bi-check2" aria-hidden="true"></i> Save profile
+        }
+      </button>
+    </div>
+  }
+</form>

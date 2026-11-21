@@ -1,0 +1,259 @@
+@use 'mixins' as *;
+
+@layer components {
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-gutter);
+    padding: var(--spacing-margin);
+    max-width: 1440px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+
+    @include below(mobile) {
+      padding: var(--spacing-margin-mobile);
+      gap: var(--spacing-gutter-mobile);
+    }
+  }
+
+  .page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .page-title {
+    margin: 0;
+    font: 600 var(--text-headline-lg) / var(--text-headline-lg--line-height) var(--font-display);
+    letter-spacing: var(--text-headline-lg--letter-spacing);
+
+    @include below(mobile) {
+      font-size: var(--text-headline-lg-mobile);
+      line-height: var(--text-headline-lg-mobile--line-height);
+    }
+  }
+
+  .page-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--color-ink-muted);
+  }
+
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .breadcrumb {
+    @include mono-label(sm);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-ink-muted);
+
+    a {
+      color: inherit;
+      text-decoration: none;
+
+      &:hover {
+        color: var(--color-cyan);
+      }
+    }
+
+    &__current {
+      color: var(--color-cyan);
+    }
+  }
+
+  .eyebrow {
+    @include mono-label(sm);
+    color: var(--color-cyan);
+  }
+
+  .card {
+    @include slab;
+    padding: var(--spacing-gutter);
+
+    @include below(mobile) {
+      padding: var(--spacing-gutter-mobile);
+    }
+
+    &__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    &__title {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font: 600 var(--text-headline-sm) / var(--text-headline-sm--line-height) var(--font-display);
+
+      i {
+        color: var(--color-cyan);
+      }
+    }
+  }
+
+  .glass {
+    @include glass;
+    border-radius: var(--radius-panel);
+  }
+
+  .stage {
+    @include stage;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgb(5 7 12 / 0.72);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal {
+    @include stage;
+    width: min(520px, 100%);
+    padding: var(--spacing-gutter);
+  }
+
+  // PDF document plate — stark light paper against the dark platform.
+  .paper-plate {
+    background: var(--color-paper);
+    color: #0f172a;
+    border-radius: 2px;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06),
+      var(--shadow-float);
+  }
+
+  .viewer-frame {
+    @include slab;
+    border-radius: var(--radius-stage);
+    background: var(--color-abyss);
+    padding: var(--spacing-gutter);
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-gutter);
+
+    @include below(tablet) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include below(mobile) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-gutter-mobile);
+    }
+  }
+
+  .stat-card {
+    @include slab;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 1.25rem;
+
+    &__label {
+      @include mono-label(sm);
+      color: var(--color-ink-muted);
+    }
+
+    &__value {
+      font: 700 32px / 40px var(--font-display);
+      letter-spacing: -0.02em;
+    }
+
+    &__sub {
+      font-size: var(--text-body-sm);
+      color: var(--color-ink-muted);
+    }
+
+    &__icon {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      color: var(--color-cyan);
+      opacity: 0.7;
+      font-size: 1.25rem;
+    }
+
+    &--gold &__icon {
+      color: var(--color-gold);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--color-hairline-cyan), transparent);
+    }
+  }
+
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-panel);
+    border: 1px solid;
+    font-size: var(--text-body-md);
+
+    &--danger {
+      border-color: rgb(255 92 108 / 0.4);
+      background: rgb(255 92 108 / 0.08);
+      color: #ffc9cf;
+    }
+
+    &--info {
+      border-color: var(--color-hairline-cyan);
+      background: rgb(0 229 255 / 0.06);
+      color: var(--color-primary);
+    }
+
+    &--seal {
+      border-color: rgb(229 185 76 / 0.4);
+      background: rgb(229 185 76 / 0.08);
+      color: var(--color-tertiary);
+      box-shadow: var(--shadow-seal);
+    }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--color-ink-muted);
+
+    i {
+      font-size: 2rem;
+      color: var(--color-outline);
+    }
+  }
+
+  .divider {
+    border: 0;
+    border-top: 1px solid var(--color-hairline);
+    margin: 0;
+  }
+}

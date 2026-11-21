@@ -1,0 +1,87 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Notifications</span>
+      </nav>
+      <h1 class="page-title">Notifications</h1>
+      <p class="page-subtitle">{{ unreadCount() }} unread</p>
+    </div>
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [disabled]="!unreadCount() || !!busyId()"
+      (click)="markAllRead()"
+    >
+      <i class="bi bi-check2-all" aria-hidden="true"></i> Mark all read
+    </button>
+  </header>
+
+  <app-notification-tabs />
+
+  <label class="check self-start">
+    <input
+      type="checkbox"
+      [checked]="unreadOnly()"
+      (change)="setUnreadOnly($any($event.target).checked)"
+    />
+    Unread only
+  </label>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Your notifications">
+    <ul class="m-0 list-none p-0">
+      @for (n of notifications(); track n.id) {
+        <li
+          class="flex items-start gap-4 border-b border-[var(--color-hairline)] px-5 py-4 last:border-b-0"
+        >
+          <i
+            class="bi mt-1"
+            [class.bi-bell-fill]="!n.readAt"
+            [class.text-cyan]="!n.readAt"
+            [class.bi-bell]="!!n.readAt"
+            [class.text-ink-muted]="!!n.readAt"
+            aria-hidden="true"
+          ></i>
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            @if (link(n); as path) {
+              <a class="cell-title" [routerLink]="path" (click)="markRead(n)">{{
+                n.subject || label(n.eventType)
+              }}</a>
+            } @else {
+              <span class="cell-title">{{ n.subject || label(n.eventType) }}</span>
+            }
+            <span class="cell-note">
+              <span class="sr-only">{{ n.readAt ? 'Read' : 'Unread' }} · </span>
+              {{ label(n.eventType) }} · {{ n.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+            </span>
+          </div>
+          @if (!n.readAt) {
+            <button
+              type="button"
+              class="btn btn--ghost"
+              [disabled]="busyId() === n.id"
+              [attr.aria-label]="'Mark ' + (n.subject || 'notification') + ' as read'"
+              (click)="markRead(n)"
+            >
+              <i class="bi bi-check2" aria-hidden="true"></i> Mark read
+            </button>
+          }
+        </li>
+      } @empty {
+        <li>
+          <div class="empty-state">
+            <i class="bi bi-bell-slash" aria-hidden="true"></i>
+            <span>{{
+              loading() ? 'Loading notifications…' : unreadOnly() ? 'Nothing unread.' : 'No notifications yet.'
+            }}</span>
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+</div>

@@ -1,0 +1,204 @@
+<div class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+  <!-- Palette -->
+  <aside class="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start" aria-label="Field palette">
+    <div class="glass flex flex-col gap-3 p-4">
+      <span class="eyebrow">Fields for</span>
+      <div class="flex flex-col gap-1" role="radiogroup" aria-label="Recipient for new fields">
+        @for (r of recipients(); track r.key; let i = $index) {
+          <label
+            class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5"
+            [class.bg-abyss]="activeRecipient()?.key === r.key"
+          >
+            <input
+              type="radio"
+              name="placer-recipient"
+              class="sr-only"
+              [checked]="activeRecipient()?.key === r.key"
+              (change)="activeRecipientKey.set(r.key)"
+            />
+            <span class="swatch" [style.background]="r.color" aria-hidden="true"></span>
+            <span class="min-w-0 flex-1 truncate">{{ i + 1 }}. {{ r.name || 'Recipient ' + (i + 1) }}</span>
+            @if (activeRecipient()?.key === r.key) {
+              <i class="bi bi-check2 text-cyan" aria-hidden="true"></i>
+            }
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="glass flex flex-col gap-2 p-4">
+      <span class="eyebrow">Drag onto the page</span>
+      <div class="grid grid-cols-2 gap-2 lg:grid-cols-1">
+        @for (kind of kinds; track kind.type) {
+          <button
+            type="button"
+            class="btn btn--secondary justify-start !min-h-9"
+            draggable="true"
+            [class.btn--primary]="armed() === kind.type"
+            [attr.aria-pressed]="armed() === kind.type"
+            [style.border-color]="activeRecipient()?.color"
+            (dragstart)="onDragStart($event, kind.type)"
+            (click)="arm(kind.type)"
+          >
+            <i class="bi" [class]="kind.icon" aria-hidden="true"></i> {{ kind.label }}
+          </button>
+        }
+      </div>
+      <p class="m-0 text-body-sm text-ink-muted">
+        @if (armed(); as type) {
+          Click the page where the {{ kindOf(type).label.toLowerCase() }} field goes.
+        } @else {
+          Drag a field onto the page, or click it and then click the page.
+        }
+      </p>
+    </div>
+
+    <div class="glass flex flex-col gap-2 p-4" aria-live="polite">
+      <span class="eyebrow">Checklist</span>
+      <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
+        @for (c of coverage(); track c.recipient.key) {
+          <li class="flex items-center gap-2" [class.text-crimson]="!c.signs">
+            <i
+              class="bi"
+              [class]="c.signs ? 'bi-check-circle-fill text-cyan' : 'bi-exclamation-circle'"
+              aria-hidden="true"
+            ></i>
+            <span class="min-w-0 flex-1 truncate">{{ c.recipient.name || 'Recipient' }}</span>
+            <span class="mono text-ink-muted">{{ c.count }}</span>
+          </li>
+        }
+      </ul>
+      <p class="m-0 text-body-sm text-ink-muted">Everyone needs at least one signature field.</p>
+    </div>
+
+    @if (selected(); as field) {
+      <div class="glass flex flex-col gap-3 p-4" aria-label="Selected field">
+        <span class="eyebrow">Selected · {{ kindOf(field.type).label }}</span>
+        <div class="field">
+          <label for="placer-owner">Filled by</label>
+          <select
+            id="placer-owner"
+            class="field-control"
+            [value]="field.recipientKey"
+            (change)="assign(field.key, $any($event.target).value)"
+          >
+            @for (r of recipients(); track r.key; let i = $index) {
+              <option [value]="r.key">{{ i + 1 }}. {{ r.name || 'Recipient ' + (i + 1) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="placer-label">Label</label>
+          <input
+            id="placer-label"
+            class="field-control"
+            [value]="field.label"
+            [placeholder]="kindOf(field.type).label"
+            (input)="setLabel(field.key, $any($event.target).value)"
+          />
+        </div>
+        @if (field.type !== FieldType.SIGNATURE && field.type !== FieldType.INITIALS) {
+          <label class="check">
+            <input
+              type="checkbox"
+              [checked]="field.required"
+              (change)="setRequired(field.key, $any($event.target).checked)"
+            />
+            Required
+          </label>
+        }
+        <div class="flex flex-wrap gap-2">
+          @if (field.type === FieldType.INITIALS && pages().length > 1) {
+            <button type="button" class="btn btn--secondary" (click)="duplicateToAllPages(field)">
+              <i class="bi bi-files" aria-hidden="true"></i> Every page
+            </button>
+          }
+          <button type="button" class="btn btn--ghost text-crimson" (click)="remove(field.key)">
+            <i class="bi bi-trash3" aria-hidden="true"></i> Remove
+          </button>
+        </div>
+      </div>
+    }
+  </aside>
+
+  <!-- Pages -->
+  <div class="flex min-w-0 flex-col items-center gap-6">
+    @if (error()) {
+      <div class="alert alert--danger self-stretch" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ error() }}
+      </div>
+    }
+    @if (!loading() && !error() && !pages().length) {
+      <div class="alert alert--danger self-stretch" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        This document's pages haven't been processed, so fields can't be placed on it. Go back and
+        upload the PDF again.
+      </div>
+    }
+    @if (loading() && !pages().length) {
+      <p class="m-0 text-ink-muted" role="status">
+        <span class="spinner" aria-hidden="true"></span> Loading pages…
+      </p>
+    }
+    @for (page of pages(); track page.pageNumber) {
+      <figure class="m-0 flex w-full max-w-[820px] flex-col gap-2">
+        <div
+          class="placer-page"
+          [class.placer-page--armed]="!!armed()"
+          [style.aspect-ratio]="images()[page.pageNumber!] ? null : '612 / 792'"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event, page)"
+          (click)="onPageClick($event, page)"
+          role="group"
+          [attr.aria-label]="'Page ' + page.pageNumber"
+        >
+          @if (images()[page.pageNumber!]; as src) {
+            <img [src]="src" [alt]="'Page ' + page.pageNumber" />
+          } @else {
+            <div class="grid h-full place-items-center text-slate-400">
+              <span class="spinner" aria-hidden="true"></span>
+            </div>
+          }
+          @for (field of fieldsOn(page.pageNumber!); track field.key) {
+            <div
+              class="placed"
+              tabindex="0"
+              role="button"
+              [class.placed--selected]="selectedKey() === field.key"
+              [style.--field-colour]="colourOf(field.recipientKey)"
+              [style.left.%]="field.x * 100"
+              [style.top.%]="field.y * 100"
+              [style.width.%]="field.w * 100"
+              [style.height.%]="field.h * 100"
+              [attr.aria-label]="
+                kindOf(field.type).label + ' for ' + nameOf(field.recipientKey) + '. Arrow keys move it, Delete removes it.'
+              "
+              (click)="select(field, $event)"
+              (keydown)="onFieldKey($event, field)"
+              (pointerdown)="startGesture($event, field, 'move')"
+              (pointermove)="moveGesture($event)"
+              (pointerup)="endGesture($event)"
+              (pointercancel)="endGesture($event)"
+            >
+              @if (field.type !== FieldType.CHECKBOX) {
+                <i class="bi" [class]="kindOf(field.type).icon" aria-hidden="true"></i>
+                <span class="truncate">{{ field.label || kindOf(field.type).label }}</span>
+              }
+              <span
+                class="placed__handle"
+                aria-hidden="true"
+                (pointerdown)="startGesture($event, field, 'resize')"
+                (pointermove)="moveGesture($event)"
+                (pointerup)="endGesture($event)"
+                (pointercancel)="endGesture($event)"
+              ></span>
+            </div>
+          }
+        </div>
+        <figcaption class="text-center mono text-ink-muted">
+          Page {{ page.pageNumber }} of {{ pages().length }}
+        </figcaption>
+      </figure>
+    }
+  </div>
+</div>

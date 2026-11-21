@@ -1,0 +1,217 @@
+<div class="page">
+  @if (loadError()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-octagon" aria-hidden="true"></i> {{ loadError() }}
+    </div>
+  }
+
+  @if (tpl(); as t) {
+    <header class="page-header">
+      <div>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a routerLink="/templates">Signing templates</a
+          ><i class="bi bi-chevron-right" aria-hidden="true"></i
+          ><span class="breadcrumb__current">{{ t.name }}</span>
+        </nav>
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="page-title">{{ t.name }}</h1>
+          <span class="chip" [class]="templateTone(t.status)">{{ t.status }}</span>
+          <span class="mono text-ink-muted">v{{ t.templateVersion ?? 1 }}</span>
+        </div>
+        @if (t.description) {
+          <p class="page-subtitle max-w-3xl">{{ t.description }}</p>
+        }
+      </div>
+      <div class="page-actions">
+        @if (t.status !== TemplateStatus.ARCHIVED) {
+          <a *appCan="'templates:edit'" class="btn btn--secondary" routerLink="edit"
+            ><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a
+          >
+        }
+        @if (t.status === TemplateStatus.ACTIVE) {
+          <a *appCan="'templates:initiate'" class="btn btn--primary" routerLink="use"
+            ><i class="bi bi-send-plus" aria-hidden="true"></i> Use template</a
+          >
+        }
+      </div>
+    </header>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div class="flex min-w-0 flex-col gap-6">
+        <section class="card flex flex-col gap-4" aria-labelledby="tpl-roles-title">
+          <h2 class="card__title" id="tpl-roles-title">
+            <i class="bi bi-people" aria-hidden="true"></i> Signatory roles
+          </h2>
+          @for (stage of stages(); track stage.stageNumber) {
+            <div class="flex flex-col gap-2">
+              <span class="eyebrow">Stage {{ stage.stageNumber }}</span>
+              <ul class="m-0 flex list-none flex-col gap-2 p-0">
+                @for (role of stage.roles; track role.id) {
+                  <li
+                    class="flex flex-wrap items-center gap-3 rounded-[var(--radius-panel)] border border-hairline p-3"
+                  >
+                    <span
+                      class="h-3 w-3 shrink-0 rounded-full"
+                      [style.background]="role.colour || 'currentColor'"
+                      aria-hidden="true"
+                    ></span>
+                    <span class="font-medium">{{ role.roleName }}</span>
+                    <span class="chip chip--neutral">{{ signatoryTypeLabel(role.signatoryType) }}</span>
+                    @if (role.mandatory === false) {
+                      <span class="chip chip--neutral">Optional</span>
+                    }
+                    @if (role.canDecline) {
+                      <span class="chip chip--neutral">May decline</span>
+                    }
+                    <span class="ml-auto text-body-sm text-ink-muted">
+                      {{ verificationLabel(role.verificationMethod) }} · {{ fieldCount(role) }} field(s)
+                      @if (t.executionMode === 'SEQUENTIAL') {
+                        · order {{ role.signingOrder ?? 1 }}
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </div>
+          } @empty {
+            <p class="m-0 text-ink-muted">No roles yet.</p>
+          }
+        </section>
+
+        <section class="table-panel" aria-labelledby="tpl-fields-title">
+          <h2 id="tpl-fields-title" class="m-0 px-5 pt-4 text-headline-sm">Fields</h2>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Field</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Page</th>
+                  <th scope="col">Position (x, y · w × h)</th>
+                  <th scope="col">Required</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (field of t.fields ?? []; track field.id) {
+                  <tr>
+                    <td>
+                      <span class="cell-title">{{ field.label || fieldTypeLabel(field.fieldType) }}</span>
+                      @if (field.label) {
+                        <div class="cell-note">{{ fieldTypeLabel(field.fieldType) }}</div>
+                      }
+                    </td>
+                    <td>{{ roleName(field.signatoryRoleId) }}</td>
+                    <td class="mono">{{ field.pageNumber }}</td>
+                    <td class="mono text-ink-muted">
+                      {{ (field.xRatio ?? 0) * 100 | number: '1.0-1' }}%,
+                      {{ (field.yRatio ?? 0) * 100 | number: '1.0-1' }}% ·
+                      {{ (field.widthRatio ?? 0) * 100 | number: '1.0-1' }}% ×
+                      {{ (field.heightRatio ?? 0) * 100 | number: '1.0-1' }}%
+                    </td>
+                    <td>{{ field.required ? 'Yes' : 'No' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="text-center text-ink-muted">No fields placed.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6">
+        <section class="card">
+          <h2 class="card__title mb-4">
+            <i class="bi bi-sliders" aria-hidden="true"></i> Settings
+          </h2>
+          <dl class="m-0 flex flex-col gap-3">
+            <div>
+              <dt class="eyebrow">Signing order</dt>
+              <dd class="m-0 mono">{{ t.executionMode || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Workflows expire after</dt>
+              <dd class="m-0">{{ t.defaultExpiryDays ?? '—' }} day(s)</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Assurance level</dt>
+              <dd class="m-0">{{ assuranceLabel(t.assuranceLevel) }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Default verification</dt>
+              <dd class="m-0">{{ verificationLabel(t.verificationMethod) }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Pages</dt>
+              <dd class="m-0">
+                {{ t.pageCount ?? '—' }}
+                @if (highestPage()) {
+                  <span class="text-ink-muted">· documents need at least {{ highestPage() }}</span>
+                }
+              </dd>
+            </div>
+            @if (t.baseDocumentId) {
+              <div>
+                <dt class="eyebrow">Base document</dt>
+                <dd class="m-0">
+                  <a class="text-cyan" [routerLink]="['/documents', t.baseDocumentId]">Open document</a>
+                </dd>
+              </div>
+            }
+            @if (t.message) {
+              <div>
+                <dt class="eyebrow">Message to signatories</dt>
+                <dd class="m-0 whitespace-pre-line">{{ t.message }}</dd>
+              </div>
+            }
+            <div>
+              <dt class="eyebrow">Last changed</dt>
+              <dd class="m-0 mono">{{ t.modifiedAt || t.createdAt | date: 'yyyy-MM-dd HH:mm' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section *appCan="'templates:edit'" class="card flex flex-col gap-2">
+          <h2 class="card__title mb-2">
+            <i class="bi bi-toggles" aria-hidden="true"></i> Lifecycle
+          </h2>
+          @if (t.status !== TemplateStatus.ACTIVE && t.status !== TemplateStatus.ARCHIVED) {
+            <button
+              type="button"
+              class="btn btn--primary btn--block"
+              (click)="activate()"
+              [disabled]="!!busy() || issues().length > 0"
+            >
+              <i class="bi bi-check2-circle" aria-hidden="true"></i>
+              {{ busy() === 'activate' ? 'Activating…' : 'Activate' }}
+            </button>
+            @if (issues().length) {
+              <ul class="m-0 pl-4 text-body-sm text-ink-muted" aria-label="Before it can be activated">
+                @for (issue of issues(); track $index) {
+                  <li>{{ issue }}</li>
+                }
+              </ul>
+            }
+          }
+          @if (t.status !== TemplateStatus.ARCHIVED) {
+            <button
+              type="button"
+              class="btn btn--secondary btn--block"
+              (click)="archive()"
+              [disabled]="!!busy()"
+            >
+              <i class="bi bi-archive" aria-hidden="true"></i>
+              {{ busy() === 'archive' ? 'Archiving…' : 'Archive' }}
+            </button>
+          } @else {
+            <p class="m-0 text-body-sm text-ink-muted">
+              Archived templates cannot be used or changed.
+            </p>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+</div>

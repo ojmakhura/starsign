@@ -1,0 +1,263 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/users">Users</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">{{ user() ? fullName() : 'User' }}</span>
+      </nav>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="page-title">{{ user() ? fullName() : loading() ? 'Loading…' : 'User' }}</h1>
+        @if (user(); as u) {
+          <app-status-chip [status]="u.status" />
+          @if (isSelf()) {
+            <span class="chip chip--progress">You</span>
+          }
+        }
+      </div>
+      @if (user(); as u) {
+        <p class="page-subtitle">
+          <span class="mono">{{ u.emailAddress }}</span>
+          @if (u.jobTitle) {
+            · {{ u.jobTitle }}
+          }
+        </p>
+      }
+    </div>
+    @if (user() && !isSelf()) {
+      <div class="page-actions">
+        <button
+          *appCan="'users:delete'"
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="busy() !== null"
+          (click)="remove()"
+        >
+          <i class="bi bi-person-x" aria-hidden="true"></i> Remove user
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (user(); as u) {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <section class="card flex flex-col gap-4" aria-labelledby="profile-title">
+          <h2 id="profile-title" class="m-0 text-headline-sm">Profile</h2>
+          <app-user-profile-form [user]="u" [editable]="canEdit()" (saved)="onProfileSaved($event)" />
+        </section>
+
+        <fieldset class="card flex flex-col gap-3" [disabled]="!canManage() || busy() === 'roles'">
+          <legend class="eyebrow">Roles</legend>
+          @if (rolesError()) {
+            <div class="alert alert--danger" role="alert">{{ rolesError() }}</div>
+          }
+          @if (canManage() && roles().length) {
+            @for (role of roles(); track role.code) {
+              <label class="flex items-start gap-3 rounded-md p-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="mt-1"
+                  [checked]="isChosen(role.code!)"
+                  (change)="toggleRole(role.code!, $any($event.target).checked)"
+                />
+                <span class="flex flex-col">
+                  <span class="font-medium text-ink">
+                    {{ role.name || role.code }}
+                    @if (!role.builtIn) {
+                      <span class="chip chip--progress ml-1">Custom</span>
+                    }
+                  </span>
+                  @if (role.description) {
+                    <span class="text-body-sm text-ink-muted">{{ role.description }}</span>
+                  }
+                </span>
+              </label>
+            }
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn btn--ghost" [disabled]="!rolesDirty()" (click)="resetRoles()">
+                Undo changes
+              </button>
+              <button type="button" class="btn btn--primary" [disabled]="!rolesDirty()" (click)="saveRoles()">
+                @if (busy() === 'roles') {
+                  <span class="spinner" aria-hidden="true"></span> Saving…
+                } @else {
+                  <i class="bi bi-check2" aria-hidden="true"></i> Save roles
+                }
+              </button>
+            </div>
+          } @else {
+            <div class="flex flex-wrap gap-2">
+              @for (code of u.roles ?? []; track code) {
+                <span class="chip chip--neutral">{{ roleNames().get(code) || code }}</span>
+              } @empty {
+                <span class="text-ink-muted">No roles.</span>
+              }
+            </div>
+          }
+        </fieldset>
+
+        @if (permissionGroups().length) {
+          <section class="table-panel" aria-labelledby="eff-title">
+            <h2 id="eff-title" class="m-0 px-5 pt-4 text-headline-sm">
+              Effective permissions <span class="text-ink-muted mono">({{ permissions().length }})</span>
+            </h2>
+            <p class="m-0 px-5 pt-1 text-ink-muted">Granted by the user's roles.</p>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Resource</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (group of permissionGroups(); track group.resource) {
+                    <tr>
+                      <th scope="row" class="text-left"><span class="cell-title">{{ group.label }}</span></th>
+                      <td>
+                        <div class="flex flex-wrap gap-1">
+                          @for (action of group.actions; track action) {
+                            <span class="chip chip--neutral mono">{{ action }}</span>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+
+        @if (canManage()) {
+          <section class="table-panel" aria-labelledby="sessions-title">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
+              <h2 id="sessions-title" class="m-0 text-headline-sm">Active sessions</h2>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="btn btn--ghost btn--icon"
+                  (click)="loadSessions()"
+                  aria-label="Refresh sessions"
+                >
+                  <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--secondary"
+                  [disabled]="!sessions().length || busy() !== null"
+                  (click)="terminateSessions()"
+                >
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out everywhere
+                </button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">IP address</th>
+                    <th scope="col">Started</th>
+                    <th scope="col">Last access</th>
+                    <th scope="col">Clients</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of sessions(); track s.sessionId) {
+                    <tr>
+                      <td class="mono">{{ s.ipAddress || '—' }}</td>
+                      <td class="mono text-ink-muted">{{ (s.started | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+                      <td class="mono text-ink-muted">{{ (s.lastAccess | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+                      <td>{{ (s.clients ?? []).join(', ') || '—' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="text-center text-ink-muted">No active sessions.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      </div>
+
+      <aside class="flex flex-col gap-6">
+        <section class="card flex flex-col gap-3">
+          <span class="eyebrow">Account</span>
+          <dl class="m-0 flex flex-col gap-3">
+            <div>
+              <dt class="eyebrow">Username</dt>
+              <dd class="m-0 mono">{{ u.username || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Email verified</dt>
+              <dd class="m-0">{{ u.emailVerified ? 'Yes' : 'No' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Two-factor authentication</dt>
+              <dd class="m-0">{{ u.mfaEnabled ? 'Required' : 'Not required' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Last sign-in</dt>
+              <dd class="m-0 mono">{{ (u.lastLoginAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Member since</dt>
+              <dd class="m-0 mono">{{ (u.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        @if (canManage()) {
+          <section class="card flex flex-col gap-3" aria-labelledby="actions-title">
+            <h2 id="actions-title" class="eyebrow m-0">Account actions</h2>
+            @if (u.status !== UserStatus.ACTIVE) {
+              <button
+                type="button"
+                class="btn btn--primary btn--block"
+                [disabled]="busy() !== null"
+                (click)="activate()"
+              >
+                <i class="bi bi-person-check" aria-hidden="true"></i> Activate
+              </button>
+            }
+            @if (u.status === UserStatus.LOCKED) {
+              <button type="button" class="btn btn--secondary btn--block" [disabled]="busy() !== null" (click)="unlock()">
+                <i class="bi bi-unlock" aria-hidden="true"></i> Unlock
+              </button>
+            }
+            @if (u.status !== UserStatus.DEACTIVATED) {
+              <button
+                type="button"
+                class="btn btn--secondary btn--block"
+                [disabled]="busy() !== null"
+                (click)="requestPasswordReset()"
+              >
+                <i class="bi bi-key" aria-hidden="true"></i> Send password reset
+              </button>
+            }
+            @if (!u.mfaEnabled) {
+              <button type="button" class="btn btn--secondary btn--block" [disabled]="busy() !== null" (click)="requireMfa()">
+                <i class="bi bi-shield-lock" aria-hidden="true"></i> Require two-factor
+              </button>
+            }
+            @if (u.status !== UserStatus.DEACTIVATED) {
+              @if (isSelf()) {
+                <p class="m-0 text-body-sm text-ink-muted">You cannot deactivate your own account.</p>
+              } @else {
+                <button type="button" class="btn btn--ghost btn--block" [disabled]="busy() !== null" (click)="deactivate()">
+                  <i class="bi bi-person-slash" aria-hidden="true"></i> Deactivate
+                </button>
+              }
+            }
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</div>

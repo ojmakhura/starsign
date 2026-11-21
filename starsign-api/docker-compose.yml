@@ -1,0 +1,97 @@
+# Local StarSign stack: Postgres, Redis, webservice, portal.
+# Keycloak (stock image, realm imported on first start) runs with:  make up-all
+# Settings come from .env (copy .env.example).
+
+name: starsign
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-starsign}
+      POSTGRES_USER: ${DB_USERNAME:-starsign}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-starsign}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # S3-compatible object storage for documents and artifacts (SeaweedFS all-in-one with the S3 gateway)
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    command: server -s3 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+    volumes:
+      - seaweedfs-data:/data
+      - ./docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+    ports:
+      - "${S3_PORT:-8333}:8333"
+
+  webservice:
+    build: .
+    image: ${API_IMAGE_NAME:-ojmakhura/starsign-api}:${TAG:-latest}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-starsign}
+      DB_USERNAME: ${DB_USERNAME:-starsign}
+      DB_PASSWORD: ${DB_PASSWORD:-starsign}
+      REDIS_HOST: redis
+      S3_ENDPOINT: http://seaweedfs:8333
+      # Must match the issuer in the tokens the browser gets, so use an address both the
+      # browser and this container can reach (host.docker.internal works on Docker Desktop
+      # and, with extra_hosts below, on Linux)
+      AUTH_URL: ${AUTH_URL:-http://host.docker.internal:8080}
+      REALM: ${REALM:-starsign}
+      API_CLIENT_ID: ${API_CLIENT_ID:-starsign-api}
+      STARSIGN_API_CLIENT_SECRET: ${STARSIGN_API_CLIENT_SECRET:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4700}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${API_PORT:-8085}:8085"
+
+  portal:
+    build: ../starsign-portal
+    image: ${PORTAL_IMAGE_NAME:-ojmakhura/starsign-portal}:${TAG:-latest}
+    depends_on:
+      - webservice
+    environment:
+      API_UPSTREAM: http://webservice:8085
+      STARSIGN_API_URL: /api
+      STARSIGN_PORTAL_URL: ${STARSIGN_PORTAL_URL:-http://localhost:4700}
+      KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      KEYCLOAK_REALM: ${REALM:-starsign}
+      KEYCLOAK_CLIENT_ID: ${PORTAL_CLIENT_ID:-starsign-portal}
+    ports:
+      - "${PORTAL_PORT:-4700}:80"
+
+  keycloak:
+    profiles: ["keycloak"]
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      STARSIGN_API_CLIENT_SECRET: ${STARSIGN_API_CLIENT_SECRET:-}
+      STARSIGN_BOOTSTRAP_ADMIN_PASSWORD: ${STARSIGN_BOOTSTRAP_ADMIN_PASSWORD:-}
+      STARSIGN_PORTAL_URL: ${STARSIGN_PORTAL_URL:-http://localhost:4700}
+    volumes:
+      - ./starsign-realm.json:/opt/keycloak/data/import/starsign-realm.json:ro
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+
+volumes:
+  postgres-data:
+  seaweedfs-data:

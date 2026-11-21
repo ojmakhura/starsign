@@ -1,0 +1,81 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Roles</span>
+      </nav>
+      <h1 class="page-title">Roles</h1>
+      <p class="page-subtitle">
+        {{ roles().length }} {{ roles().length === 1 ? 'role' : 'roles' }} · {{ customCount() }} custom
+      </p>
+    </div>
+    <a *appCan="'roles:edit'" class="btn btn--primary" routerLink="new"
+      ><i class="bi bi-plus-lg" aria-hidden="true"></i> New role</a
+    >
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Roles">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Role</th>
+            <th scope="col">Code</th>
+            <th scope="col">Type</th>
+            <th scope="col">Permissions</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (role of roles(); track role.id) {
+            <tr>
+              <td>
+                <a class="cell-title" [routerLink]="[role.id]">{{ role.name || role.code }}</a>
+                @if (role.description) {
+                  <div class="text-ink-muted">{{ role.description }}</div>
+                }
+              </td>
+              <td class="mono text-ink-muted">{{ role.code }}</td>
+              <td>
+                @if (role.builtIn) {
+                  <span class="chip chip--neutral"><i class="bi bi-lock" aria-hidden="true"></i> Built-in</span>
+                } @else {
+                  <span class="chip chip--progress">Custom</span>
+                }
+              </td>
+              <td class="mono">{{ role.permissions?.length ?? 0 }}</td>
+              <td>
+                <div class="flex justify-end gap-2">
+                  <a class="btn btn--secondary" [routerLink]="[role.id]">View</a>
+                  @if (!role.builtIn) {
+                    <button
+                      *appCan="'roles:delete'"
+                      type="button"
+                      class="btn btn--ghost btn--icon"
+                      [disabled]="busyId() === role.id"
+                      (click)="remove(role)"
+                      [attr.aria-label]="'Delete role ' + (role.name || role.code)"
+                    >
+                      <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="text-center text-ink-muted">
+                {{ loading() ? 'Loading roles…' : 'No roles.' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

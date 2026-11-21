@@ -1,0 +1,233 @@
+@if (loadError()) {
+  <div class="alert alert--danger" role="alert">
+    {{ loadError() }}
+    <button type="button" class="btn btn--ghost" (click)="load()">Retry</button>
+  </div>
+}
+
+@if (loading()) {
+  <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading the signing policy…</p>
+} @else if (policy()) {
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="policyForm"
+    aria-label="Signing policy"
+  >
+    <div class="flex flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="sp-workflow-title">
+        <div>
+          <h2 id="sp-workflow-title" class="eyebrow m-0">Workflow defaults</h2>
+          <p class="m-0 mt-1 text-body-sm text-ink-muted">Applied to new signing workflows; senders may change them per workflow.</p>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="sp-mode">Routing</label>
+            <select id="sp-mode" class="field-control" [formField]="policyForm.defaultExecutionMode" aria-describedby="sp-mode-hint">
+              @for (mode of executionModes; track mode.value) {
+                <option [value]="mode.value">{{ mode.label }}</option>
+              }
+            </select>
+            <span id="sp-mode-hint" class="field__hint">
+              @for (mode of executionModes; track mode.value) {
+                @if (mode.value === model().defaultExecutionMode) {
+                  {{ mode.hint }}
+                }
+              }
+            </span>
+          </div>
+          <div class="field">
+            <label for="sp-expiry">Workflow expiry (days)</label>
+            <input id="sp-expiry" class="field-control" type="number" [formField]="policyForm.defaultExpiryDays" aria-describedby="sp-expiry-hint" />
+            <span id="sp-expiry-hint" class="field__hint">1 to 365 days.</span>
+            <app-field-errors [field]="policyForm.defaultExpiryDays" />
+          </div>
+          <div class="field">
+            <label for="sp-validity">Invitation link validity (hours)</label>
+            <input id="sp-validity" class="field-control" type="number" [formField]="policyForm.invitationValidityHours" aria-describedby="sp-validity-hint" />
+            <span id="sp-validity-hint" class="field__hint">
+              1 to {{ maxInvitationHours() }} hours{{ platformLimitsKnown() ? ' (platform limit)' : '' }}.
+            </span>
+            <app-field-errors [field]="policyForm.invitationValidityHours" />
+          </div>
+          <div class="field justify-end">
+            <label class="check">
+              <input type="checkbox" [formField]="policyForm.singleUseInvitationLinks" />
+              <span>Single-use invitation links<br /><span class="text-body-sm text-ink-muted">A link stops working once it has been used.</span></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="sp-verify-title">
+        <h2 id="sp-verify-title" class="eyebrow m-0">Verification &amp; assurance</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="sp-verify">Default verification of signatories</label>
+            <select id="sp-verify" class="field-control" [formField]="policyForm.defaultVerificationMethod">
+              @for (method of verificationMethods; track method.value) {
+                <option [value]="method.value">{{ method.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="sp-assurance">Minimum assurance level</label>
+            <select id="sp-assurance" class="field-control" [formField]="policyForm.minimumAssuranceLevel" aria-describedby="sp-assurance-hint">
+              @for (level of assuranceLevels; track level.value) {
+                <option [value]="level.value" [disabled]="assuranceBelowPlatform(level.value)">{{ level.label }}</option>
+              }
+            </select>
+            <span id="sp-assurance-hint" class="field__hint">
+              @for (level of assuranceLevels; track level.value) {
+                @if (level.value === model().minimumAssuranceLevel) {
+                  {{ level.hint }}
+                }
+              }
+              @if (platformMinimumAssurance()) {
+                The platform requires at least {{ assuranceLabel(platformMinimumAssurance()) }}.
+              }
+            </span>
+            <app-field-errors [field]="policyForm.minimumAssuranceLevel" />
+          </div>
+        </div>
+      </section>
+
+      <fieldset class="card flex flex-col gap-4">
+        <legend class="eyebrow">Signature methods</legend>
+        <p class="m-0 text-body-sm text-ink-muted">How signatories may make their signature. Allow at least one.</p>
+        <div class="grid gap-3 md:grid-cols-3">
+          <label class="check">
+            <input type="checkbox" [formField]="policyForm.allowDrawnSignature" />
+            <span>Drawn</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formField]="policyForm.allowTypedSignature" />
+            <span>Typed</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formField]="policyForm.allowUploadedSignatureImage" />
+            <span>Uploaded image</span>
+          </label>
+        </div>
+        <app-field-errors [field]="policyForm.allowDrawnSignature" />
+
+        <div class="flex flex-col gap-3 border-t border-hairline pt-4">
+          <label class="check">
+            <input type="checkbox" [formField]="policyForm.digitalSignatureEnabled" />
+            <span>
+              Seal signed PDFs with a digital (PAdES) signature
+              <br /><span class="text-body-sm text-ink-muted">Turning this on needs a subscription that includes digital signatures.</span>
+            </span>
+          </label>
+          @if (model().digitalSignatureEnabled) {
+            <div class="field md:max-w-md">
+              <label for="sp-alias">Certificate alias</label>
+              <input id="sp-alias" class="field-control mono" [formField]="policyForm.certificateAlias" placeholder="Platform certificate" aria-describedby="sp-alias-hint" />
+              <span id="sp-alias-hint" class="field__hint">Leave empty to use the platform certificate.</span>
+              <app-field-errors [field]="policyForm.certificateAlias" />
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="card flex flex-col gap-3">
+        <legend class="eyebrow">Declining &amp; completion</legend>
+        <label class="check">
+          <input type="checkbox" [formField]="policyForm.allowSignatoryDecline" />
+          <span>Signatories may decline to sign</span>
+        </label>
+        @if (model().allowSignatoryDecline) {
+          <div class="ml-7 flex flex-col gap-3">
+            <label class="check">
+              <input type="checkbox" [formField]="policyForm.requireDeclineReason" />
+              <span>They must give a reason</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" [formField]="policyForm.declineTerminatesWorkflow" />
+              <span>A decline ends the whole workflow</span>
+            </label>
+          </div>
+        }
+        <label class="check">
+          <input type="checkbox" [formField]="policyForm.sendCompletedCopyToSignatories" />
+          <span>Email every signatory a copy of the completed document</span>
+        </label>
+      </fieldset>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="sp-docs-title">
+        <h2 id="sp-docs-title" class="eyebrow m-0">Documents &amp; retention</h2>
+        <div class="grid gap-5 md:grid-cols-3">
+          <div class="field">
+            <label for="sp-upload">Largest upload (MB)</label>
+            <input id="sp-upload" class="field-control" type="number" [formField]="policyForm.maxUploadSizeMb" aria-describedby="sp-upload-hint" />
+            <span id="sp-upload-hint" class="field__hint">1 to {{ maxUploadMb() }} MB.</span>
+            <app-field-errors [field]="policyForm.maxUploadSizeMb" />
+          </div>
+          <div class="field">
+            <label for="sp-docret">Keep documents (days)</label>
+            <input id="sp-docret" class="field-control" type="number" [formField]="policyForm.documentRetentionDays" aria-describedby="sp-docret-hint" />
+            <span id="sp-docret-hint" class="field__hint">≈ {{ (model().documentRetentionDays / 365).toFixed(1) }} years.</span>
+            <app-field-errors [field]="policyForm.documentRetentionDays" />
+          </div>
+          <div class="field">
+            <label for="sp-auditret">Keep the audit trail (days)</label>
+            <input id="sp-auditret" class="field-control" type="number" [formField]="policyForm.auditRetentionDays" aria-describedby="sp-auditret-hint" />
+            <span id="sp-auditret-hint" class="field__hint">At least as long as the documents.</span>
+            <app-field-errors [field]="policyForm.auditRetentionDays" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="sp-consent">Electronic signature consent</label>
+          <textarea id="sp-consent" class="field-control" rows="4" [formField]="policyForm.consentText" aria-describedby="sp-consent-hint"></textarea>
+          <span id="sp-consent-hint" class="field__hint">Shown to signatories before they sign. Leave empty to use the StarSign wording.</span>
+          <app-field-errors [field]="policyForm.consentText" />
+        </div>
+      </section>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <div class="glass flex flex-col gap-3 p-5">
+        <span class="eyebrow">Rules</span>
+        <ul class="m-0 flex flex-col gap-2 pl-5 text-body-sm">
+          <li>Workflows expire after 1 to 365 days.</li>
+          <li>Invitation links last 1 to {{ maxInvitationHours() }} hours.</li>
+          <li>Uploads may be limited to 1 to {{ maxUploadMb() }} MB.</li>
+          <li>The audit trail is kept at least as long as the documents.</li>
+          <li>At least one signature method stays allowed.</li>
+          @if (!platformLimitsKnown()) {
+            <li class="text-ink-muted">The platform may set lower limits; they are checked when you save.</li>
+          }
+        </ul>
+        @if (policy()?.id) {
+          <p class="m-0 text-body-sm text-ink-muted">Changes apply to new workflows; running workflows keep their settings.</p>
+        }
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      @if (canEdit()) {
+        <button
+          type="submit"
+          class="btn btn--primary btn--block min-h-11"
+          [disabled]="policyForm().submitting() || !policyForm().dirty()"
+        >
+          @if (policyForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check2" aria-hidden="true"></i> Save policy
+          }
+        </button>
+        <button type="button" class="btn btn--secondary btn--block" [disabled]="policyForm().submitting()" (click)="load()">
+          Discard changes
+        </button>
+      } @else {
+        <p class="m-0 text-body-sm text-ink-muted">
+          <i class="bi bi-lock" aria-hidden="true"></i> Read-only: changing the policy needs the organisations:configure permission.
+        </p>
+      }
+    </aside>
+  </form>
+}

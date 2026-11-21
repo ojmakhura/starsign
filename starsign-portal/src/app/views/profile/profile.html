@@ -1,0 +1,157 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">My profile</span>
+      </nav>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="page-title">{{ displayName() }}</h1>
+        @if (user()?.status) {
+          <app-status-chip [status]="user()?.status" />
+        }
+        @if (me()?.platformAdministrator) {
+          <span class="chip chip--progress">Platform administrator</span>
+        }
+      </div>
+      <p class="page-subtitle">
+        <span class="mono">{{ user()?.emailAddress }}</span>
+        @if (user()?.jobTitle) {
+          · {{ user()?.jobTitle }}
+        }
+      </p>
+    </div>
+    @if (accountUrl(); as url) {
+      <div class="page-actions">
+        <a class="btn btn--secondary" [href]="url" target="_blank" rel="noopener"
+          ><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Account &amp; security</a
+        >
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (user(); as u) {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <section class="card flex flex-col gap-4" aria-labelledby="my-profile-title">
+          <h2 id="my-profile-title" class="m-0 text-headline-sm">Profile</h2>
+          @if (!canEdit()) {
+            <p class="m-0 text-ink-muted">
+              Your name, password and two-factor settings are managed on your
+              @if (accountUrl(); as url) {
+                <a [href]="url" target="_blank" rel="noopener">account page</a>.
+              } @else {
+                account page.
+              }
+              Ask an administrator to change your job title, phone number or locale.
+            </p>
+          }
+          <app-user-profile-form [user]="u" [editable]="canEdit()" (saved)="onSaved($event)" />
+        </section>
+
+        <section class="table-panel" aria-labelledby="my-perm-title">
+          <h2 id="my-perm-title" class="m-0 px-5 pt-4 text-headline-sm">
+            My permissions <span class="text-ink-muted mono">({{ permissions().length }})</span>
+          </h2>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Resource</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (group of permissionGroups(); track group.resource) {
+                  <tr>
+                    <th scope="row" class="text-left"><span class="cell-title">{{ group.label }}</span></th>
+                    <td>
+                      <div class="flex flex-wrap gap-1">
+                        @for (action of group.actions; track action) {
+                          <span class="chip chip--neutral mono">{{ action }}</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="2" class="text-center text-ink-muted">
+                      {{ loading() ? 'Loading permissions…' : 'No permissions.' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6">
+        <section class="card flex flex-col gap-3" aria-labelledby="my-org-title">
+          <h2 id="my-org-title" class="eyebrow m-0">Organisation</h2>
+          @if (me()?.organisation; as org) {
+            <dl class="m-0 flex flex-col gap-3">
+              <div>
+                <dt class="eyebrow">Name</dt>
+                <dd class="m-0 text-ink">{{ org.name || '—' }}</dd>
+              </div>
+              @if (org.registrationNumber) {
+                <div>
+                  <dt class="eyebrow">Registration number</dt>
+                  <dd class="m-0 mono">{{ org.registrationNumber }}</dd>
+                </div>
+              }
+              @if (org.status) {
+                <div>
+                  <dt class="eyebrow">Status</dt>
+                  <dd class="m-0"><app-status-chip [status]="org.status" /></dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <p class="m-0 text-ink-muted">Your account is not linked to an organisation.</p>
+          }
+        </section>
+
+        <section class="card flex flex-col gap-3" aria-labelledby="my-roles-title">
+          <h2 id="my-roles-title" class="eyebrow m-0">Roles</h2>
+          <div class="flex flex-wrap gap-2">
+            @for (role of u.roles ?? []; track role) {
+              <span class="chip chip--neutral">{{ role }}</span>
+            } @empty {
+              <span class="text-ink-muted">No roles.</span>
+            }
+          </div>
+        </section>
+
+        <section class="card flex flex-col gap-3" aria-labelledby="my-account-title">
+          <h2 id="my-account-title" class="eyebrow m-0">Account</h2>
+          <dl class="m-0 flex flex-col gap-3">
+            <div>
+              <dt class="eyebrow">Username</dt>
+              <dd class="m-0 mono">{{ u.username || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Email verified</dt>
+              <dd class="m-0">{{ u.emailVerified ? 'Yes' : 'No' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Two-factor authentication</dt>
+              <dd class="m-0">{{ u.mfaEnabled ? 'Required' : 'Not required' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Last sign-in</dt>
+              <dd class="m-0 mono">{{ (u.lastLoginAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
+    </div>
+  } @else if (loading()) {
+    <p class="text-ink-muted">Loading your account…</p>
+  }
+</div>

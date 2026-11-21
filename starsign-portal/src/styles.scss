@@ -1,0 +1,7 @@
+// Component layer (SCSS) over the Tailwind design tokens in styles/tailwind.css.
+// Utilities from Tailwind win over these classes (layer order: base < components < utilities).
+@use 'buttons';
+@use 'forms';
+@use 'surfaces';
+@use 'data';
+@use 'chips';

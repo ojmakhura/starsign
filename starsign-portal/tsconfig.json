@@ -1,0 +1,63 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2023",
+    "module": "preserve",
+    "paths": {
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@models/*": [
+        "./src/app/models/*"
+      ],
+      "@services/*": [
+        "./src/app/services/*"
+      ],
+      "@store/*": [
+        "./src/app/store/*"
+      ],
+      "@views/*": [
+        "./src/app/views/*"
+      ],
+      "@core/*": [
+        "./src/app/@core/*"
+      ],
+      "@shared/*": [
+        "./src/app/@shared/*"
+      ],
+      "@auth/*": [
+        "./src/app/auth/*"
+      ],
+      "@env/*": [
+        "./src/environments/*"
+      ]
+    },
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

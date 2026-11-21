@@ -1,0 +1,172 @@
+<div class="page max-w-5xl">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/documents">Document vault</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Upload</span>
+      </nav>
+      <h1 class="page-title">Upload a PDF</h1>
+      <p class="page-subtitle">
+        The original is hashed (SHA-256) on arrival and every later version is chained to it.
+      </p>
+    </div>
+  </header>
+
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="uploadForm"
+    aria-label="Upload document"
+  >
+    <div class="card flex flex-col gap-5">
+      <div>
+        <app-file-drop
+          [formField]="uploadForm.file"
+          [hint]="'PDF · up to ' + maxUploadMb + ' MB'"
+        />
+        <app-field-errors [field]="uploadForm.file" />
+      </div>
+
+      <div class="field">
+        <div class="flex items-center justify-between">
+          <label for="up-title">Title *</label>
+          @if (suggestedTitle() && suggestedTitle() !== model().title) {
+            <button
+              type="button"
+              class="btn btn--ghost !min-h-0 !px-2 !py-0.5 text-body-sm"
+              (click)="useSuggestedTitle()"
+            >
+              Use “{{ suggestedTitle() }}”
+            </button>
+          }
+        </div>
+        <input
+          id="up-title"
+          class="field-control"
+          [formField]="uploadForm.title"
+          placeholder="e.g. Master Services Agreement"
+        />
+        <app-field-errors [field]="uploadForm.title" />
+      </div>
+
+      <div class="grid gap-5 md:grid-cols-2">
+        <div class="field">
+          <label for="up-ref">Reference number</label>
+          <input
+            id="up-ref"
+            class="field-control font-mono"
+            [formField]="uploadForm.referenceNumber"
+            placeholder="Generated if blank"
+          />
+          <app-field-errors [field]="uploadForm.referenceNumber" />
+        </div>
+        <div class="field">
+          <label for="up-retention">Retain until</label>
+          <input
+            id="up-retention"
+            class="field-control"
+            type="date"
+            [min]="today"
+            [formField]="uploadForm.retentionUntil"
+          />
+          <app-field-errors [field]="uploadForm.retentionUntil" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="up-desc">Description</label>
+        <textarea
+          id="up-desc"
+          class="field-control"
+          [formField]="uploadForm.description"
+          placeholder="What is this document and who needs to sign it?"
+        ></textarea>
+        <span class="field__hint text-right">{{ model().description.length }}/2000</span>
+        <app-field-errors [field]="uploadForm.description" />
+      </div>
+
+      <div class="field">
+        <label for="up-tags">Tags</label>
+        <div class="flex gap-2">
+          <input
+            id="up-tags"
+            class="field-control"
+            [formField]="uploadForm.tagInput"
+            placeholder="Type a tag and press Enter"
+            (keydown.enter)="addTag($event)"
+          />
+          <button
+            type="button"
+            class="btn btn--secondary"
+            (click)="addTag()"
+            [disabled]="!model().tagInput.trim()"
+          >
+            Add
+          </button>
+        </div>
+        @if (model().tags.length) {
+          <div class="flex flex-wrap gap-2">
+            @for (tag of model().tags; track tag) {
+              <button
+                type="button"
+                class="chip chip--progress cursor-pointer"
+                (click)="removeTag(tag)"
+                [attr.aria-label]="'Remove tag ' + tag"
+              >
+                {{ tag }} <i class="bi bi-x" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+        }
+        <app-field-errors [field]="uploadForm.tags" />
+      </div>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <div class="glass flex flex-col gap-3 p-5">
+        <span class="eyebrow">Pre-flight</span>
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          <li class="flex items-center gap-2" [class.text-cyan]="uploadForm.file().valid()">
+            <i
+              class="bi"
+              [class]="uploadForm.file().valid() ? 'bi-check-circle-fill' : 'bi-circle'"
+              aria-hidden="true"
+            ></i>
+            PDF selected
+          </li>
+          <li class="flex items-center gap-2" [class.text-cyan]="uploadForm.title().valid()">
+            <i
+              class="bi"
+              [class]="uploadForm.title().valid() ? 'bi-check-circle-fill' : 'bi-circle'"
+              aria-hidden="true"
+            ></i>
+            Titled
+          </li>
+          <li class="flex items-center gap-2 text-ink-muted">
+            <i class="bi bi-shield-check" aria-hidden="true"></i> Malware scan &amp; sanitisation on
+            upload
+          </li>
+        </ul>
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn btn--primary btn--block min-h-11"
+        [disabled]="uploadForm().submitting()"
+      >
+        @if (uploadForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Uploading &amp; hashing…
+        } @else {
+          <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload to vault
+        }
+      </button>
+      <a class="btn btn--secondary btn--block" routerLink="/documents">Cancel</a>
+    </aside>
+  </form>
+</div>

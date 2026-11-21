@@ -1,0 +1,206 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Storage</span>
+      </nav>
+      <h1 class="page-title">Storage</h1>
+      <p class="page-subtitle">
+        Reconciliation between the SeaweedFS bucket and StarSign's records. Object keys and contents are never shown.
+      </p>
+    </div>
+  </header>
+
+  @if (canEdit()) {
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section class="card flex flex-col gap-4" aria-labelledby="reconcile-title">
+        <div>
+          <h2 id="reconcile-title" class="m-0 text-headline-sm">Run a reconciliation</h2>
+          <p class="m-0 text-body-sm text-ink-muted">
+            Scans one organisation's files (or the platform's) for orphaned, missing, damaged or unfinished objects.
+            Issues whose cause has gone away are resolved on the way.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="field min-w-64 flex-1">
+            <label for="reconcile-target">Scope</label>
+            @if (listOrganisations()) {
+              <select
+                id="reconcile-target"
+                class="field-control"
+                [value]="target()"
+                (change)="target.set($any($event.target).value)"
+              >
+                <option [value]="platform">Platform files (branding, reports)</option>
+                @for (org of organisations(); track org.id) {
+                  <option [value]="org.id">{{ org.name }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                id="reconcile-target"
+                class="field-control mono"
+                [value]="target()"
+                (input)="target.set($any($event.target).value)"
+              />
+              <span class="field__hint">An organisation id, or "platform" for the platform's files.</span>
+            }
+          </div>
+          <button type="button" class="btn btn--primary" [disabled]="running()" (click)="runReconciliation()">
+            @if (running()) {
+              <span class="spinner" aria-hidden="true"></span> Running…
+            } @else {
+              <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Reconcile
+            }
+          </button>
+        </div>
+        @if (lastRun(); as last) {
+          <dl class="m-0 grid grid-cols-2 gap-3 sm:grid-cols-4" role="status" [attr.aria-label]="'Last run for ' + last.target">
+            <div>
+              <dt class="text-body-sm text-ink-muted">Objects scanned</dt>
+              <dd class="m-0 mono">{{ last.run.objectsScanned ?? 0 }}</dd>
+            </div>
+            <div>
+              <dt class="text-body-sm text-ink-muted">References scanned</dt>
+              <dd class="m-0 mono">{{ last.run.referencesScanned ?? 0 }}</dd>
+            </div>
+            <div>
+              <dt class="text-body-sm text-ink-muted">Issues detected</dt>
+              <dd class="m-0 mono">{{ last.run.issuesDetected ?? 0 }}</dd>
+            </div>
+            <div>
+              <dt class="text-body-sm text-ink-muted">Issues resolved</dt>
+              <dd class="m-0 mono">{{ last.run.issuesResolved ?? 0 }}</dd>
+            </div>
+            <p class="col-span-full m-0 text-body-sm text-ink-muted">
+              {{ last.target }}, {{ last.run.startedAt | date: 'HH:mm:ss' }}–{{ last.run.finishedAt | date: 'HH:mm:ss' }}
+            </p>
+          </dl>
+        }
+      </section>
+
+      <section class="card flex flex-col gap-4" aria-labelledby="retry-title">
+        <div>
+          <h2 id="retry-title" class="m-0 text-headline-sm">Retry failed uploads</h2>
+          <p class="m-0 text-body-sm text-ink-muted">
+            Checks every failed or stuck upload again and recovers those whose object is now in the bucket with the
+            right checksum.
+          </p>
+        </div>
+        <button type="button" class="btn btn--secondary self-start" [disabled]="retrying()" (click)="retryFailed()">
+          @if (retrying()) {
+            <span class="spinner" aria-hidden="true"></span> Retrying…
+          } @else {
+            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Retry failed uploads
+          }
+        </button>
+        @if (retried() !== null) {
+          <p class="m-0 text-body-sm" role="status">
+            {{ retried() === 1 ? '1 upload was' : retried() + ' uploads were' }} recovered.
+          </p>
+        }
+      </section>
+    </div>
+  }
+
+  <div class="segmented self-start" role="tablist" aria-label="Issue resolution">
+    @for (filter of filters; track filter) {
+      <label role="tab" [attr.aria-selected]="resolution() === filter">
+        <input
+          type="radio"
+          name="resolution-tab"
+          [checked]="resolution() === filter"
+          (change)="resolution.set(filter)"
+        />{{ filter === 'OPEN' ? 'Open' : humanise(filter) }}
+      </label>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Reconciliation issues">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Issue</th>
+            <th scope="col">Object</th>
+            <th scope="col">Detected</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">{{ resolution() === 'OPEN' ? 'Resolve' : 'Resolved' }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (issue of issues(); track issue.id) {
+            <tr>
+              <td>
+                <span class="cell-title">{{ humanise(issue.issueType) }}</span>
+                <div class="cell-note">{{ issue.issueType ? issueHints[issue.issueType] : '' }}</div>
+                @if (issue.details) {
+                  <div class="cell-note">{{ issue.details }}</div>
+                }
+              </td>
+              <td class="mono text-ink-muted">{{ issue.objectId || '—' }}</td>
+              <td class="mono text-ink-muted">{{ (issue.detectedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+              <td class="mono">{{ issue.attempts ?? 0 }}</td>
+              <td>
+                @if (issue.resolution === 'OPEN') {
+                  @if (canEdit()) {
+                    <div class="flex flex-wrap items-center gap-2">
+                      <label class="sr-only" [for]="'resolve-' + issue.id">Resolution</label>
+                      <select
+                        [id]="'resolve-' + issue.id"
+                        class="field-control"
+                        [value]="chosen(issue)"
+                        (change)="choose(issue, $any($event.target).value)"
+                      >
+                        @for (option of options(issue); track option) {
+                          <option [value]="option">{{ resolutionLabels[option] }}</option>
+                        }
+                      </select>
+                      <button
+                        type="button"
+                        class="btn"
+                        [class]="chosen(issue) === 'OBJECT_DELETED' ? 'btn--danger' : 'btn--secondary'"
+                        [disabled]="busyId() === issue.id"
+                        (click)="resolve(issue)"
+                      >
+                        @if (busyId() === issue.id) {
+                          <span class="spinner" aria-hidden="true"></span>
+                        }
+                        Resolve
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="chip chip--pending">Open</span>
+                  }
+                } @else {
+                  <span class="chip chip--neutral">{{ humanise(issue.resolution) }}</span>
+                  <div class="cell-note mono">{{ issue.resolvedAt | date: 'dd MMM yyyy, HH:mm' }}</div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <i class="bi bi-hdd-stack" aria-hidden="true"></i>
+                  <span>{{
+                    loading()
+                      ? 'Loading issues…'
+                      : resolution() === 'OPEN'
+                        ? 'No open issues: the bucket and the records agree.'
+                        : 'No issues resolved this way.'
+                  }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

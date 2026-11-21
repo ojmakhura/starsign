@@ -1,0 +1,179 @@
+<div class="page">
+  @if (document.error()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-octagon" aria-hidden="true"></i> The document could not be loaded.
+    </div>
+  }
+
+  @if (doc(); as d) {
+    <header class="page-header">
+      <div>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a routerLink="/documents">Document vault</a
+          ><i class="bi bi-chevron-right" aria-hidden="true"></i
+          ><span class="breadcrumb__current">{{ d.referenceNumber }}</span>
+        </nav>
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="page-title">{{ d.title }}</h1>
+          <app-status-chip [status]="d.status" />
+        </div>
+        @if (d.description) {
+          <p class="page-subtitle max-w-3xl">{{ d.description }}</p>
+        }
+      </div>
+      <div class="page-actions">
+        <button type="button" class="btn btn--secondary" (click)="download()">
+          <i class="bi bi-download" aria-hidden="true"></i> Download
+        </button>
+        <button
+          type="button"
+          class="btn btn--verify"
+          (click)="verify()"
+          [disabled]="integrity.isLoading()"
+        >
+          <i class="bi bi-patch-check" aria-hidden="true"></i>
+          {{ integrity.isLoading() ? 'Verifying…' : 'Verify integrity' }}
+        </button>
+        @if (canStartWorkflow()) {
+          <a
+            *appCan="'workflows:edit'"
+            class="btn btn--primary"
+            routerLink="/workflows/new"
+            [queryParams]="{ documentId: d.id }"
+          >
+            <i class="bi bi-send-plus" aria-hidden="true"></i> Send for signing
+          </a>
+        } @else if (d.activeWorkflowId) {
+          <a class="btn btn--primary" [routerLink]="['/workflows', d.activeWorkflowId]"
+            ><i class="bi bi-diagram-3" aria-hidden="true"></i> Open workflow</a
+          >
+        }
+      </div>
+    </header>
+
+    @if (request.error()) {
+      <div class="alert alert--danger" role="alert">{{ request.error() }}</div>
+    }
+
+    @if (integrity.hasValue()) {
+      @let report = integrity.value();
+      <section
+        [class]="integrityPassed() ? 'alert alert--seal' : 'alert alert--danger'"
+        aria-live="polite"
+      >
+        <i
+          class="bi text-xl"
+          [class]="integrityPassed() ? 'bi-patch-check-fill' : 'bi-shield-exclamation'"
+          aria-hidden="true"
+        ></i>
+        <div class="flex-1">
+          <strong class="mono"
+            >{{ report.overallResult }} ·
+            {{ report.verifiedAt | date: 'yyyy-MM-dd HH:mm:ss' }}</strong
+          >
+          <p class="m-0 mt-1">
+            Audit chain {{ report.auditChainValid ? 'intact' : 'BROKEN' }} ·
+            {{ report.signatureCount ?? 0 }} digital signature(s)
+            {{ report.digitalSignaturesValid ? 'valid' : 'not verified' }}
+            @if (report.assuranceLevel) {
+              · {{ report.assuranceLevel }}
+            }
+          </p>
+          @for (message of report.messages ?? []; track $index) {
+            <p class="m-0 mt-1 text-body-sm">{{ message }}</p>
+          }
+        </div>
+      </section>
+    } @else if (integrity.error()) {
+      <div class="alert alert--danger" role="alert">Integrity verification failed to run.</div>
+    }
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section class="viewer-frame" aria-label="Document preview">
+        <div
+          class="paper-plate mx-auto flex aspect-[1/1.414] w-full max-w-[560px] flex-col items-center justify-center gap-3 p-10 text-center"
+        >
+          <i class="bi bi-file-earmark-pdf text-6xl text-slate-400" aria-hidden="true"></i>
+          <p class="m-0 font-semibold text-slate-800">{{ d.originalFileName || d.title }}</p>
+          <p class="m-0 font-mono text-[11px] tracking-[0.08em] text-slate-500">
+            {{ d.pageCount ?? 0 }} PAGES · V{{ d.currentVersionNumber ?? 1 }} ·
+            {{ (d.fileSizeBytes ?? 0) / 1048576 | number: '1.0-2' }} MB
+          </p>
+          @if (sealed()) {
+            <span
+              class="mt-4 rounded border border-amber-400 bg-amber-50 px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-amber-700"
+              >SEALED {{ d.completedAt | date: 'dd MMM yyyy' }}</span
+            >
+          }
+        </div>
+      </section>
+
+      <aside class="flex flex-col gap-6">
+        <section class="card">
+          <h2 class="card__title mb-4">
+            <i class="bi bi-fingerprint" aria-hidden="true"></i> Cryptographic record
+          </h2>
+          <dl class="m-0 flex flex-col gap-3">
+            <div>
+              <dt class="eyebrow">Original SHA-256</dt>
+              <dd class="m-0 hash">{{ d.originalSha256 || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Reference</dt>
+              <dd class="m-0 mono">{{ d.referenceNumber || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Owner</dt>
+              <dd class="m-0">{{ d.ownerName || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="eyebrow">Uploaded</dt>
+              <dd class="m-0 mono">{{ d.createdAt | date: 'yyyy-MM-dd HH:mm' }}</dd>
+            </div>
+            @if (d.retentionUntil) {
+              <div>
+                <dt class="eyebrow">Retain until</dt>
+                <dd class="m-0 mono">{{ d.retentionUntil | date: 'yyyy-MM-dd' }}</dd>
+              </div>
+            }
+          </dl>
+          @if (d.tags?.length) {
+            <div class="mt-4 flex flex-wrap gap-2">
+              @for (tag of d.tags; track tag) {
+                <span class="chip chip--progress">{{ tag }}</span>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="card flex flex-col gap-2">
+          <h2 class="card__title mb-2">
+            <i class="bi bi-sliders" aria-hidden="true"></i> Lifecycle
+          </h2>
+          <button
+            type="button"
+            class="btn btn--secondary btn--block"
+            (click)="archive()"
+            [disabled]="request.busy() || d.status === 'ARCHIVED'"
+          >
+            <i class="bi bi-archive" aria-hidden="true"></i> Archive
+          </button>
+          <button
+            *appCan="'documents:delete'"
+            type="button"
+            class="btn btn--danger btn--block"
+            (click)="remove()"
+            [disabled]="request.busy() || sealed()"
+          >
+            <i class="bi bi-trash3" aria-hidden="true"></i> Delete
+          </button>
+          @if (sealed()) {
+            <p class="m-0 text-body-sm text-ink-muted">
+              Sealed documents are retained for the audit trail and cannot be deleted.
+            </p>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+</div>

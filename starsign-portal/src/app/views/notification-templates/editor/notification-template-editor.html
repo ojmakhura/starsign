@@ -1,0 +1,263 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/notification-templates">Notification templates</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">{{ creating() ? 'New' : template()?.code }}</span>
+      </nav>
+      <h1 class="page-title">
+        @if (creating()) {
+          {{ source() ? 'Customise template' : 'New template' }}
+        } @else {
+          {{ selectedEvent()?.label ?? template()?.code }}
+        }
+      </h1>
+      <p class="page-subtitle">
+        @if (source()) {
+          A copy of the platform template {{ source()?.code }} for your organisation; once active it is used instead.
+        } @else if (isPlatformTemplate()) {
+          Platform template{{ template()?.systemDefault ? ' · system default' : '' }}
+        } @else {
+          Your organisation's template
+        }
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @if (canCustomise()) {
+        <a class="btn btn--primary" routerLink="/notification-templates/new" [queryParams]="{ from: template()?.id }"
+          ><i class="bi bi-pencil-square" aria-hidden="true"></i> Customise for my organisation</a
+        >
+      }
+      @if (canDelete()) {
+        <button type="button" class="btn btn--ghost" [disabled]="deleting()" (click)="remove()">
+          <i class="bi bi-trash" aria-hidden="true"></i> Delete
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (loadError()) {
+    <div class="alert alert--danger" role="alert">
+      {{ loadError() }}
+      <button type="button" class="btn btn--ghost" (click)="load()">Retry</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading the template…</p>
+  } @else if (!loadError()) {
+    @if (!canEdit()) {
+      <div class="glass flex items-start gap-3 p-4" role="status">
+        <i class="bi bi-lock text-cyan" aria-hidden="true"></i>
+        <p class="m-0 text-body-sm">
+          @if (isPlatformTemplate() && session.organisationId()) {
+            Platform templates are managed by the platform administrators.
+            @if (canCustomise()) {
+              Customise it to give your organisation its own wording.
+            }
+          } @else {
+            Read-only: changing templates needs the notification-templates:edit permission.
+          }
+        </p>
+      </div>
+    }
+
+    <form class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" [formRoot]="templateForm" aria-label="Template">
+      <div class="flex flex-col gap-6">
+        <section class="card flex flex-col gap-5" aria-labelledby="nt-what-title">
+          <h2 id="nt-what-title" class="eyebrow m-0">When it is sent</h2>
+          <div class="grid gap-5 md:grid-cols-2">
+            <div class="field">
+              <label for="nt-event">Event *</label>
+              <select id="nt-event" class="field-control" [formField]="templateForm.eventType">
+                <option value="" disabled>Choose an event</option>
+                @for (event of eventTypes; track event) {
+                  <option [value]="event">{{ eventMeta[event].label }}</option>
+                }
+              </select>
+              @if (selectedEvent(); as meta) {
+                <span class="field__hint">{{ meta.description }}</span>
+              }
+              <app-field-errors [field]="templateForm.eventType" />
+            </div>
+            <div class="field">
+              <label for="nt-channel">Channel *</label>
+              <select id="nt-channel" class="field-control" [formField]="templateForm.channel">
+                <option value="" disabled>Choose a channel</option>
+                @for (channel of channels; track channel) {
+                  <option [value]="channel">{{ channelMeta[channel].label }}</option>
+                }
+              </select>
+              <app-field-errors [field]="templateForm.channel" />
+            </div>
+            <div class="field">
+              <label for="nt-code">Code *</label>
+              <input id="nt-code" class="field-control mono" [formField]="templateForm.code" aria-describedby="nt-code-hint" />
+              <span id="nt-code-hint" class="field__hint">Unique per channel and locale within its owner.</span>
+              <app-field-errors [field]="templateForm.code" />
+            </div>
+            <div class="field">
+              <label for="nt-locale">Locale *</label>
+              <input id="nt-locale" class="field-control mono" [formField]="templateForm.locale" placeholder="en" aria-describedby="nt-locale-hint" />
+              <span id="nt-locale-hint" class="field__hint">Matched against the organisation's locale, e.g. en or en-BW.</span>
+              <app-field-errors [field]="templateForm.locale" />
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-6">
+            <label class="check">
+              <input type="checkbox" [formField]="templateForm.active" />
+              <span>Active<br /><span class="text-body-sm text-ink-muted">Inactive templates are skipped.</span></span>
+            </label>
+            @if (isPlatformTemplate()) {
+              <label class="check">
+                <input type="checkbox" [formField]="templateForm.systemDefault" />
+                <span>System default<br /><span class="text-body-sm text-ink-muted">Cannot be deleted, only changed or deactivated.</span></span>
+              </label>
+            }
+          </div>
+        </section>
+
+        <section class="card flex flex-col gap-5" aria-labelledby="nt-wording-title">
+          <h2 id="nt-wording-title" class="eyebrow m-0">Wording</h2>
+          @if (isEmail() || model().subjectTemplate) {
+            <div class="field">
+              <label for="nt-subject">Subject{{ isEmail() ? ' *' : '' }}</label>
+              <input id="nt-subject" class="field-control" [formField]="templateForm.subjectTemplate" />
+              <app-field-errors [field]="templateForm.subjectTemplate" />
+            </div>
+          }
+          <div class="field">
+            <label for="nt-body">Body *</label>
+            <textarea #bodyArea id="nt-body" class="field-control body-editor" [formField]="templateForm.bodyTemplate" aria-describedby="nt-body-hint"></textarea>
+            <span id="nt-body-hint" class="field__hint">
+              @if (isEmail()) {
+                HTML. Placeholders are written as {{ '{{name}' + '}' }}; their values are HTML-escaped.
+              } @else {
+                Plain text. Placeholders are written as {{ '{{name}' + '}' }}.
+              }
+            </span>
+            <app-field-errors [field]="templateForm.bodyTemplate" />
+          </div>
+          @if (selectedEvent(); as meta) {
+            <div class="flex flex-col gap-2">
+              <span class="field__label">Placeholders for this event{{ canEdit() ? ' — click to insert' : '' }}</span>
+              <div class="flex flex-wrap gap-1">
+                @for (name of meta.variables; track name) {
+                  <button
+                    type="button"
+                    class="chip chip--neutral mono"
+                    [disabled]="!canEdit()"
+                    (click)="insertPlaceholder(name, bodyArea)"
+                    [attr.aria-label]="'Insert the ' + name + ' placeholder'"
+                  >{{ name }}</button>
+                }
+              </div>
+            </div>
+          }
+          @if (unknownPlaceholders().length) {
+            <p class="m-0 text-body-sm text-ink-muted" role="status">
+              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+              Not provided for this event, so rendered as nothing:
+              <span class="mono">{{ unknownPlaceholders().join(', ') }}</span>
+            </p>
+          }
+        </section>
+
+        @if (serverError()) {
+          <div class="alert alert--danger" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+          </div>
+        }
+
+        @if (canEdit()) {
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="btn btn--primary min-h-11" [disabled]="templateForm().submitting()">
+              @if (templateForm().submitting()) {
+                <span class="spinner" aria-hidden="true"></span> Saving…
+              } @else {
+                <i class="bi bi-check2" aria-hidden="true"></i> {{ creating() ? 'Create template' : 'Save template' }}
+              }
+            </button>
+            <a class="btn btn--secondary" routerLink="/notification-templates">Cancel</a>
+          </div>
+        }
+      </div>
+
+      <aside class="flex flex-col gap-6 xl:sticky xl:top-4 xl:self-start">
+        <section class="card flex flex-col gap-3" aria-labelledby="nt-preview-title">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="nt-preview-title" class="eyebrow m-0">
+              Preview
+              <span class="text-ink-muted">· {{ serverPreview() !== null ? 'rendered by the API' : 'sample values' }}</span>
+            </h2>
+            @if (canServerPreview()) {
+              <button type="button" class="btn btn--secondary" [disabled]="serverPreviewing()" (click)="renderOnServer()">
+                @if (serverPreviewing()) {
+                  <span class="spinner" aria-hidden="true"></span>
+                } @else {
+                  <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                }
+                Render on server
+              </button>
+            }
+          </div>
+          @if (model().subjectTemplate) {
+            <div class="field">
+              <span class="field__label">Subject</span>
+              <p class="m-0 font-medium text-ink">{{ renderedSubject() }}</p>
+            </div>
+          }
+          @if (!model().bodyTemplate.trim()) {
+            <p class="m-0 text-ink-muted">Write the body to see it here.</p>
+          } @else if (isEmail()) {
+            <iframe class="preview-frame" sandbox="" title="Email preview" [srcdoc]="renderedHtml()"></iframe>
+          } @else {
+            <pre class="preview-text">{{ renderedText() }}</pre>
+            @if (model().channel === 'SMS') {
+              <span class="field__hint">{{ renderedText().length }} characters · {{ Math.max(1, Math.ceil(renderedText().length / 160)) }} SMS</span>
+            }
+          }
+        </section>
+
+        <section class="glass flex flex-col gap-3 p-5" aria-labelledby="nt-novu-title">
+          <h2 id="nt-novu-title" class="eyebrow m-0"><i class="bi bi-send" aria-hidden="true"></i> Delivery through Novu</h2>
+          @if (novuWorkflow(); as workflowId) {
+            <div class="field">
+              <span class="field__label">Novu workflow</span>
+              <span class="mono text-cyan">{{ workflowId }}</span>
+              <span class="field__hint">With the default prefix <span class="mono">{{ novuPrefix }}</span>; the API's app.novu.workflow-prefix may differ.</span>
+            </div>
+          }
+          <p class="m-0 text-body-sm">
+            StarSign renders the subject and body from this template and passes them to the Novu workflow, which must
+            send the payload's <span class="mono">subject</span> and <span class="mono">body</span> rather than wording
+            of its own.
+          </p>
+          @if (novuPayload(); as fields) {
+            <div class="flex flex-col gap-1">
+              <span class="field__label">{{ channelLabel() }} payload</span>
+              <div class="flex flex-wrap gap-1">
+                @for (field of fields; track field) {
+                  <span class="chip chip--neutral mono">{{ field }}</span>
+                }
+              </div>
+            </div>
+          }
+          <p class="m-0 text-body-sm text-ink-muted">
+            When Novu is turned off, notifications are recorded as suppressed and nothing is sent; previews still work.
+          </p>
+        </section>
+
+        @if (template(); as saved) {
+          <p class="m-0 text-body-sm text-ink-muted">
+            Created {{ saved.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+            @if (saved.modifiedAt) {
+              · changed {{ saved.modifiedAt | date: 'dd MMM yyyy, HH:mm' }}
+            }
+          </p>
+        }
+      </aside>
+    </form>
+  }
+</div>

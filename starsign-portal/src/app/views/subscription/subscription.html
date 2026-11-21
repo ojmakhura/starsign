@@ -1,0 +1,249 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Subscription</span>
+      </nav>
+      <h1 class="page-title">Subscription</h1>
+      <p class="page-subtitle">Your plan, what you have used this period and the plans on offer.</p>
+    </div>
+    @if (subscription() && !ended()) {
+      <button
+        *appCan="'subscriptions:edit'"
+        type="button"
+        class="btn btn--danger"
+        [disabled]="!!busy()"
+        (click)="cancel()"
+      >
+        @if (busy() === 'cancel') {
+          <span class="spinner" aria-hidden="true"></span>
+        }
+        Cancel subscription
+      </button>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading() && !subscription()) {
+    <p class="m-0 text-ink-muted" role="status">
+      <span class="spinner" aria-hidden="true"></span> Loading subscription…
+    </p>
+  }
+
+  @if (!loading() && !error() && !subscription()) {
+    <section class="card flex flex-col gap-2" aria-labelledby="no-plan-title">
+      <span class="eyebrow">No subscription</span>
+      <h2 id="no-plan-title" class="m-0 text-headline-sm">Choose a plan to get started</h2>
+      <p class="m-0 text-ink-muted">
+        Your organisation isn't subscribed to a plan yet, so documents can't be uploaded. Pick
+        one of the plans below.
+      </p>
+    </section>
+  }
+
+  @if (subscription(); as s) {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+      <section class="card flex flex-col gap-4" aria-labelledby="plan-title">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="eyebrow m-0">Current plan</p>
+            <h2 id="plan-title" class="m-0 text-headline-sm">{{ s.plan?.name || '—' }}</h2>
+          </div>
+          <span class="chip" [class]="statusChip(s.status)">{{ s.status?.replaceAll('_', ' ') }}</span>
+        </div>
+        @if (s.plan?.description) {
+          <p class="m-0 text-ink-muted">{{ s.plan?.description }}</p>
+        }
+        <dl class="m-0 grid grid-cols-2 gap-3">
+          <div>
+            <dt class="eyebrow">Billing</dt>
+            <dd class="m-0">{{ s.billingCycle === BillingCycle.ANNUAL ? 'Annual' : 'Monthly' }}</dd>
+          </div>
+          <div>
+            <dt class="eyebrow">Auto-renew</dt>
+            <dd class="m-0">{{ s.autoRenew ? 'On' : 'Off' }}</dd>
+          </div>
+          <div>
+            <dt class="eyebrow">Current period</dt>
+            <dd class="m-0 mono">
+              {{ (s.currentPeriodStart | date: 'dd MMM yyyy') || '—' }} –
+              {{ (s.currentPeriodEnd | date: 'dd MMM yyyy') || '—' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="eyebrow">Started</dt>
+            <dd class="m-0 mono">{{ (s.startDate | date: 'dd MMM yyyy') || '—' }}</dd>
+          </div>
+          @if (s.trialEndsAt) {
+            <div>
+              <dt class="eyebrow">Trial ends</dt>
+              <dd class="m-0 mono">{{ s.trialEndsAt | date: 'dd MMM yyyy' }}</dd>
+            </div>
+          }
+          @if (s.endDate) {
+            <div>
+              <dt class="eyebrow">Ends</dt>
+              <dd class="m-0 mono">{{ s.endDate | date: 'dd MMM yyyy' }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+
+      <section class="card flex flex-col gap-4" aria-labelledby="usage-title">
+        <div>
+          <h2 id="usage-title" class="m-0 text-headline-sm">Usage</h2>
+          @if (usage(); as u) {
+            <p class="m-0 text-ink-muted">
+              {{ u.periodStart | date: 'dd MMM yyyy' }} – {{ u.periodEnd | date: 'dd MMM yyyy' }}
+            </p>
+          }
+        </div>
+        <ul class="m-0 grid list-none gap-4 p-0 md:grid-cols-2">
+          @for (m of meters(); track m.metric) {
+            <li class="flex flex-col gap-1.5">
+              <div class="flex items-baseline justify-between gap-2">
+                <span [id]="'meter-' + m.metric">{{ m.label }}</span>
+                <span class="mono" [class.text-ink-muted]="!m.near">
+                  {{ formatValue(m, m.used) }} / {{ formatValue(m, m.limit) }}
+                </span>
+              </div>
+              @if (m.limit != null) {
+                <div
+                  class="progress"
+                  [class.meter--near]="m.near && !m.over"
+                  [class.meter--over]="m.over"
+                  role="meter"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-valuenow]="m.percent"
+                  [attr.aria-valuetext]="(m.percentage ?? 0) + '% of the plan limit'"
+                  [attr.aria-labelledby]="'meter-' + m.metric"
+                >
+                  <div class="progress__bar" [style.width.%]="m.percent"></div>
+                </div>
+                @if (m.over) {
+                  <span class="cell-note"
+                    ><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Limit reached</span
+                  >
+                }
+              } @else {
+                <span class="cell-note">No limit on this plan</span>
+              }
+            </li>
+          } @empty {
+            <li class="text-ink-muted">No usage recorded yet.</li>
+          }
+        </ul>
+      </section>
+    </div>
+  }
+
+  <section class="table-panel" aria-labelledby="plans-title">
+    <div class="flex flex-wrap items-center justify-between gap-4 px-5 pt-4">
+      <h2 id="plans-title" class="m-0 text-headline-sm">Compare plans</h2>
+      <div class="segmented" role="radiogroup" aria-label="Billing cycle">
+        <label
+          ><input
+            type="radio"
+            name="billing-cycle"
+            [checked]="cycle() === BillingCycle.MONTHLY"
+            (change)="cycle.set(BillingCycle.MONTHLY)"
+          />Monthly</label
+        >
+        <label
+          ><input
+            type="radio"
+            name="billing-cycle"
+            [checked]="cycle() === BillingCycle.ANNUAL"
+            (change)="cycle.set(BillingCycle.ANNUAL)"
+          />Annual</label
+        >
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Plan</th>
+            <th scope="col">Price</th>
+            <th scope="col">Users</th>
+            <th scope="col">Documents / month</th>
+            <th scope="col">Workflows / month</th>
+            <th scope="col">Storage</th>
+            <th scope="col">SMS / month</th>
+            <th scope="col">Features</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (plan of plans(); track plan.code) {
+            <tr [attr.aria-current]="plan.code === currentPlanCode() ? 'true' : null">
+              <th scope="row">
+                <span class="cell-title">{{ plan.name }}</span>
+                @if (plan.code === currentPlanCode()) {
+                  <span class="chip chip--sealed ml-2">Current</span>
+                }
+                @if (plan.trialDays) {
+                  <div class="cell-note">{{ plan.trialDays }}-day trial</div>
+                }
+              </th>
+              <td class="mono">
+                @if (price(plan); as amount) {
+                  {{ amount | currency: plan.currency || 'BWP' : 'symbol-narrow' }}
+                  <span class="text-ink-muted">/ {{ cycle() === BillingCycle.ANNUAL ? 'yr' : 'mo' }}</span>
+                } @else {
+                  Free
+                }
+              </td>
+              <td class="mono">{{ limit(plan.maxUsers) }}</td>
+              <td class="mono">{{ limit(plan.maxDocumentsPerMonth) }}</td>
+              <td class="mono">{{ limit(plan.maxWorkflowsPerMonth) }}</td>
+              <td class="mono">{{ bytes(plan.maxStorageBytes) }}</td>
+              <td class="mono">{{ limit(plan.maxSmsPerMonth) }}</td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  @if (plan.digitalSignaturesEnabled) {
+                    <span class="chip chip--progress">Digital signatures</span>
+                  }
+                  @if (plan.templatesEnabled) {
+                    <span class="chip chip--progress">Templates</span>
+                  }
+                  @if (plan.apiAccessEnabled) {
+                    <span class="chip chip--progress">API</span>
+                  }
+                </div>
+              </td>
+              <td>
+                @if (!isCurrent(plan)) {
+                  <button
+                    *appCan="'subscriptions:edit'"
+                    type="button"
+                    class="btn btn--secondary"
+                    [disabled]="!!busy()"
+                    [attr.aria-label]="'Switch to the ' + plan.name + ' plan'"
+                    (click)="changePlan(plan)"
+                  >
+                    @if (busy() === plan.code) {
+                      <span class="spinner" aria-hidden="true"></span>
+                    }
+                    Switch
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="text-center text-ink-muted">
+                {{ loading() ? 'Loading plans…' : 'No plans are on offer.' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

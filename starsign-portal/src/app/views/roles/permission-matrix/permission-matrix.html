@@ -1,0 +1,64 @@
+<div class="table-scroll">
+  <table class="data-table" [attr.aria-label]="label()">
+    <thead>
+      <tr>
+        <th scope="col">Resource</th>
+        @for (action of actions(); track action) {
+          <th scope="col" class="text-center whitespace-nowrap">{{ humanise(action) }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (group of groups(); track group.resource) {
+        @let state = groupState(group);
+        <tr>
+          <th scope="row" class="text-left font-medium">
+            @if (editable()) {
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  [checked]="state === 'all'"
+                  [indeterminate]="state === 'some'"
+                  (change)="toggleGroup(group, $any($event.target).checked)"
+                  [attr.aria-label]="'All ' + group.label + ' permissions'"
+                />
+                <span class="cell-title">{{ group.label }}</span>
+              </label>
+            } @else {
+              <span class="cell-title">{{ group.label }}</span>
+            }
+          </th>
+          @for (action of actions(); track action) {
+            @let permission = group.actions.get(action);
+            <td class="text-center">
+              @if (!permission) {
+                <span class="text-ink-muted" aria-hidden="true">·</span>
+              } @else if (editable()) {
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(permission.code)"
+                  (change)="toggle(permission.code, $any($event.target).checked)"
+                  [attr.aria-label]="permission.name || permission.code"
+                  [title]="permission.description || permission.name || permission.code"
+                />
+              } @else if (isSelected(permission.code)) {
+                <i
+                  class="bi bi-check-lg text-cyan"
+                  role="img"
+                  [attr.aria-label]="(permission.name || permission.code) + ': granted'"
+                  [title]="permission.description || permission.name || permission.code"
+                ></i>
+              } @else {
+                <span class="text-ink-muted" [attr.aria-label]="(permission.name || permission.code) + ': not granted'">–</span>
+              }
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="actions().length + 1" class="text-center text-ink-muted">No permissions.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

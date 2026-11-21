@@ -1,0 +1,1991 @@
+{
+  "allowRemoteResourceManagement": true,
+  "policyEnforcementMode": "ENFORCING",
+  "decisionStrategy": "UNANIMOUS",
+  "resources": [
+    {
+      "name": "admin-configuration",
+      "displayName": "Platform Configuration",
+      "type": "urn:starsign-api:resources:admin-configuration",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/admin/configuration",
+        "/admin/configuration/security-policy"
+      ],
+      "scopes": [
+        {
+          "name": "admin-configuration:view"
+        },
+        {
+          "name": "admin-configuration:list"
+        },
+        {
+          "name": "admin-configuration:edit"
+        },
+        {
+          "name": "admin-configuration:configure"
+        }
+      ]
+    },
+    {
+      "name": "admin-notification-providers",
+      "displayName": "Notification Provider",
+      "type": "urn:starsign-api:resources:admin-notification-providers",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/admin/notification-providers",
+        "/admin/notification-providers/{id}",
+        "/admin/notification-providers/{id}/test"
+      ],
+      "scopes": [
+        {
+          "name": "admin-notification-providers:list"
+        },
+        {
+          "name": "admin-notification-providers:edit"
+        },
+        {
+          "name": "admin-notification-providers:delete"
+        }
+      ]
+    },
+    {
+      "name": "admin-storage",
+      "displayName": "Storage Admin",
+      "type": "urn:starsign-api:resources:admin-storage",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/admin/storage/issues",
+        "/admin/storage/issues/{id}/resolve",
+        "/admin/storage/reconciliation",
+        "/admin/storage/retry-failed",
+        "/admin/storage/usage/{organisationId}"
+      ],
+      "scopes": [
+        {
+          "name": "admin-storage:view"
+        },
+        {
+          "name": "admin-storage:list"
+        },
+        {
+          "name": "admin-storage:edit"
+        }
+      ]
+    },
+    {
+      "name": "audit",
+      "displayName": "Audit",
+      "type": "urn:starsign-api:resources:audit",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/audit/chains/{chainKey}/seal",
+        "/audit/chains/{chainKey}/verify",
+        "/audit/export",
+        "/audit/search"
+      ],
+      "scopes": [
+        {
+          "name": "audit:list"
+        },
+        {
+          "name": "audit:verify"
+        },
+        {
+          "name": "audit:export"
+        },
+        {
+          "name": "audit:administer"
+        }
+      ]
+    },
+    {
+      "name": "branding",
+      "displayName": "Branding",
+      "type": "urn:starsign-api:resources:branding",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/branding",
+        "/branding/assets/{asset}",
+        "/branding/organisations/{organisationId}",
+        "/branding/organisations/{organisationId}/assets/{asset}",
+        "/branding/preview"
+      ],
+      "scopes": [
+        {
+          "name": "branding:self"
+        },
+        {
+          "name": "branding:configure"
+        },
+        {
+          "name": "branding:administer"
+        }
+      ]
+    },
+    {
+      "name": "documents",
+      "displayName": "Document",
+      "type": "urn:starsign-api:resources:documents",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/documents",
+        "/documents/search",
+        "/documents/verify",
+        "/documents/{documentId}/audit",
+        "/documents/{id}",
+        "/documents/{id}/archive",
+        "/documents/{id}/artifacts/{artifactId}",
+        "/documents/{id}/content",
+        "/documents/{id}/download",
+        "/documents/{id}/download/original",
+        "/documents/{id}/integrity",
+        "/documents/{id}/metadata",
+        "/documents/{id}/pages",
+        "/documents/{id}/preview",
+        "/documents/{id}/thumbnail",
+        "/documents/{id}/versions"
+      ],
+      "scopes": [
+        {
+          "name": "documents:self"
+        },
+        {
+          "name": "documents:view"
+        },
+        {
+          "name": "documents:view-own"
+        },
+        {
+          "name": "documents:list"
+        },
+        {
+          "name": "documents:list-own"
+        },
+        {
+          "name": "documents:edit"
+        },
+        {
+          "name": "documents:edit-own"
+        },
+        {
+          "name": "documents:delete"
+        },
+        {
+          "name": "documents:delete-own"
+        },
+        {
+          "name": "documents:verify"
+        },
+        {
+          "name": "documents:verify-own"
+        },
+        {
+          "name": "documents:export"
+        },
+        {
+          "name": "documents:export-own"
+        }
+      ]
+    },
+    {
+      "name": "invitations",
+      "displayName": "User Invitation",
+      "type": "urn:starsign-api:resources:invitations",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/invitations/accept",
+        "/invitations/{id}/resend",
+        "/invitations/{id}/revoke",
+        "/organisations/{organisationId}/users/invitations"
+      ],
+      "scopes": [
+        {
+          "name": "invitations:self"
+        },
+        {
+          "name": "invitations:list"
+        },
+        {
+          "name": "invitations:manage"
+        }
+      ]
+    },
+    {
+      "name": "notification-templates",
+      "displayName": "Notification Template",
+      "type": "urn:starsign-api:resources:notification-templates",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/notification-templates",
+        "/notification-templates/preview",
+        "/notification-templates/{id}"
+      ],
+      "scopes": [
+        {
+          "name": "notification-templates:view"
+        },
+        {
+          "name": "notification-templates:list"
+        },
+        {
+          "name": "notification-templates:edit"
+        },
+        {
+          "name": "notification-templates:delete"
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "displayName": "Notification",
+      "type": "urn:starsign-api:resources:notifications",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/notifications/me",
+        "/notifications/search",
+        "/notifications/{id}/read"
+      ],
+      "scopes": [
+        {
+          "name": "notifications:self"
+        },
+        {
+          "name": "notifications:list"
+        }
+      ]
+    },
+    {
+      "name": "organisations",
+      "displayName": "Organisation",
+      "type": "urn:starsign-api:resources:organisations",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/organisations/current",
+        "/organisations/search",
+        "/organisations/{id}",
+        "/organisations/{id}/notification-settings",
+        "/organisations/{id}/signing-policy",
+        "/organisations/{id}/status"
+      ],
+      "scopes": [
+        {
+          "name": "organisations:self"
+        },
+        {
+          "name": "organisations:view"
+        },
+        {
+          "name": "organisations:edit"
+        },
+        {
+          "name": "organisations:configure"
+        },
+        {
+          "name": "organisations:administer"
+        }
+      ]
+    },
+    {
+      "name": "reports",
+      "displayName": "Reporting",
+      "type": "urn:starsign-api:resources:reports",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/reports/dashboard/{organisationId}",
+        "/reports/document-volume",
+        "/reports/export",
+        "/reports/platform",
+        "/reports/signatory-activity",
+        "/reports/signing-performance",
+        "/reports/storage/{organisationId}",
+        "/reports/user-activity"
+      ],
+      "scopes": [
+        {
+          "name": "reports:view"
+        },
+        {
+          "name": "reports:export"
+        },
+        {
+          "name": "reports:administer"
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "displayName": "Role",
+      "type": "urn:starsign-api:resources:roles",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/roles",
+        "/roles/permissions",
+        "/roles/{id}",
+        "/roles/{id}/permissions"
+      ],
+      "scopes": [
+        {
+          "name": "roles:view"
+        },
+        {
+          "name": "roles:list"
+        },
+        {
+          "name": "roles:edit"
+        },
+        {
+          "name": "roles:delete"
+        },
+        {
+          "name": "roles:manage"
+        }
+      ]
+    },
+    {
+      "name": "signing",
+      "displayName": "Internal Signing",
+      "type": "urn:starsign-api:resources:signing",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/signing/certificates/{organisationId}",
+        "/signing/pending",
+        "/signing/workflows/{workflowId}/evidence",
+        "/signing/workflows/{workflowId}/signatories/{signatoryId}",
+        "/signing/workflows/{workflowId}/signatories/{signatoryId}/decline",
+        "/signing/workflows/{workflowId}/signatories/{signatoryId}/document",
+        "/signing/workflows/{workflowId}/signatories/{signatoryId}/pages/{pageNumber}",
+        "/signing/workflows/{workflowId}/signatories/{signatoryId}/sign"
+      ],
+      "scopes": [
+        {
+          "name": "signing:self"
+        },
+        {
+          "name": "signing:list"
+        },
+        {
+          "name": "signing:sign"
+        }
+      ]
+    },
+    {
+      "name": "subscriptions",
+      "displayName": "Subscription",
+      "type": "urn:starsign-api:resources:subscriptions",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/subscriptions/plans",
+        "/subscriptions/{organisationId}",
+        "/subscriptions/{organisationId}/cancel",
+        "/subscriptions/{organisationId}/plan",
+        "/subscriptions/{organisationId}/usage"
+      ],
+      "scopes": [
+        {
+          "name": "subscriptions:self"
+        },
+        {
+          "name": "subscriptions:view"
+        },
+        {
+          "name": "subscriptions:edit"
+        },
+        {
+          "name": "subscriptions:administer"
+        }
+      ]
+    },
+    {
+      "name": "templates",
+      "displayName": "Template",
+      "type": "urn:starsign-api:resources:templates",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/templates",
+        "/templates/from-workflow/{workflowId}",
+        "/templates/search",
+        "/templates/{id}",
+        "/templates/{id}/activate",
+        "/templates/{id}/archive",
+        "/templates/{id}/instantiate"
+      ],
+      "scopes": [
+        {
+          "name": "templates:view"
+        },
+        {
+          "name": "templates:list"
+        },
+        {
+          "name": "templates:edit"
+        },
+        {
+          "name": "templates:initiate"
+        }
+      ]
+    },
+    {
+      "name": "users",
+      "displayName": "User",
+      "type": "urn:starsign-api:resources:users",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/organisations/{organisationId}/users",
+        "/users/me",
+        "/users/search",
+        "/users/{id}",
+        "/users/{id}/activate",
+        "/users/{id}/deactivate",
+        "/users/{id}/password-reset",
+        "/users/{id}/permissions",
+        "/users/{id}/require-mfa",
+        "/users/{id}/roles",
+        "/users/{id}/sessions",
+        "/users/{id}/unlock"
+      ],
+      "scopes": [
+        {
+          "name": "users:self"
+        },
+        {
+          "name": "users:view"
+        },
+        {
+          "name": "users:list"
+        },
+        {
+          "name": "users:edit"
+        },
+        {
+          "name": "users:delete"
+        },
+        {
+          "name": "users:manage"
+        }
+      ]
+    },
+    {
+      "name": "workflows",
+      "displayName": "Workflow",
+      "type": "urn:starsign-api:resources:workflows",
+      "ownerManagedAccess": false,
+      "attributes": {},
+      "uris": [
+        "/workflows",
+        "/workflows/search",
+        "/workflows/{id}",
+        "/workflows/{id}/amend",
+        "/workflows/{id}/cancel",
+        "/workflows/{id}/fields",
+        "/workflows/{id}/fields/{fieldId}",
+        "/workflows/{id}/history",
+        "/workflows/{id}/initiate",
+        "/workflows/{id}/renew",
+        "/workflows/{id}/signatories",
+        "/workflows/{id}/signatories/order",
+        "/workflows/{id}/signatories/{signatoryId}",
+        "/workflows/{id}/signatories/{signatoryId}/resend",
+        "/workflows/{id}/stages",
+        "/workflows/{id}/stages/order",
+        "/workflows/{id}/stages/{stageId}",
+        "/workflows/{id}/timeline",
+        "/workflows/{id}/validate",
+        "/workflows/{workflowId}/audit",
+        "/workflows/{workflowId}/evidence",
+        "/workflows/{workflowId}/evidence/download"
+      ],
+      "scopes": [
+        {
+          "name": "workflows:view"
+        },
+        {
+          "name": "workflows:view-own"
+        },
+        {
+          "name": "workflows:list"
+        },
+        {
+          "name": "workflows:list-own"
+        },
+        {
+          "name": "workflows:edit"
+        },
+        {
+          "name": "workflows:edit-own"
+        },
+        {
+          "name": "workflows:delete"
+        },
+        {
+          "name": "workflows:delete-own"
+        },
+        {
+          "name": "workflows:initiate"
+        },
+        {
+          "name": "workflows:initiate-own"
+        },
+        {
+          "name": "workflows:cancel"
+        },
+        {
+          "name": "workflows:cancel-own"
+        },
+        {
+          "name": "workflows:export"
+        },
+        {
+          "name": "workflows:export-own"
+        }
+      ]
+    }
+  ],
+  "policies": [
+    {
+      "name": "authenticated-policy",
+      "description": "Any authenticated user of the realm",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"default-roles-starsign\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "starsign-user-policy",
+      "description": "Base role of every organisation user: signs in to the portal, own profile, signs documents assigned to them",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"STARSIGN_USER\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "organisation-user-policy",
+      "description": "Uploads documents, prepares and sends signing workflows (own documents)",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"ORGANISATION_USER\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "signing-officer-policy",
+      "description": "Internal signatory: reads the documents and workflows they take part in",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"SIGNING_OFFICER\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "document-manager-policy",
+      "description": "Manages every document, workflow and template of the organisation",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"DOCUMENT_MANAGER\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "auditor-policy",
+      "description": "Read-only access to the organisation's documents, workflows, evidence and audit trail",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"AUDITOR\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "organisation-admin-policy",
+      "description": "Administers the organisation: users, roles, policies, branding, subscription",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"ORGANISATION_ADMIN\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "platform-admin-policy",
+      "description": "Platform administration: organisations, plans, providers, storage, security policy",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"PLATFORM_ADMIN\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "developer-policy",
+      "description": "Developer / tester: platform and organisation administration with one account (never assign in production)",
+      "type": "role",
+      "logic": "POSITIVE",
+      "decisionStrategy": "UNANIMOUS",
+      "config": {
+        "fetchRoles": "false",
+        "roles": "[{\"id\": \"DEVELOPER\", \"required\": false}]"
+      }
+    },
+    {
+      "name": "admin-configuration:view-permission",
+      "description": "Read a single record (Platform Configuration)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-configuration\"]",
+        "scopes": "[\"admin-configuration:view\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-configuration:list-permission",
+      "description": "List, page or search records (Platform Configuration)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-configuration\"]",
+        "scopes": "[\"admin-configuration:list\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-configuration:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Platform Configuration)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-configuration\"]",
+        "scopes": "[\"admin-configuration:edit\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-configuration:configure-permission",
+      "description": "Change organisation policies, notification settings and branding (Platform Configuration)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-configuration\"]",
+        "scopes": "[\"admin-configuration:configure\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-notification-providers:list-permission",
+      "description": "List, page or search records (Notification Provider)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-notification-providers\"]",
+        "scopes": "[\"admin-notification-providers:list\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-notification-providers:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Notification Provider)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-notification-providers\"]",
+        "scopes": "[\"admin-notification-providers:edit\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-notification-providers:delete-permission",
+      "description": "Remove, archive or soft-delete a record (Notification Provider)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-notification-providers\"]",
+        "scopes": "[\"admin-notification-providers:delete\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-storage:view-permission",
+      "description": "Read a single record (Storage Admin)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-storage\"]",
+        "scopes": "[\"admin-storage:view\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-storage:list-permission",
+      "description": "List, page or search records (Storage Admin)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-storage\"]",
+        "scopes": "[\"admin-storage:list\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "admin-storage:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Storage Admin)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"admin-storage\"]",
+        "scopes": "[\"admin-storage:edit\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "audit:list-permission",
+      "description": "List, page or search records (Audit)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"audit\"]",
+        "scopes": "[\"audit:list\"]",
+        "applyPolicies": "[\"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "audit:verify-permission",
+      "description": "Verify document integrity or the audit hash chain (Audit)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"audit\"]",
+        "scopes": "[\"audit:verify\"]",
+        "applyPolicies": "[\"auditor-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "audit:export-permission",
+      "description": "Download documents and evidence, export reports and audit trails (Audit)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"audit\"]",
+        "scopes": "[\"audit:export\"]",
+        "applyPolicies": "[\"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "audit:administer-permission",
+      "description": "Platform administration across tenants (no access to document contents) (Audit)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"audit\"]",
+        "scopes": "[\"audit:administer\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "branding:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Branding)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"branding\"]",
+        "scopes": "[\"branding:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "branding:configure-permission",
+      "description": "Change organisation policies, notification settings and branding (Branding)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"branding\"]",
+        "scopes": "[\"branding:configure\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "branding:administer-permission",
+      "description": "Platform administration across tenants (no access to document contents) (Branding)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"branding\"]",
+        "scopes": "[\"branding:administer\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "documents:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "documents:view-permission",
+      "description": "Read a single record (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:view\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "documents:view-own-permission",
+      "description": "Read a single record (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:view-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"signing-officer-policy\"]"
+      }
+    },
+    {
+      "name": "documents:list-permission",
+      "description": "List, page or search records (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:list\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "documents:list-own-permission",
+      "description": "List, page or search records (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:list-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"signing-officer-policy\"]"
+      }
+    },
+    {
+      "name": "documents:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:edit\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "documents:edit-own-permission",
+      "description": "Create or update a record, prepare a workflow (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:edit-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "documents:delete-permission",
+      "description": "Remove, archive or soft-delete a record (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:delete\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "documents:delete-own-permission",
+      "description": "Remove, archive or soft-delete a record (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:delete-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "documents:verify-permission",
+      "description": "Verify document integrity or the audit hash chain (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:verify\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "documents:verify-own-permission",
+      "description": "Verify document integrity or the audit hash chain (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:verify-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "documents:export-permission",
+      "description": "Download documents and evidence, export reports and audit trails (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:export\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "documents:export-own-permission",
+      "description": "Download documents and evidence, export reports and audit trails (own records only) (Document)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"documents\"]",
+        "scopes": "[\"documents:export-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"signing-officer-policy\"]"
+      }
+    },
+    {
+      "name": "invitations:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (User Invitation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"invitations\"]",
+        "scopes": "[\"invitations:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "invitations:list-permission",
+      "description": "List, page or search records (User Invitation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"invitations\"]",
+        "scopes": "[\"invitations:list\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "invitations:manage-permission",
+      "description": "Administer user accounts, sessions, invitations and role assignments (User Invitation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"invitations\"]",
+        "scopes": "[\"invitations:manage\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "notification-templates:view-permission",
+      "description": "Read a single record (Notification Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notification-templates\"]",
+        "scopes": "[\"notification-templates:view\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "notification-templates:list-permission",
+      "description": "List, page or search records (Notification Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notification-templates\"]",
+        "scopes": "[\"notification-templates:list\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "notification-templates:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Notification Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notification-templates\"]",
+        "scopes": "[\"notification-templates:edit\"]",
+        "applyPolicies": "[\"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "notification-templates:delete-permission",
+      "description": "Remove, archive or soft-delete a record (Notification Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notification-templates\"]",
+        "scopes": "[\"notification-templates:delete\"]",
+        "applyPolicies": "[\"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "notifications:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Notification)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notifications\"]",
+        "scopes": "[\"notifications:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "notifications:list-permission",
+      "description": "List, page or search records (Notification)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"notifications\"]",
+        "scopes": "[\"notifications:list\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "organisations:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Organisation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"organisations\"]",
+        "scopes": "[\"organisations:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "organisations:view-permission",
+      "description": "Read a single record (Organisation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"organisations\"]",
+        "scopes": "[\"organisations:view\"]",
+        "applyPolicies": "[\"starsign-user-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "organisations:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Organisation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"organisations\"]",
+        "scopes": "[\"organisations:edit\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "organisations:configure-permission",
+      "description": "Change organisation policies, notification settings and branding (Organisation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"organisations\"]",
+        "scopes": "[\"organisations:configure\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "organisations:administer-permission",
+      "description": "Platform administration across tenants (no access to document contents) (Organisation)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"organisations\"]",
+        "scopes": "[\"organisations:administer\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "reports:view-permission",
+      "description": "Read a single record (Reporting)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"reports\"]",
+        "scopes": "[\"reports:view\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "reports:export-permission",
+      "description": "Download documents and evidence, export reports and audit trails (Reporting)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"reports\"]",
+        "scopes": "[\"reports:export\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "reports:administer-permission",
+      "description": "Platform administration across tenants (no access to document contents) (Reporting)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"reports\"]",
+        "scopes": "[\"reports:administer\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "roles:view-permission",
+      "description": "Read a single record (Role)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"roles\"]",
+        "scopes": "[\"roles:view\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "roles:list-permission",
+      "description": "List, page or search records (Role)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"roles\"]",
+        "scopes": "[\"roles:list\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "roles:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Role)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"roles\"]",
+        "scopes": "[\"roles:edit\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "roles:delete-permission",
+      "description": "Remove, archive or soft-delete a record (Role)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"roles\"]",
+        "scopes": "[\"roles:delete\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "roles:manage-permission",
+      "description": "Administer user accounts, sessions, invitations and role assignments (Role)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"roles\"]",
+        "scopes": "[\"roles:manage\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "signing:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Internal Signing)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"signing\"]",
+        "scopes": "[\"signing:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "signing:list-permission",
+      "description": "List, page or search records (Internal Signing)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"signing\"]",
+        "scopes": "[\"signing:list\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\", \"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "signing:sign-permission",
+      "description": "Sign or decline as an internal signatory (Internal Signing)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"signing\"]",
+        "scopes": "[\"signing:sign\"]",
+        "applyPolicies": "[\"starsign-user-policy\"]"
+      }
+    },
+    {
+      "name": "subscriptions:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (Subscription)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"subscriptions\"]",
+        "scopes": "[\"subscriptions:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "subscriptions:view-permission",
+      "description": "Read a single record (Subscription)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"subscriptions\"]",
+        "scopes": "[\"subscriptions:view\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "subscriptions:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Subscription)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"subscriptions\"]",
+        "scopes": "[\"subscriptions:edit\"]",
+        "applyPolicies": "[\"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "subscriptions:administer-permission",
+      "description": "Platform administration across tenants (no access to document contents) (Subscription)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"subscriptions\"]",
+        "scopes": "[\"subscriptions:administer\"]",
+        "applyPolicies": "[\"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "templates:view-permission",
+      "description": "Read a single record (Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"templates\"]",
+        "scopes": "[\"templates:view\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "templates:list-permission",
+      "description": "List, page or search records (Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"templates\"]",
+        "scopes": "[\"templates:list\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "templates:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"templates\"]",
+        "scopes": "[\"templates:edit\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "templates:initiate-permission",
+      "description": "Send a workflow for signing, renew, amend or resend invitations (Template)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"templates\"]",
+        "scopes": "[\"templates:initiate\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "users:self-permission",
+      "description": "Act on the caller's own data (my profile, my organisation, my notifications) (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:self\"]",
+        "applyPolicies": "[\"authenticated-policy\"]"
+      }
+    },
+    {
+      "name": "users:view-permission",
+      "description": "Read a single record (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:view\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "users:list-permission",
+      "description": "List, page or search records (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:list\"]",
+        "applyPolicies": "[\"auditor-policy\", \"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "users:edit-permission",
+      "description": "Create or update a record, prepare a workflow (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:edit\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "users:delete-permission",
+      "description": "Remove, archive or soft-delete a record (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:delete\"]",
+        "applyPolicies": "[\"organisation-admin-policy\"]"
+      }
+    },
+    {
+      "name": "users:manage-permission",
+      "description": "Administer user accounts, sessions, invitations and role assignments (User)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"users\"]",
+        "scopes": "[\"users:manage\"]",
+        "applyPolicies": "[\"organisation-admin-policy\", \"platform-admin-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:view-permission",
+      "description": "Read a single record (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:view\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:view-own-permission",
+      "description": "Read a single record (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:view-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"signing-officer-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:list-permission",
+      "description": "List, page or search records (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:list\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:list-own-permission",
+      "description": "List, page or search records (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:list-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\", \"signing-officer-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:edit-permission",
+      "description": "Create or update a record, prepare a workflow (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:edit\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:edit-own-permission",
+      "description": "Create or update a record, prepare a workflow (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:edit-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:delete-permission",
+      "description": "Remove, archive or soft-delete a record (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:delete\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:delete-own-permission",
+      "description": "Remove, archive or soft-delete a record (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:delete-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:initiate-permission",
+      "description": "Send a workflow for signing, renew, amend or resend invitations (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:initiate\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:initiate-own-permission",
+      "description": "Send a workflow for signing, renew, amend or resend invitations (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:initiate-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:cancel-permission",
+      "description": "Cancel or recall a workflow (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:cancel\"]",
+        "applyPolicies": "[\"document-manager-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:cancel-own-permission",
+      "description": "Cancel or recall a workflow (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:cancel-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:export-permission",
+      "description": "Download documents and evidence, export reports and audit trails (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:export\"]",
+        "applyPolicies": "[\"document-manager-policy\", \"auditor-policy\"]"
+      }
+    },
+    {
+      "name": "workflows:export-own-permission",
+      "description": "Download documents and evidence, export reports and audit trails (own records only) (Workflow)",
+      "type": "scope",
+      "logic": "POSITIVE",
+      "decisionStrategy": "AFFIRMATIVE",
+      "config": {
+        "resources": "[\"workflows\"]",
+        "scopes": "[\"workflows:export-own\"]",
+        "applyPolicies": "[\"organisation-user-policy\"]"
+      }
+    }
+  ],
+  "scopes": [
+    {
+      "name": "admin-configuration:view",
+      "displayName": "Read a single record (Platform Configuration)"
+    },
+    {
+      "name": "admin-configuration:list",
+      "displayName": "List, page or search records (Platform Configuration)"
+    },
+    {
+      "name": "admin-configuration:edit",
+      "displayName": "Create or update a record, prepare a workflow (Platform Configuration)"
+    },
+    {
+      "name": "admin-configuration:configure",
+      "displayName": "Change organisation policies, notification settings and branding (Platform Configuration)"
+    },
+    {
+      "name": "admin-notification-providers:list",
+      "displayName": "List, page or search records (Notification Provider)"
+    },
+    {
+      "name": "admin-notification-providers:edit",
+      "displayName": "Create or update a record, prepare a workflow (Notification Provider)"
+    },
+    {
+      "name": "admin-notification-providers:delete",
+      "displayName": "Remove, archive or soft-delete a record (Notification Provider)"
+    },
+    {
+      "name": "admin-storage:view",
+      "displayName": "Read a single record (Storage Admin)"
+    },
+    {
+      "name": "admin-storage:list",
+      "displayName": "List, page or search records (Storage Admin)"
+    },
+    {
+      "name": "admin-storage:edit",
+      "displayName": "Create or update a record, prepare a workflow (Storage Admin)"
+    },
+    {
+      "name": "audit:list",
+      "displayName": "List, page or search records (Audit)"
+    },
+    {
+      "name": "audit:verify",
+      "displayName": "Verify document integrity or the audit hash chain (Audit)"
+    },
+    {
+      "name": "audit:export",
+      "displayName": "Download documents and evidence, export reports and audit trails (Audit)"
+    },
+    {
+      "name": "audit:administer",
+      "displayName": "Platform administration across tenants (no access to document contents) (Audit)"
+    },
+    {
+      "name": "branding:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Branding)"
+    },
+    {
+      "name": "branding:configure",
+      "displayName": "Change organisation policies, notification settings and branding (Branding)"
+    },
+    {
+      "name": "branding:administer",
+      "displayName": "Platform administration across tenants (no access to document contents) (Branding)"
+    },
+    {
+      "name": "documents:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Document)"
+    },
+    {
+      "name": "documents:view",
+      "displayName": "Read a single record (Document)"
+    },
+    {
+      "name": "documents:view-own",
+      "displayName": "Read a single record (own records only) (Document)"
+    },
+    {
+      "name": "documents:list",
+      "displayName": "List, page or search records (Document)"
+    },
+    {
+      "name": "documents:list-own",
+      "displayName": "List, page or search records (own records only) (Document)"
+    },
+    {
+      "name": "documents:edit",
+      "displayName": "Create or update a record, prepare a workflow (Document)"
+    },
+    {
+      "name": "documents:edit-own",
+      "displayName": "Create or update a record, prepare a workflow (own records only) (Document)"
+    },
+    {
+      "name": "documents:delete",
+      "displayName": "Remove, archive or soft-delete a record (Document)"
+    },
+    {
+      "name": "documents:delete-own",
+      "displayName": "Remove, archive or soft-delete a record (own records only) (Document)"
+    },
+    {
+      "name": "documents:verify",
+      "displayName": "Verify document integrity or the audit hash chain (Document)"
+    },
+    {
+      "name": "documents:verify-own",
+      "displayName": "Verify document integrity or the audit hash chain (own records only) (Document)"
+    },
+    {
+      "name": "documents:export",
+      "displayName": "Download documents and evidence, export reports and audit trails (Document)"
+    },
+    {
+      "name": "documents:export-own",
+      "displayName": "Download documents and evidence, export reports and audit trails (own records only) (Document)"
+    },
+    {
+      "name": "invitations:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (User Invitation)"
+    },
+    {
+      "name": "invitations:list",
+      "displayName": "List, page or search records (User Invitation)"
+    },
+    {
+      "name": "invitations:manage",
+      "displayName": "Administer user accounts, sessions, invitations and role assignments (User Invitation)"
+    },
+    {
+      "name": "notification-templates:view",
+      "displayName": "Read a single record (Notification Template)"
+    },
+    {
+      "name": "notification-templates:list",
+      "displayName": "List, page or search records (Notification Template)"
+    },
+    {
+      "name": "notification-templates:edit",
+      "displayName": "Create or update a record, prepare a workflow (Notification Template)"
+    },
+    {
+      "name": "notification-templates:delete",
+      "displayName": "Remove, archive or soft-delete a record (Notification Template)"
+    },
+    {
+      "name": "notifications:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Notification)"
+    },
+    {
+      "name": "notifications:list",
+      "displayName": "List, page or search records (Notification)"
+    },
+    {
+      "name": "organisations:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Organisation)"
+    },
+    {
+      "name": "organisations:view",
+      "displayName": "Read a single record (Organisation)"
+    },
+    {
+      "name": "organisations:edit",
+      "displayName": "Create or update a record, prepare a workflow (Organisation)"
+    },
+    {
+      "name": "organisations:configure",
+      "displayName": "Change organisation policies, notification settings and branding (Organisation)"
+    },
+    {
+      "name": "organisations:administer",
+      "displayName": "Platform administration across tenants (no access to document contents) (Organisation)"
+    },
+    {
+      "name": "reports:view",
+      "displayName": "Read a single record (Reporting)"
+    },
+    {
+      "name": "reports:export",
+      "displayName": "Download documents and evidence, export reports and audit trails (Reporting)"
+    },
+    {
+      "name": "reports:administer",
+      "displayName": "Platform administration across tenants (no access to document contents) (Reporting)"
+    },
+    {
+      "name": "roles:view",
+      "displayName": "Read a single record (Role)"
+    },
+    {
+      "name": "roles:list",
+      "displayName": "List, page or search records (Role)"
+    },
+    {
+      "name": "roles:edit",
+      "displayName": "Create or update a record, prepare a workflow (Role)"
+    },
+    {
+      "name": "roles:delete",
+      "displayName": "Remove, archive or soft-delete a record (Role)"
+    },
+    {
+      "name": "roles:manage",
+      "displayName": "Administer user accounts, sessions, invitations and role assignments (Role)"
+    },
+    {
+      "name": "signing:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Internal Signing)"
+    },
+    {
+      "name": "signing:list",
+      "displayName": "List, page or search records (Internal Signing)"
+    },
+    {
+      "name": "signing:sign",
+      "displayName": "Sign or decline as an internal signatory (Internal Signing)"
+    },
+    {
+      "name": "subscriptions:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (Subscription)"
+    },
+    {
+      "name": "subscriptions:view",
+      "displayName": "Read a single record (Subscription)"
+    },
+    {
+      "name": "subscriptions:edit",
+      "displayName": "Create or update a record, prepare a workflow (Subscription)"
+    },
+    {
+      "name": "subscriptions:administer",
+      "displayName": "Platform administration across tenants (no access to document contents) (Subscription)"
+    },
+    {
+      "name": "templates:view",
+      "displayName": "Read a single record (Template)"
+    },
+    {
+      "name": "templates:list",
+      "displayName": "List, page or search records (Template)"
+    },
+    {
+      "name": "templates:edit",
+      "displayName": "Create or update a record, prepare a workflow (Template)"
+    },
+    {
+      "name": "templates:initiate",
+      "displayName": "Send a workflow for signing, renew, amend or resend invitations (Template)"
+    },
+    {
+      "name": "users:self",
+      "displayName": "Act on the caller's own data (my profile, my organisation, my notifications) (User)"
+    },
+    {
+      "name": "users:view",
+      "displayName": "Read a single record (User)"
+    },
+    {
+      "name": "users:list",
+      "displayName": "List, page or search records (User)"
+    },
+    {
+      "name": "users:edit",
+      "displayName": "Create or update a record, prepare a workflow (User)"
+    },
+    {
+      "name": "users:delete",
+      "displayName": "Remove, archive or soft-delete a record (User)"
+    },
+    {
+      "name": "users:manage",
+      "displayName": "Administer user accounts, sessions, invitations and role assignments (User)"
+    },
+    {
+      "name": "workflows:view",
+      "displayName": "Read a single record (Workflow)"
+    },
+    {
+      "name": "workflows:view-own",
+      "displayName": "Read a single record (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:list",
+      "displayName": "List, page or search records (Workflow)"
+    },
+    {
+      "name": "workflows:list-own",
+      "displayName": "List, page or search records (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:edit",
+      "displayName": "Create or update a record, prepare a workflow (Workflow)"
+    },
+    {
+      "name": "workflows:edit-own",
+      "displayName": "Create or update a record, prepare a workflow (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:delete",
+      "displayName": "Remove, archive or soft-delete a record (Workflow)"
+    },
+    {
+      "name": "workflows:delete-own",
+      "displayName": "Remove, archive or soft-delete a record (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:initiate",
+      "displayName": "Send a workflow for signing, renew, amend or resend invitations (Workflow)"
+    },
+    {
+      "name": "workflows:initiate-own",
+      "displayName": "Send a workflow for signing, renew, amend or resend invitations (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:cancel",
+      "displayName": "Cancel or recall a workflow (Workflow)"
+    },
+    {
+      "name": "workflows:cancel-own",
+      "displayName": "Cancel or recall a workflow (own records only) (Workflow)"
+    },
+    {
+      "name": "workflows:export",
+      "displayName": "Download documents and evidence, export reports and audit trails (Workflow)"
+    },
+    {
+      "name": "workflows:export-own",
+      "displayName": "Download documents and evidence, export reports and audit trails (own records only) (Workflow)"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+<div class="page max-w-3xl">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/templates">Signing templates</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">From workflow</span>
+      </nav>
+      <h1 class="page-title">Save workflow as template</h1>
+      <p class="page-subtitle">
+        Each signatory becomes a role (named after their designation), with the same stages, signing
+        order and field layout. The template starts as a draft.
+      </p>
+    </div>
+  </header>
+
+  <form class="card flex flex-col gap-5" [formRoot]="nameForm" aria-label="Create template from workflow">
+    @if (wf(); as w) {
+      <div class="flex flex-col gap-1">
+        <span class="eyebrow">Source workflow</span>
+        <div class="flex flex-wrap items-center gap-3">
+          <a class="cell-title" [routerLink]="['/workflows', w.id]">{{ w.title }}</a>
+          <app-status-chip [status]="w.status" />
+        </div>
+        <span class="mono text-ink-muted">
+          {{ w.referenceNumber }} · {{ w.stages?.length ?? 0 }} stage(s) · {{ signatoryCount() }}
+          signatory(ies) · {{ w.fields?.length ?? 0 }} field(s)
+        </span>
+      </div>
+    } @else if (workflow.isLoading()) {
+      <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading workflow…</p>
+    } @else if (workflow.error()) {
+      <p class="m-0 text-ink-muted">The workflow details could not be shown; the template can still be created.</p>
+    }
+
+    <div class="field">
+      <label for="tfw-name">Template name</label>
+      <input id="tfw-name" class="field-control" [formField]="nameForm.name" />
+      <span class="field__hint">Blank = the workflow's title. Names must be unique in the organisation.</span>
+      <app-field-errors [field]="nameForm.name" />
+    </div>
+
+    @if (formError()) {
+      <div class="alert alert--danger" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ formError() }}
+      </div>
+    }
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <a class="btn btn--secondary" [routerLink]="['/workflows', workflowId()]">Cancel</a>
+      <button type="submit" class="btn btn--primary" [disabled]="nameForm().submitting()">
+        @if (nameForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Creating…
+        } @else {
+          <i class="bi bi-files" aria-hidden="true"></i> Create template
+        }
+      </button>
+    </div>
+  </form>
+</div>

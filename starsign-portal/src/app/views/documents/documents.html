@@ -1,0 +1,167 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Document vault</span>
+      </nav>
+      <h1 class="page-title">Document vault</h1>
+      <p class="page-subtitle">
+        {{ store.dataList().length }} documents · {{ inFlightCount() }} in signing ·
+        {{ sealedCount() }} sealed
+      </p>
+    </div>
+    <div class="page-actions">
+      <button
+        type="button"
+        class="btn btn--secondary"
+        (click)="exportCsv()"
+        [disabled]="!store.dataList().length"
+      >
+        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+      </button>
+      <a *appCan="'documents:edit'" class="btn btn--primary" routerLink="upload"
+        ><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload PDF</a
+      >
+    </div>
+  </header>
+
+  <form
+    class="card flex flex-col gap-4"
+    (submit)="$event.preventDefault()"
+    aria-label="Search documents"
+  >
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+      <div class="field">
+        <label for="doc-text">Title, reference or signatory</label>
+        <input
+          id="doc-text"
+          class="field-control"
+          type="search"
+          placeholder="e.g. NDA-2026-0142"
+          [formField]="filterForm.text"
+        />
+      </div>
+      <div class="field">
+        <label for="doc-status">Status</label>
+        <select id="doc-status" class="field-control" [formField]="filterForm.status">
+          <option value="">All statuses</option>
+          @for (status of statuses; track status) {
+            <option [value]="status">{{ statusLabel(status) }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="doc-from">Created from</label>
+        <input
+          id="doc-from"
+          class="field-control"
+          type="date"
+          [formField]="filterForm.createdFrom"
+        />
+      </div>
+      <div class="field">
+        <label for="doc-to">Created to</label>
+        <input id="doc-to" class="field-control" type="date" [formField]="filterForm.createdTo" />
+        <app-field-errors [field]="filterForm.createdTo" />
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="check"
+        ><input type="checkbox" [formField]="filterForm.includeArchived" /> Include archived</label
+      >
+      <span class="flex-1"></span>
+      @for (chip of activeFilters(); track chip.key) {
+        <button
+          type="button"
+          class="chip chip--pending cursor-pointer"
+          (click)="clearFilter(chip.key)"
+          [attr.aria-label]="'Remove filter ' + chip.label"
+        >
+          {{ chip.label }} <i class="bi bi-x" aria-hidden="true"></i>
+        </button>
+      }
+      <button
+        type="button"
+        class="btn btn--ghost"
+        (click)="resetFilters()"
+        [disabled]="!activeFilters().length"
+      >
+        Reset
+      </button>
+    </div>
+  </form>
+
+  @if (store.error()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ store.messages()[0] }}
+    </div>
+  }
+
+  <section class="table-panel" aria-label="Documents">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Document</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="min-w-40">Signatures</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Created</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (doc of store.dataList(); track doc.id) {
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <i class="bi bi-file-earmark-pdf text-xl text-cyan" aria-hidden="true"></i>
+                  <div class="min-w-0">
+                    <a class="cell-title" [routerLink]="doc.id">{{ doc.title }}</a>
+                    <div class="cell-note mono">
+                      {{ doc.referenceNumber || '—' }} · {{ doc.pageCount ?? 0 }} PP
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td><app-status-chip [status]="doc.status" /></td>
+              <td>
+                <div class="mono mb-1.5">
+                  {{ doc.signedCount ?? 0 }}/{{ doc.signatoryCount ?? 0 }}
+                </div>
+                <div class="progress" [class.progress--gold]="doc.status === 'COMPLETED'">
+                  <div
+                    class="progress__bar"
+                    [style.width.%]="progress(doc.signedCount, doc.signatoryCount)"
+                  ></div>
+                </div>
+              </td>
+              <td class="cell-note">{{ doc.ownerName || '—' }}</td>
+              <td class="cell-note">{{ doc.createdAt | date: 'dd MMM yyyy' }}</td>
+              <td class="text-right">
+                <a
+                  class="btn btn--ghost btn--icon"
+                  [routerLink]="doc.id"
+                  [attr.aria-label]="'Open ' + doc.title"
+                  ><i class="bi bi-chevron-right" aria-hidden="true"></i
+                ></a>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-file-earmark-lock2" aria-hidden="true"></i>
+                  <span>{{
+                    store.loading() ? 'Searching the vault…' : 'No documents match these criteria.'
+                  }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,192 @@
+@if (loadError()) {
+  <div class="alert alert--danger" role="alert">
+    {{ loadError() }}
+    <button type="button" class="btn btn--ghost" (click)="load()">Retry</button>
+  </div>
+}
+
+@if (loading()) {
+  <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading the profile…</p>
+} @else if (organisation(); as org) {
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="profileForm"
+    aria-label="Organisation profile"
+  >
+    <div class="flex flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="org-details-title">
+        <h2 id="org-details-title" class="eyebrow m-0">Organisation</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="org-name">Registered name *</label>
+            <input id="org-name" class="field-control" [formField]="profileForm.name" />
+            <app-field-errors [field]="profileForm.name" />
+          </div>
+          <div class="field">
+            <label for="org-trading">Trading name</label>
+            <input id="org-trading" class="field-control" [formField]="profileForm.tradingName" />
+            <app-field-errors [field]="profileForm.tradingName" />
+          </div>
+          <div class="field">
+            <label for="org-reg">Registration number</label>
+            <input id="org-reg" class="field-control mono" [value]="org.registrationNumber ?? ''" readonly aria-describedby="org-reg-hint" />
+            <span id="org-reg-hint" class="field__hint">Identifies the company; only a platform administrator can correct it.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="org-contact-title">
+        <h2 id="org-contact-title" class="eyebrow m-0">Contact</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="org-email">Email *</label>
+            <input id="org-email" class="field-control" type="email" [formField]="profileForm.emailAddress" />
+            <app-field-errors [field]="profileForm.emailAddress" />
+          </div>
+          <div class="field">
+            <label for="org-phone">Phone</label>
+            <input id="org-phone" class="field-control" type="tel" [formField]="profileForm.phoneNumber" placeholder="+267 391 0000" />
+            <app-field-errors [field]="profileForm.phoneNumber" />
+          </div>
+          <div class="field md:col-span-2">
+            <label for="org-website">Website</label>
+            <input id="org-website" class="field-control" type="url" [formField]="profileForm.website" placeholder="https://example.co.bw" />
+            <app-field-errors [field]="profileForm.website" />
+          </div>
+          <div class="field">
+            <label for="org-tz">Time zone</label>
+            <input id="org-tz" class="field-control" list="org-tz-list" [formField]="profileForm.timeZone" placeholder="Africa/Gaborone" />
+            <datalist id="org-tz-list">
+              @for (zone of timeZones; track zone) {
+                <option [value]="zone"></option>
+              }
+            </datalist>
+            <span class="field__hint">Dates in emails and reports use this zone.</span>
+            <app-field-errors [field]="profileForm.timeZone" />
+          </div>
+          <div class="field">
+            <label for="org-locale">Locale</label>
+            <input id="org-locale" class="field-control" [formField]="profileForm.locale" placeholder="en" />
+            <span class="field__hint">Picks the language of notification templates, e.g. en or en-BW.</span>
+            <app-field-errors [field]="profileForm.locale" />
+          </div>
+        </div>
+      </section>
+
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Physical address</legend>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="phys-1">Line 1 *</label>
+            <input id="phys-1" class="field-control" [formField]="profileForm.physical.line1" />
+            <app-field-errors [field]="profileForm.physical.line1" />
+          </div>
+          <div class="field">
+            <label for="phys-2">Line 2</label>
+            <input id="phys-2" class="field-control" [formField]="profileForm.physical.line2" />
+          </div>
+          <div class="field">
+            <label for="phys-city">City *</label>
+            <input id="phys-city" class="field-control" [formField]="profileForm.physical.city" />
+            <app-field-errors [field]="profileForm.physical.city" />
+          </div>
+          <div class="field">
+            <label for="phys-country">Country *</label>
+            <input id="phys-country" class="field-control" [formField]="profileForm.physical.country" />
+            <app-field-errors [field]="profileForm.physical.country" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Postal address</legend>
+        @if (canEdit()) {
+          <button type="button" class="btn btn--ghost self-start" (click)="copyPhysicalToPostal()">
+            <i class="bi bi-clipboard" aria-hidden="true"></i> Same as physical address
+          </button>
+        }
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="post-1">Line 1</label>
+            <input id="post-1" class="field-control" [formField]="profileForm.postal.line1" placeholder="P.O. Box …" />
+          </div>
+          <div class="field">
+            <label for="post-2">Line 2</label>
+            <input id="post-2" class="field-control" [formField]="profileForm.postal.line2" />
+          </div>
+          <div class="field">
+            <label for="post-city">City</label>
+            <input id="post-city" class="field-control" [formField]="profileForm.postal.city" />
+          </div>
+          <div class="field">
+            <label for="post-code">Postal code</label>
+            <input id="post-code" class="field-control" [formField]="profileForm.postal.postalCode" />
+          </div>
+          <div class="field">
+            <label for="post-country">Country</label>
+            <input id="post-country" class="field-control" [formField]="profileForm.postal.country" />
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <div class="glass flex flex-col gap-3 p-5">
+        <span class="eyebrow">Status</span>
+        <span class="chip self-start" [class]="'chip--' + statusTone()">{{ (org.status ?? 'UNKNOWN').replaceAll('_', ' ') }}</span>
+        @if (statusHelp()) {
+          <p class="m-0 text-body-sm text-ink-muted">{{ statusHelp() }}</p>
+        }
+        @if (org.statusReason) {
+          <p class="m-0 text-body-sm"><span class="text-ink-muted">Reason:</span> {{ org.statusReason }}</p>
+        }
+        <dl class="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-body-sm">
+          <dt class="text-ink-muted">Tenant</dt>
+          <dd class="m-0 mono break-all">{{ org.tenantId || '—' }}</dd>
+          <dt class="text-ink-muted">Email verified</dt>
+          <dd class="m-0">
+            @if (org.emailVerified) {
+              <i class="bi bi-patch-check text-cyan" aria-hidden="true"></i> Yes
+            } @else {
+              No
+            }
+          </dd>
+          <dt class="text-ink-muted">Activated</dt>
+          <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd MMM yyyy') || '—' }}</dd>
+          <dt class="text-ink-muted">Registered</dt>
+          <dd class="m-0 mono">{{ (org.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+          <dt class="text-ink-muted">Last changed</dt>
+          <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+        </dl>
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      @if (canEdit()) {
+        <button
+          type="submit"
+          class="btn btn--primary btn--block min-h-11"
+          [disabled]="profileForm().submitting() || !profileForm().dirty()"
+        >
+          @if (profileForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check2" aria-hidden="true"></i> Save profile
+          }
+        </button>
+        <button type="button" class="btn btn--secondary btn--block" [disabled]="profileForm().submitting()" (click)="load()">
+          Discard changes
+        </button>
+      } @else {
+        <p class="m-0 text-body-sm text-ink-muted">
+          <i class="bi bi-lock" aria-hidden="true"></i>
+          {{ closed() ? 'A closed organisation cannot be changed.' : 'You can view the profile; changing it needs the organisations:edit permission.' }}
+        </p>
+      }
+    </aside>
+  </form>
+}

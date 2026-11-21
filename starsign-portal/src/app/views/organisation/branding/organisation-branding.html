@@ -1,0 +1,261 @@
+@if (loadError()) {
+  <div class="alert alert--danger" role="alert">
+    {{ loadError() }}
+    <button type="button" class="btn btn--ghost" (click)="load()">Retry</button>
+  </div>
+}
+
+@if (loading()) {
+  <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading the branding…</p>
+} @else if (branding(); as current) {
+  @if (current.inherited) {
+    <div class="glass flex items-start gap-3 p-4" role="status">
+      <i class="bi bi-info-circle text-cyan" aria-hidden="true"></i>
+      <p class="m-0 text-body-sm">
+        Your organisation uses the platform branding. Saving below or uploading a logo gives it its own branding,
+        starting from what is shown here.
+      </p>
+    </div>
+  }
+
+  <form
+    class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]"
+    [formRoot]="brandingForm"
+    aria-label="Branding"
+  >
+    <div class="flex flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="br-identity-title">
+        <h2 id="br-identity-title" class="eyebrow m-0">Identity</h2>
+        <div class="field md:max-w-md">
+          <label for="br-app">App name</label>
+          <input id="br-app" class="field-control" [formField]="brandingForm.appName" placeholder="StarSign" aria-describedby="br-app-hint" />
+          <span id="br-app-hint" class="field__hint">Shown in the portal, on signing pages and in emails.</span>
+          <app-field-errors [field]="brandingForm.appName" />
+        </div>
+      </section>
+
+      <fieldset class="card flex flex-col gap-4">
+        <legend class="eyebrow">Colours</legend>
+        <p class="m-0 text-body-sm text-ink-muted">
+          Seed colours; the full light and dark palettes are generated from them. Empty seeds fall back to the platform's.
+        </p>
+        <div class="grid gap-4 md:grid-cols-2">
+          @for (key of seedKeys; track key) {
+            <div class="field">
+              <label [for]="'br-seed-' + key">{{ key }}</label>
+              <div class="flex items-center gap-2">
+                <input
+                  type="color"
+                  class="swatch"
+                  [value]="swatchValue(model().seeds[key])"
+                  [disabled]="!canEdit()"
+                  (input)="setSeed(key, $any($event.target).value)"
+                  [attr.aria-label]="'Pick the ' + key + ' colour'"
+                />
+                <input
+                  [id]="'br-seed-' + key"
+                  class="field-control mono"
+                  [formField]="brandingForm.seeds[key]"
+                  placeholder="#1a73e8"
+                  [attr.aria-describedby]="'br-seed-hint-' + key"
+                />
+              </div>
+              <span [id]="'br-seed-hint-' + key" class="field__hint">{{ seedHints[key] }}</span>
+              <app-field-errors [field]="brandingForm.seeds[key]" />
+            </div>
+          }
+        </div>
+        @if (overrideCount()) {
+          <p class="m-0 text-body-sm text-ink-muted">
+            {{ overrideCount() }} individual token {{ overrideCount() === 1 ? 'override is' : 'overrides are' }} kept as they are.
+          </p>
+        }
+      </fieldset>
+
+      <section class="card flex flex-col gap-4" aria-labelledby="br-assets-title">
+        <h2 id="br-assets-title" class="eyebrow m-0">Logos &amp; icon</h2>
+        <p class="m-0 text-body-sm text-ink-muted">At most 1 MB each. Uploads take effect at once.</p>
+        <div class="grid gap-4 md:grid-cols-2">
+          @for (slot of assetSlots; track slot.slug) {
+            @let src = assetSrc(slot.url(current));
+            <div class="flex flex-col gap-2">
+              <span class="field__label">{{ slot.label }}</span>
+              <div class="asset-box" [class.bg-white]="slot.kind !== 'LOGO_DARK'" [class.bg-obsidian]="slot.kind === 'LOGO_DARK'">
+                @if (src) {
+                  <img [src]="src" [alt]="slot.label" />
+                } @else {
+                  <span class="text-body-sm text-ink-muted">None</span>
+                }
+              </div>
+              <span class="field__hint">
+                {{ slot.hint }}
+                @if (src && !ownAsset(slot)) {
+                  · from the platform
+                }
+              </span>
+              @if (canEdit()) {
+                <div class="flex flex-wrap gap-2">
+                  <label class="btn btn--secondary" [class.opacity-50]="busyAsset() === slot.slug">
+                    <input
+                      type="file"
+                      class="sr-only"
+                      [accept]="slot.accept"
+                      [disabled]="busyAsset() !== null"
+                      (change)="upload(slot, $event)"
+                    />
+                    @if (busyAsset() === slot.slug) {
+                      <span class="spinner" aria-hidden="true"></span>
+                    } @else {
+                      <i class="bi bi-upload" aria-hidden="true"></i>
+                    }
+                    {{ ownAsset(slot) ? 'Replace' : 'Upload' }}
+                  </label>
+                  @if (ownAsset(slot)) {
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      [disabled]="busyAsset() !== null"
+                      (click)="removeAsset(slot)"
+                      [attr.aria-label]="'Remove the ' + slot.label.toLowerCase()"
+                    >
+                      <i class="bi bi-trash" aria-hidden="true"></i> Remove
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="br-support-title">
+        <h2 id="br-support-title" class="eyebrow m-0">Support &amp; wording</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="br-support-email">Support email</label>
+            <input id="br-support-email" class="field-control" type="email" [formField]="brandingForm.supportEmail" placeholder="support@example.co.bw" />
+            <app-field-errors [field]="brandingForm.supportEmail" />
+          </div>
+          <div class="field">
+            <label for="br-support-url">Support web page</label>
+            <input id="br-support-url" class="field-control" type="url" [formField]="brandingForm.supportUrl" placeholder="https://example.co.bw/help" />
+            <app-field-errors [field]="brandingForm.supportUrl" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="br-portal-msg">Signing page message</label>
+          <textarea id="br-portal-msg" class="field-control" [formField]="brandingForm.signingPortalMessage" aria-describedby="br-portal-msg-hint"></textarea>
+          <span id="br-portal-msg-hint" class="field__hint">Shown to external signatories on the signing page. {{ model().signingPortalMessage.length }}/1000</span>
+          <app-field-errors [field]="brandingForm.signingPortalMessage" />
+        </div>
+        <div class="field">
+          <label for="br-footer">Email footer</label>
+          <textarea id="br-footer" class="field-control" [formField]="brandingForm.emailFooter" aria-describedby="br-footer-hint"></textarea>
+          <span id="br-footer-hint" class="field__hint">Added to the bottom of every email. {{ model().emailFooter.length }}/2000</span>
+          <app-field-errors [field]="brandingForm.emailFooter" />
+        </div>
+      </section>
+    </div>
+
+    <aside class="flex flex-col gap-4 xl:sticky xl:top-4 xl:self-start">
+      <div class="card flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-2">
+          <span class="eyebrow">
+            Live preview
+            @if (previewing()) {
+              <span class="spinner ml-1" aria-hidden="true"></span>
+            }
+          </span>
+          <div class="segmented" role="radiogroup" aria-label="Preview colour mode">
+            <label><input type="radio" name="br-mode" [checked]="previewMode() === 'light'" (change)="previewMode.set('light')" />Light</label>
+            <label><input type="radio" name="br-mode" [checked]="previewMode() === 'dark'" (change)="previewMode.set('dark')" />Dark</label>
+          </div>
+        </div>
+
+        <div class="preview" [attr.style]="previewStyle()" aria-label="Preview of the signing page" role="img">
+          <div class="preview__bar">
+            @if (previewLogo(); as logo) {
+              <img [src]="logo" alt="" />
+            } @else {
+              <i class="bi bi-pen" aria-hidden="true"></i>
+            }
+            <span>{{ model().appName || 'StarSign' }}</span>
+          </div>
+          <div class="preview__card">
+            <strong>Service agreement 2026</strong>
+            <span class="preview__muted">Sent by {{ model().appName || 'StarSign' }} · 3 pages</span>
+            <div class="flex flex-wrap gap-2">
+              <span class="preview__chip" style="background: var(--p-color-success-container); color: var(--p-color-on-success-container)">Signed</span>
+              <span class="preview__chip" style="background: var(--p-color-warning-container); color: var(--p-color-on-warning-container)">Expires soon</span>
+              <span class="preview__chip" style="background: var(--p-color-error-container); color: var(--p-color-on-error-container)">Declined</span>
+            </div>
+            @if (model().signingPortalMessage) {
+              <p class="m-0" style="white-space: pre-line">{{ model().signingPortalMessage }}</p>
+            }
+            <div class="flex flex-wrap gap-2">
+              <span class="preview__btn">Review &amp; sign</span>
+              <span class="preview__btn preview__btn--secondary">Decline</span>
+            </div>
+            @if (model().supportEmail || model().supportUrl) {
+              <span class="preview__muted">Need help? <span class="preview__link">{{ model().supportEmail || model().supportUrl }}</span></span>
+            }
+          </div>
+          @if (model().emailFooter) {
+            <div class="preview__footer">{{ model().emailFooter }}</div>
+          }
+        </div>
+
+        @if (issues().length) {
+          <div class="alert alert--danger flex-col items-start" role="alert">
+            <strong>Not enough contrast — saving will be refused:</strong>
+            <ul class="m-0 pl-5 text-body-sm">
+              @for (issue of issues(); track $index) {
+                <li>
+                  {{ tokenLabel(issue.foreground) }} on {{ tokenLabel(issue.background) }} ({{ issue.mode }}):
+                  {{ issue.ratio?.toFixed(2) }}:1, needs {{ issue.minimum }}:1
+                </li>
+              }
+            </ul>
+          </div>
+        } @else if (preview()) {
+          <p class="m-0 text-body-sm text-ink-muted"><i class="bi bi-check2-circle text-cyan" aria-hidden="true"></i> Text contrast meets WCAG AA in both modes.</p>
+        }
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      @if (canEdit()) {
+        <button
+          type="submit"
+          class="btn btn--primary btn--block min-h-11"
+          [disabled]="brandingForm().submitting() || (!brandingForm().dirty() && !current.inherited)"
+        >
+          @if (brandingForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check2" aria-hidden="true"></i> Save branding
+          }
+        </button>
+        <button type="button" class="btn btn--secondary btn--block" [disabled]="brandingForm().submitting()" (click)="load()">
+          Discard changes
+        </button>
+        @if (!current.inherited) {
+          <button type="button" class="btn btn--ghost btn--block" [disabled]="resetting()" (click)="reset()">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to platform branding
+          </button>
+        }
+      } @else {
+        <p class="m-0 text-body-sm text-ink-muted">
+          <i class="bi bi-lock" aria-hidden="true"></i> Read-only: changing the branding needs the branding:configure permission.
+        </p>
+      }
+      @if (current.modifiedAt) {
+        <p class="m-0 text-body-sm text-ink-muted">Last changed {{ current.modifiedAt | date: 'dd MMM yyyy, HH:mm' }}</p>
+      }
+    </aside>
+  </form>
+}

@@ -1,0 +1,370 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Audit trail</span>
+      </nav>
+      <h1 class="page-title">Audit trail</h1>
+      <p class="page-subtitle">Tamper-evident, hash-chained record of everything that happened.</p>
+    </div>
+    <button
+      *appCan="'audit:export'"
+      type="button"
+      class="btn btn--secondary"
+      [disabled]="exporting()"
+      (click)="exportCsv()"
+    >
+      @if (exporting()) {
+        <span class="spinner" aria-hidden="true"></span>
+      } @else {
+        <i class="bi bi-filetype-csv" aria-hidden="true"></i>
+      }
+      Export CSV
+    </button>
+  </header>
+
+  <form
+    class="card grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+    (submit)="search($event)"
+    aria-label="Search the audit trail"
+  >
+    <div class="field">
+      <label for="au-type">Event type</label>
+      <select id="au-type" class="field-control" [formField]="filterForm.eventType">
+        <option value="">All events</option>
+        @for (type of eventTypes; track type) {
+          <option [value]="type">{{ label(type) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="au-outcome">Outcome</label>
+      <select id="au-outcome" class="field-control" [formField]="filterForm.outcome">
+        <option value="">Any outcome</option>
+        @for (outcome of outcomes; track outcome) {
+          <option [value]="outcome">{{ label(outcome) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="au-from">From</label>
+      <input id="au-from" class="field-control" type="date" [formField]="filterForm.from" />
+    </div>
+    <div class="field">
+      <label for="au-to">To</label>
+      <input id="au-to" class="field-control" type="date" [formField]="filterForm.to" />
+      <app-field-errors [field]="filterForm.to" />
+    </div>
+    <div class="field">
+      <label for="au-actor">Actor ID</label>
+      <input id="au-actor" class="field-control mono" type="search" [formField]="filterForm.actorId" />
+    </div>
+    <div class="field">
+      <label for="au-document">Document ID</label>
+      <input
+        id="au-document"
+        class="field-control mono"
+        type="search"
+        [formField]="filterForm.documentId"
+      />
+    </div>
+    <div class="field">
+      <label for="au-workflow">Workflow ID</label>
+      <input
+        id="au-workflow"
+        class="field-control mono"
+        type="search"
+        [formField]="filterForm.workflowId"
+      />
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn--primary" [disabled]="loading()">
+        <i class="bi bi-search" aria-hidden="true"></i> Search
+      </button>
+      <button type="button" class="btn btn--ghost" (click)="reset()">Reset</button>
+    </div>
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Audit events">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">When</th>
+            <th scope="col">Event</th>
+            <th scope="col">Actor</th>
+            <th scope="col">Entity</th>
+            <th scope="col">Outcome</th>
+            <th scope="col"><span class="sr-only">Details</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of events(); track e.id ?? e.chainKey + ':' + e.sequenceNumber) {
+            <tr>
+              <td class="mono text-ink-muted">{{ e.sequenceNumber }}</td>
+              <td class="mono text-ink-muted">{{ e.occurredAt | date: 'dd MMM yyyy, HH:mm:ss' }}</td>
+              <td><span class="cell-title">{{ label(e.eventType) }}</span></td>
+              <td>
+                {{ e.actorDisplayName || '—' }}
+                <div class="cell-note">{{ label(e.actorType) }}</div>
+              </td>
+              <td>
+                {{ e.entityType || (e.workflowId ? 'Workflow' : e.documentId ? 'Document' : '—') }}
+                <div class="cell-note mono">{{ e.entityId || e.workflowId || e.documentId }}</div>
+              </td>
+              <td><span class="chip" [class]="outcomeChip(e.outcome)">{{ label(e.outcome) }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--icon btn--ghost"
+                  [attr.aria-label]="'Details of event ' + e.sequenceNumber"
+                  (click)="selected.set(e)"
+                >
+                  <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <i class="bi bi-journal-text" aria-hidden="true"></i>
+                  <span>{{ loading() ? 'Searching…' : 'No audit events match these criteria.' }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <nav class="flex items-center justify-between gap-2 px-5 py-3" aria-label="Pages">
+      <span class="mono text-ink-muted">Page {{ page() + 1 }}</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn btn--secondary"
+          [disabled]="loading() || page() === 0"
+          (click)="load(page() - 1)"
+        >
+          <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+        </button>
+        <button
+          type="button"
+          class="btn btn--secondary"
+          [disabled]="loading() || !hasNext()"
+          (click)="load(page() + 1)"
+        >
+          Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </nav>
+  </section>
+
+  <section *appCan="'audit:verify'" class="card flex flex-col gap-4" aria-labelledby="chain-title">
+    <h2 id="chain-title" class="card__title m-0">
+      <i class="bi bi-link-45deg" aria-hidden="true"></i> Chain integrity
+    </h2>
+    <p class="m-0 text-ink-muted">
+      Recomputes every event hash in the chain and checks the latest seal. Leave the sequence range
+      empty to verify the whole chain.
+    </p>
+    <form class="grid gap-4 md:grid-cols-4" (submit)="verify($event)" aria-label="Verify audit chain">
+      <div class="field">
+        <label for="chain-key">Chain key</label>
+        <input id="chain-key" class="field-control mono" [formField]="chainForm.chainKey" />
+        <app-field-errors [field]="chainForm.chainKey" />
+      </div>
+      <div class="field">
+        <label for="chain-from">From sequence</label>
+        <input
+          id="chain-from"
+          class="field-control mono"
+          type="number"
+          [formField]="chainForm.fromSequence"
+        />
+        <app-field-errors [field]="chainForm.fromSequence" />
+      </div>
+      <div class="field">
+        <label for="chain-to">To sequence</label>
+        <input
+          id="chain-to"
+          class="field-control mono"
+          type="number"
+          [formField]="chainForm.toSequence"
+        />
+        <app-field-errors [field]="chainForm.toSequence" />
+      </div>
+      <div class="flex items-end gap-2">
+        <button type="submit" class="btn btn--verify" [disabled]="!!chainBusy()">
+          @if (chainBusy() === 'verify') {
+            <span class="spinner" aria-hidden="true"></span>
+          } @else {
+            <i class="bi bi-shield-check" aria-hidden="true"></i>
+          }
+          Verify
+        </button>
+        <button
+          *appCan="'audit:administer'"
+          type="button"
+          class="btn btn--secondary"
+          [disabled]="!!chainBusy()"
+          (click)="seal()"
+        >
+          @if (chainBusy() === 'seal') {
+            <span class="spinner" aria-hidden="true"></span>
+          } @else {
+            <i class="bi bi-patch-check" aria-hidden="true"></i>
+          }
+          Seal
+        </button>
+      </div>
+    </form>
+
+    @if (verification(); as v) {
+      <div
+        class="alert"
+        [class.alert--seal]="v.valid"
+        [class.alert--danger]="!v.valid"
+        role="status"
+        aria-live="polite"
+      >
+        <i
+          class="bi"
+          [class.bi-shield-fill-check]="v.valid"
+          [class.bi-shield-fill-exclamation]="!v.valid"
+          aria-hidden="true"
+        ></i>
+        <div class="flex flex-col gap-1">
+          <strong>{{ v.valid ? 'Chain intact' : 'Chain broken' }}</strong>
+          <span>{{ v.message }}</span>
+          <span class="mono">
+            {{ v.checkedEvents ?? 0 }} events checked
+            @if (v.fromSequence != null) {
+              · #{{ v.fromSequence }}–#{{ v.toSequence }}
+            }
+            @if (!v.valid && v.firstInvalidSequence != null) {
+              · first invalid event #{{ v.firstInvalidSequence }}
+            }
+            · last seal {{ v.lastSealVerified ? 'verified' : 'not verified' }}
+            · {{ v.verifiedAt | date: 'dd MMM yyyy, HH:mm:ss' }}
+          </span>
+        </div>
+      </div>
+    }
+  </section>
+</div>
+
+@if (selected(); as e) {
+  <div class="modal-backdrop" (click)="selected.set(null)">
+    <section
+      class="modal flex flex-col gap-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="event-title"
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="selected.set(null)"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="eyebrow m-0">Event #{{ e.sequenceNumber }} · {{ e.chainKey }}</p>
+          <h2 id="event-title" class="m-0 text-headline-sm">{{ label(e.eventType) }}</h2>
+        </div>
+        <button
+          type="button"
+          class="btn btn--icon btn--ghost"
+          aria-label="Close event details"
+          (click)="selected.set(null)"
+        >
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <dl class="m-0 grid gap-3 sm:grid-cols-2">
+        <div>
+          <dt class="eyebrow">Occurred</dt>
+          <dd class="m-0 mono">{{ e.occurredAt | date: 'yyyy-MM-dd HH:mm:ss' }}</dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Outcome</dt>
+          <dd class="m-0"><span class="chip" [class]="outcomeChip(e.outcome)">{{ label(e.outcome) }}</span></dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Actor</dt>
+          <dd class="m-0">
+            {{ e.actorDisplayName || '—' }} <span class="text-ink-muted">({{ label(e.actorType) }})</span>
+            <div class="hash">{{ e.actorId }}</div>
+          </dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Authentication</dt>
+          <dd class="m-0 mono">{{ label(e.authenticationMethod) }}</dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Entity</dt>
+          <dd class="m-0">
+            {{ e.entityType || '—' }}
+            <div class="hash">{{ e.entityId }}</div>
+          </dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Network</dt>
+          <dd class="m-0 mono">{{ e.ipAddress || '—' }}</dd>
+        </div>
+        @if (e.documentId) {
+          <div>
+            <dt class="eyebrow">Document</dt>
+            <dd class="m-0"><a class="hash" [routerLink]="['/documents', e.documentId]">{{ e.documentId }}</a></dd>
+          </div>
+        }
+        @if (e.workflowId) {
+          <div>
+            <dt class="eyebrow">Workflow</dt>
+            <dd class="m-0"><a class="hash" [routerLink]="['/workflows', e.workflowId]">{{ e.workflowId }}</a></dd>
+          </div>
+        }
+        @if (e.documentSha256) {
+          <div class="sm:col-span-2">
+            <dt class="eyebrow">Document SHA-256</dt>
+            <dd class="m-0 hash">{{ e.documentSha256 }}</dd>
+          </div>
+        }
+        @if (e.userAgent) {
+          <div class="sm:col-span-2">
+            <dt class="eyebrow">User agent</dt>
+            <dd class="m-0 hash">{{ e.userAgent }}</dd>
+          </div>
+        }
+        <div class="sm:col-span-2">
+          <dt class="eyebrow">Previous hash</dt>
+          <dd class="m-0 hash">{{ e.previousHash || '—' }}</dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="eyebrow">Event hash</dt>
+          <dd class="m-0 hash">{{ e.eventHash || '—' }}</dd>
+        </div>
+        @if (e.correlationId) {
+          <div class="sm:col-span-2">
+            <dt class="eyebrow">Correlation ID</dt>
+            <dd class="m-0 hash">{{ e.correlationId }}</dd>
+          </div>
+        }
+        @if (e.details) {
+          <div class="sm:col-span-2">
+            <dt class="eyebrow">Details</dt>
+            <dd class="m-0"><pre class="mono m-0 overflow-auto whitespace-pre-wrap">{{ prettyDetails(e.details) }}</pre></dd>
+          </div>
+        }
+      </dl>
+      <div *appCan="'audit:verify'" class="flex justify-end">
+        <button type="button" class="btn btn--secondary" (click)="useChainOf(e)">
+          <i class="bi bi-shield-check" aria-hidden="true"></i> Verify this chain
+        </button>
+      </div>
+    </section>
+  </div>
+}

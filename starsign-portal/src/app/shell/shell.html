@@ -1,0 +1,151 @@
+<div class="app-layout">
+  @if (chrome()) {
+    @if (mobileMenuOpen()) {
+      <div class="sidebar-backdrop" aria-hidden="true" (click)="mobileMenuOpen.set(false)"></div>
+    }
+    <aside id="side-nav" class="sidebar" [class.sidebar--open]="mobileMenuOpen()">
+      <div class="sidebar-brand">
+        <img src="/mark.svg" alt="" class="h-7 w-7" />
+        <div class="min-w-0">
+          <div class="brand-name">StarSign</div>
+          <div class="eyebrow truncate">{{ session.organisationName() || 'Precision Trust' }}</div>
+        </div>
+        <button type="button" class="btn btn--ghost btn--icon ml-auto md:hidden" aria-label="Close menu" (click)="mobileMenuOpen.set(false)">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <nav class="nav-menu" aria-label="Main navigation">
+        @for (group of menuGroups(); track group.label) {
+          <div class="nav-group" role="group" [attr.aria-label]="group.label">
+            <div class="nav-group-title" aria-hidden="true">{{ group.label }}</div>
+            @for (item of group.items; track item.link) {
+              <a
+                class="nav-item"
+                [routerLink]="item.link"
+                routerLinkActive="nav-item--active"
+                ariaCurrentWhenActive="page"
+                [routerLinkActiveOptions]="{ exact: !!item.exact }"
+              >
+                <i class="bi" [class]="item.icon" aria-hidden="true"></i>
+                <span class="flex-1">{{ item.label }}</span>
+                @if (item.badge === 'pending' && pendingCount() > 0) {
+                  <span class="badge-count" [attr.aria-label]="pendingCount() + ' pending'">{{ pendingCount() }}</span>
+                }
+              </a>
+            }
+          </div>
+        }
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="chip chip--sealed">SHA-256 · Audit chained</span>
+      </div>
+    </aside>
+  }
+
+  <div class="main-wrapper" [class.main-wrapper--full]="!chrome()">
+    @if (chrome()) {
+      <header class="top-header">
+        <button
+          type="button"
+          class="btn btn--ghost btn--icon md:hidden"
+          aria-label="Open menu"
+          aria-controls="side-nav"
+          [attr.aria-expanded]="mobileMenuOpen()"
+          (click)="mobileMenuOpen.set(true)"
+        >
+          <i class="bi bi-list text-xl" aria-hidden="true"></i>
+        </button>
+
+        <div class="hidden md:flex items-center gap-2 text-ink-muted">
+          <i class="bi bi-shield-lock text-cyan" aria-hidden="true"></i>
+          <span class="mono">SECURE SESSION</span>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2">
+          <a class="btn btn--ghost btn--icon relative" routerLink="/signing" aria-label="Signing inbox">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            @if (pendingCount() > 0) {
+              <span class="badge-count absolute -top-1 -right-1">{{ pendingCount() }}</span>
+            }
+          </a>
+
+          <div class="relative">
+            <button
+              type="button"
+              class="avatar"
+              aria-label="Account menu"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="accountMenuOpen()"
+              (click)="toggleAccountMenu($event)"
+            >
+              {{ session.initials() }}
+            </button>
+            @if (accountMenuOpen()) {
+              <div class="account-menu glass" role="menu" (click)="$event.stopPropagation()">
+                <div class="px-4 py-3">
+                  <p class="m-0 font-medium text-ink">{{ session.displayName() }}</p>
+                  <p class="m-0 mono text-ink-muted truncate">{{ session.profile()?.email }}</p>
+                </div>
+                <hr class="divider" />
+                <a class="menu-item" role="menuitem" routerLink="/profile">
+                  <i class="bi bi-person" aria-hidden="true"></i> My profile
+                </a>
+                <a class="menu-item" role="menuitem" routerLink="/notifications">
+                  <i class="bi bi-envelope" aria-hidden="true"></i> Notifications
+                </a>
+                @if (accountUrl(); as url) {
+                  <a class="menu-item" role="menuitem" [href]="url">
+                    <i class="bi bi-person-badge" aria-hidden="true"></i> Account &amp; security
+                  </a>
+                }
+                <button type="button" class="menu-item menu-item--danger" role="menuitem" (click)="logout()">
+                  <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </header>
+    }
+
+    <main class="content-body">
+      @if (keycloak.authenticated || bare()) {
+        <router-outlet />
+      } @else {
+        <div class="login-screen">
+          <div class="login-card stage">
+            <div class="flex items-center gap-3">
+              <img src="/mark.svg" alt="" class="h-9 w-9" />
+              <span class="font-display text-headline-sm font-bold">StarSign</span>
+            </div>
+            <span class="eyebrow mt-8 block">Signing Portal</span>
+            <h1 class="mt-2 mb-0 text-display-mobile md:text-display font-bold">Sign with certainty.</h1>
+            <p class="mt-4 text-body-lg text-ink-muted">
+              Review, sign and verify binding documents with tamper-evident seals and a
+              cryptographically chained audit trail.
+            </p>
+            <button type="button" class="btn btn--primary btn--block mt-8 min-h-11" (click)="login()">
+              <i class="bi bi-shield-lock" aria-hidden="true"></i>
+              Sign in with your organisation account
+            </button>
+            <p class="mt-4 mb-0 text-center text-ink-muted">
+              New to StarSign? <a routerLink="/register">Register your organisation</a>
+            </p>
+            <p class="mt-6 mb-0 flex items-center gap-2 text-ink-muted mono">
+              <i class="bi bi-lock" aria-hidden="true"></i> PKCE · OIDC · TLS
+            </p>
+          </div>
+        </div>
+      }
+    </main>
+
+    <footer class="app-footer">
+      <span>© {{ year }} StarSign</span>
+      <span class="mono">Precision Trust</span>
+    </footer>
+  </div>
+</div>
+<app-loader />
+<ngx-sonner-toaster theme="dark" position="top-right" richColors />

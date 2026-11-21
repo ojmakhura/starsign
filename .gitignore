@@ -36,6 +36,9 @@ pom.xml.versionsBackup
 release.properties
 **/logs/
 TEST*.xml
+.vscode/
+.claude/
+.github/
 
 # Eclipse / STS
 **/.classpath
@@ -54,7 +57,7 @@ starsign-portal/tmp/
 starsign-portal/out-tsc/
 starsign-portal/bazel-out/
 starsign-portal/coverage/
-**/.angular/cache/
+**/.angular
 .sass-cache/
 connect.lock
 libpeerconnection.log

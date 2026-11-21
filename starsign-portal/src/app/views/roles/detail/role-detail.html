@@ -1,0 +1,123 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/roles">Roles</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">{{ role()?.name || role()?.code || 'Role' }}</span>
+      </nav>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="page-title">{{ role()?.name || role()?.code || (loading() ? 'Loading…' : 'Role') }}</h1>
+        @if (role(); as r) {
+          @if (r.builtIn) {
+            <span class="chip chip--neutral"><i class="bi bi-lock" aria-hidden="true"></i> Built-in</span>
+          } @else {
+            <span class="chip chip--progress">Custom</span>
+          }
+        }
+      </div>
+      @if (role()?.description) {
+        <p class="page-subtitle max-w-3xl">{{ role()?.description }}</p>
+      }
+    </div>
+    @if (role(); as r) {
+      <div class="page-actions">
+        <a *appCan="'roles:edit'" class="btn btn--secondary" routerLink="edit"
+          ><i class="bi bi-pencil" aria-hidden="true"></i> {{ r.builtIn ? 'Edit description' : 'Edit' }}</a
+        >
+        @if (!r.builtIn) {
+          <button
+            *appCan="'roles:delete'"
+            type="button"
+            class="btn btn--ghost"
+            [disabled]="deleting()"
+            (click)="remove()"
+          >
+            <i class="bi bi-trash" aria-hidden="true"></i> Delete
+          </button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (role(); as r) {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <section class="table-panel" aria-labelledby="perm-title">
+        <div class="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
+          <h2 id="perm-title" class="m-0 text-headline-sm">
+            Permissions <span class="text-ink-muted mono">({{ canManage() ? selected().length : (r.permissions?.length ?? 0) }})</span>
+          </h2>
+          @if (canManage()) {
+            <div class="flex gap-2">
+              <button type="button" class="btn btn--ghost" [disabled]="!dirty() || saving()" (click)="reset()">
+                Undo changes
+              </button>
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="!dirty() || saving()"
+                (click)="savePermissions()"
+              >
+                @if (saving()) {
+                  <span class="spinner" aria-hidden="true"></span> Saving…
+                } @else {
+                  <i class="bi bi-check2" aria-hidden="true"></i> Save permissions
+                }
+              </button>
+            </div>
+          }
+        </div>
+        @if (r.builtIn) {
+          <p class="m-0 px-5 pt-2 text-ink-muted">
+            The permissions of built-in roles are fixed. Create a custom role to choose your own.
+          </p>
+        }
+        @if (canManage()) {
+          <app-permission-matrix
+            [permissions]="editablePermissions()"
+            [(selected)]="selected"
+            [editable]="true"
+            label="Role permissions"
+          />
+        } @else {
+          <app-permission-matrix
+            [permissions]="r.permissions ?? []"
+            [selected]="selected()"
+            label="Role permissions"
+          />
+        }
+      </section>
+
+      <aside class="card flex flex-col gap-3 self-start">
+        <span class="eyebrow">Details</span>
+        <dl class="m-0 flex flex-col gap-3">
+          <div>
+            <dt class="eyebrow">Code</dt>
+            <dd class="m-0 mono">{{ r.code || '—' }}</dd>
+          </div>
+          @if (r.systemRole) {
+            <div>
+              <dt class="eyebrow">System role</dt>
+              <dd class="m-0 mono">{{ r.systemRole }}</dd>
+            </div>
+          }
+          <div>
+            <dt class="eyebrow">Keycloak role</dt>
+            <dd class="m-0 mono">{{ r.keycloakRoleName || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="eyebrow">Created</dt>
+            <dd class="m-0 mono">{{ (r.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="eyebrow">Modified</dt>
+            <dd class="m-0 mono">{{ (r.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+          </div>
+        </dl>
+      </aside>
+    </div>
+  }
+</div>

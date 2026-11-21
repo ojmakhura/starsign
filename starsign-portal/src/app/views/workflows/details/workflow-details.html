@@ -1,0 +1,300 @@
+<div class="page">
+  @if (workflow.error()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-octagon" aria-hidden="true"></i> The workflow could not be loaded.
+    </div>
+  }
+
+  @if (wf(); as w) {
+    <header class="page-header">
+      <div>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a routerLink="/workflows">Signing workflows</a
+          ><i class="bi bi-chevron-right" aria-hidden="true"></i
+          ><span class="breadcrumb__current">{{ w.referenceNumber }}</span>
+        </nav>
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="page-title">{{ w.title }}</h1>
+          <app-status-chip [status]="w.status" />
+        </div>
+        <p class="page-subtitle">
+          <a class="text-cyan" [routerLink]="['/documents', w.documentId]">{{
+            w.documentTitle || 'Document'
+          }}</a>
+          · {{ w.executionMode }} · owned by {{ w.ownerName || '—' }}
+        </p>
+      </div>
+      <div class="page-actions">
+        <a
+          *appCan="'templates:edit'"
+          class="btn btn--secondary"
+          [routerLink]="['/templates/from-workflow', w.id]"
+        >
+          <i class="bi bi-files" aria-hidden="true"></i> Save as template
+        </a>
+        @if (canCancel()) {
+          <button
+            *appCan="'workflows:cancel'"
+            type="button"
+            class="btn btn--danger"
+            (click)="openCancel()"
+            [disabled]="request.busy()"
+          >
+            <i class="bi bi-x-octagon" aria-hidden="true"></i> Cancel workflow
+          </button>
+        }
+        @if (canSend()) {
+          <button
+            *appCan="'workflows:initiate'"
+            type="button"
+            class="btn btn--primary"
+            (click)="send()"
+            [disabled]="request.busy()"
+          >
+            @if (request.isRunning('initiate')()) {
+              <span class="spinner" aria-hidden="true"></span> Sending…
+            } @else {
+              <i class="bi bi-send" aria-hidden="true"></i> Send for signing
+            }
+          </button>
+        }
+      </div>
+    </header>
+
+    @if (request.error()) {
+      <div class="alert alert--danger" role="alert">{{ request.error() }}</div>
+    }
+
+    @if (sealed()) {
+      <section class="alert alert--seal">
+        <i class="bi bi-patch-check-fill text-xl" aria-hidden="true"></i>
+        <div class="min-w-0">
+          <strong class="mono"
+            >CRYPTOGRAPHICALLY SEALED · {{ w.completedAt | date: 'yyyy-MM-dd HH:mm' }}</strong
+          >
+          <p class="m-0 mt-1 hash !text-tertiary">{{ w.finalDocumentSha256 }}</p>
+        </div>
+      </section>
+    }
+
+    <section class="stat-grid" aria-label="Workflow facts">
+      <article class="stat-card">
+        <i class="bi bi-diagram-3 stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Current stage</span>
+        <strong class="stat-card__value">{{ w.currentStageNumber ?? '—' }}</strong>
+        <span class="stat-card__sub">{{ w.executionMode }}</span>
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-alarm stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Expires</span>
+        <strong class="stat-card__value">{{
+          daysLeft() === null ? '—' : daysLeft()! < 0 ? 'Past' : daysLeft() + 'd'
+        }}</strong>
+        <span class="stat-card__sub"
+          >{{ w.expiresAt | date: 'dd MMM yyyy' }} · renewed {{ w.renewalCount ?? 0 }}×</span
+        >
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-shield-lock stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Verification</span>
+        <strong class="stat-card__value !text-headline-sm">{{
+          w.verificationMethod || '—'
+        }}</strong>
+        <span class="stat-card__sub">{{
+          w.singleUseInvitations ? 'Single-use links' : 'Reusable links'
+        }}</span>
+      </article>
+      <article class="stat-card stat-card--gold">
+        <i class="bi bi-fingerprint stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Assurance</span>
+        <strong class="stat-card__value !text-headline-sm text-gold">{{
+          w.assuranceLevel || 'STANDARD'
+        }}</strong>
+        <span class="stat-card__sub">Source v{{ w.sourceVersionNumber ?? 1 }}</span>
+      </article>
+    </section>
+
+    <section class="table-panel" aria-labelledby="signatories-title">
+      <h2 class="card__title m-0 px-5 pt-4" id="signatories-title">
+        <i class="bi bi-people" aria-hidden="true"></i> Signatories
+      </h2>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Order</th>
+              <th scope="col">Signatory</th>
+              <th scope="col">Signs with</th>
+              <th scope="col">Status</th>
+              <th scope="col">Signed</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of signatories(); track s.id) {
+              <tr>
+                <td class="mono">{{ s.signingOrder ?? '—' }}</td>
+                <td>
+                  <span class="cell-title">{{ s.fullName }}</span>
+                  <div class="mono text-ink-muted">{{ s.emailAddress }}</div>
+                </td>
+                <td>
+                  {{
+                    s.signatoryType === SignatoryType.INTERNAL_USER
+                      ? 'StarSign account'
+                      : 'Email link'
+                  }}
+                </td>
+                <td><app-status-chip [status]="s.status" /></td>
+                <td class="mono text-ink-muted">
+                  {{ (s.signedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}
+                </td>
+                <td>
+                  @if (canResend(s)) {
+                    <div *appCan="'workflows:initiate'" class="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        class="btn btn--secondary"
+                        [disabled]="reminding() === s.id || request.busy()"
+                        (click)="remind(s)"
+                      >
+                        @if (reminding() === s.id) {
+                          <span class="spinner" aria-hidden="true"></span>
+                        } @else {
+                          <i class="bi bi-bell" aria-hidden="true"></i>
+                        }
+                        Remind
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--secondary"
+                        [disabled]="resending() === s.id"
+                        (click)="resend(s)"
+                      >
+                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Resend
+                      </button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="text-center text-ink-muted">No signatories yet.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section class="card" aria-labelledby="timeline-title">
+        <h2 class="card__title mb-5" id="timeline-title">
+          <i class="bi bi-clock-history" aria-hidden="true"></i> Audit timeline
+        </h2>
+        <ol class="timeline">
+          @for (entry of timeline.value(); track $index) {
+            <li class="timeline__item">
+              <span class="timeline__node" [class]="nodeClass(entry)" aria-hidden="true"></span>
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <strong class="font-medium">{{ describe(entry) }}</strong>
+                <span class="mono text-ink-muted">{{
+                  entry.timestamp | date: 'yyyy-MM-dd HH:mm:ss'
+                }}</span>
+              </div>
+              <p class="m-0 cell-note">
+                {{ entry.actorName || entry.actorType || 'System' }}
+                @if (entry.signatoryName) {
+                  · {{ entry.signatoryName }}
+                }
+                @if (entry.stageNumber) {
+                  · stage {{ entry.stageNumber }}
+                }
+              </p>
+              @if (entry.documentSha256) {
+                <p class="m-0 mt-1 hash text-label-sm">{{ entry.documentSha256 }}</p>
+              }
+            </li>
+          } @empty {
+            <li class="text-ink-muted">
+              {{ timeline.isLoading() ? 'Loading the audit timeline…' : 'No events recorded yet.' }}
+            </li>
+          }
+        </ol>
+      </section>
+
+      <aside class="card" aria-labelledby="config-title">
+        <h2 class="card__title mb-4" id="config-title">
+          <i class="bi bi-sliders" aria-hidden="true"></i> Configuration
+        </h2>
+        <dl class="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 text-body-sm">
+          <dt class="text-ink-muted">Initiated</dt>
+          <dd class="m-0 mono">{{ (w.initiatedAt | date: 'yyyy-MM-dd') || '—' }}</dd>
+          <dt class="text-ink-muted">Decline allowed</dt>
+          <dd class="m-0 mono">{{ w.allowDecline ? 'YES' : 'NO' }}</dd>
+          <dt class="text-ink-muted">Decline ends workflow</dt>
+          <dd class="m-0 mono">{{ w.declineTerminatesWorkflow ? 'YES' : 'NO' }}</dd>
+          <dt class="text-ink-muted">Sealed copy to signers</dt>
+          <dd class="m-0 mono">{{ w.sendCompletedCopy ? 'YES' : 'NO' }}</dd>
+          <dt class="text-ink-muted">Invitation validity</dt>
+          <dd class="m-0 mono">{{ w.invitationValidityHours ?? '—' }} H</dd>
+        </dl>
+        @if (w.sourceDocumentSha256) {
+          <hr class="divider my-4" />
+          <span class="eyebrow">Source SHA-256</span>
+          <p class="m-0 mt-1 hash">{{ w.sourceDocumentSha256 }}</p>
+        }
+        @if (w.cancellationReason) {
+          <hr class="divider my-4" />
+          <span class="eyebrow !text-crimson"
+            >Cancelled {{ w.cancelledAt | date: 'yyyy-MM-dd' }}</span
+          >
+          <p class="m-0 mt-1">{{ w.cancellationReason }}</p>
+        }
+      </aside>
+    </div>
+  }
+</div>
+
+@if (cancelOpen()) {
+  <div class="modal-backdrop" (click)="cancelOpen.set(false)">
+    <form
+      class="modal flex flex-col gap-4"
+      [formRoot]="cancelForm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cancel-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="cancel-title" class="m-0 text-headline-sm">Cancel this workflow?</h2>
+      <p class="m-0 text-ink-muted">
+        Outstanding invitations are revoked and the document returns to the vault. This is recorded
+        in the audit chain and cannot be undone.
+      </p>
+      <div class="field">
+        <label for="cancel-reason">Reason *</label>
+        <textarea
+          id="cancel-reason"
+          class="field-control"
+          [formField]="cancelForm.reason"
+        ></textarea>
+        <app-field-errors [field]="cancelForm.reason" />
+      </div>
+      <label class="check"
+        ><input type="checkbox" [formField]="cancelForm.notifySignatories" /> Notify
+        signatories</label
+      >
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="cancelOpen.set(false)">
+          Keep workflow
+        </button>
+        <button type="submit" class="btn btn--danger" [disabled]="request.busy()">
+          @if (request.isRunning('cancel')()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          Cancel workflow
+        </button>
+      </div>
+    </form>
+  </div>
+}

@@ -1,0 +1,515 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/workflows">Signing workflows</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span class="breadcrumb__current">New request</span>
+      </nav>
+      <h1 class="page-title">Request signatures</h1>
+      <p class="page-subtitle">
+        Add a PDF, say who signs and in what order, then place their fields on the pages.
+      </p>
+    </div>
+  </header>
+
+  <nav aria-label="Steps">
+    <ol class="m-0 flex list-none flex-wrap gap-2 p-0">
+      @for (s of steps; track s.id; let i = $index) {
+        <li>
+          <button
+            type="button"
+            class="btn"
+            [class.btn--primary]="step() === s.id"
+            [class.btn--secondary]="step() !== s.id && i <= reached()"
+            [class.btn--ghost]="i > reached()"
+            [disabled]="i > reached()"
+            [attr.aria-current]="step() === s.id ? 'step' : null"
+            (click)="goTo(s.id)"
+          >
+            <span class="mono">{{ i + 1 }}</span>
+            <i class="bi" [class]="i < stepIndex() ? 'bi-check2' : s.icon" aria-hidden="true"></i>
+            {{ s.label }}
+          </button>
+        </li>
+      }
+    </ol>
+  </nav>
+
+  <form class="flex flex-col gap-6" [formRoot]="workflowForm" aria-label="Request signatures">
+    @switch (step()) {
+      @case ('document') {
+        <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="wf-doc-title">
+        <h2 class="card__title" id="wf-doc-title">
+          <span class="eyebrow">01</span> Document
+        </h2>
+
+        <div class="field">
+          <label for="wf-document">Document *</label>
+          <select id="wf-document" class="field-control" [formField]="workflowForm.documentId">
+            <option value="">
+              {{
+                eligibleDocuments().length
+                  ? 'Choose a document…'
+                  : 'No documents are ready for signing'
+              }}
+            </option>
+            @for (doc of eligibleDocuments(); track doc.id) {
+              <option [value]="doc.id">
+                {{ doc.title }} · {{ doc.referenceNumber }} · {{ doc.pageCount ?? 0 }} pp
+              </option>
+            }
+          </select>
+          <app-field-errors [field]="workflowForm.documentId" />
+          <span class="field__hint">Only documents that are not already out for signing are listed.</span>
+        </div>
+
+        <div class="field">
+          <label for="wf-title">Workflow title *</label>
+          <input id="wf-title" class="field-control" [formField]="workflowForm.title" />
+          <app-field-errors [field]="workflowForm.title" />
+        </div>
+
+        <div class="field">
+          <label for="wf-message">Message to signatories</label>
+          <textarea
+            id="wf-message"
+            class="field-control"
+            [formField]="workflowForm.message"
+            placeholder="Shown in the invitation email and on the signing page"
+          ></textarea>
+          <span class="field__hint text-right">{{ draft().message.length }}/2000</span>
+          <app-field-errors [field]="workflowForm.message" />
+        </div>
+        <div class="flex flex-col gap-3 rounded-[var(--radius-panel)] border border-hairline p-4">
+          <span class="field__label">Or upload a new PDF</span>
+          <app-file-drop [(value)]="uploadFile" hint="PDF · the request uses it as uploaded" />
+          @if (uploadError()) {
+            <div class="alert alert--danger" role="alert">{{ uploadError() }}</div>
+          }
+          @if (uploadFile()) {
+            <button
+              type="button"
+              class="btn btn--secondary self-start"
+              [disabled]="uploading()"
+              (click)="uploadDocument()"
+            >
+              @if (uploading()) {
+                <span class="spinner" aria-hidden="true"></span> Uploading…
+              } @else {
+                <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload and use this PDF
+              }
+            </button>
+          }
+        </div>
+      </section>
+        </div>
+      }
+      @case ('recipients') {
+        <div class="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <section class="card flex flex-col gap-5" aria-labelledby="wf-sig-title">
+        <div class="card__header !mb-0">
+          <h2 class="card__title" id="wf-sig-title">
+            <span class="eyebrow">02</span> Recipients
+          </h2>
+          <div class="segmented" role="radiogroup" aria-label="Signing order">
+            <label
+              ><input
+                type="radio"
+                [value]="ExecutionMode.SEQUENTIAL"
+                [formField]="workflowForm.executionMode"
+              />Sign in order</label
+            >
+            <label
+              ><input
+                type="radio"
+                [value]="ExecutionMode.PARALLEL"
+                [formField]="workflowForm.executionMode"
+              />Any order</label
+            >
+          </div>
+        </div>
+        <p class="m-0 text-ink-muted">
+          {{
+            draft().executionMode === ExecutionMode.SEQUENTIAL
+              ? 'Each recipient is notified once the one before them has signed.'
+              : 'Everyone is notified at once and can sign in any order.'
+          }}
+        </p>
+        <p class="m-0 flex items-start gap-2 text-body-sm text-ink-muted">
+          <i class="bi bi-inbox text-cyan" aria-hidden="true"></i>
+          <span>Recipients who already have a StarSign account in your organisation are linked by
+          email: they get the email and also find the request in their Signing inbox.</span>
+        </p>
+
+        <ol class="timeline">
+          @for (
+            row of workflowForm.signatories;
+            track row;
+            let i = $index, first = $first, last = $last
+          ) {
+            <li class="timeline__item">
+              <span
+                class="timeline__node"
+                [class.timeline__node--done]="row().valid()"
+                aria-hidden="true"
+              ></span>
+              <fieldset
+                class="m-0 flex flex-col gap-4 rounded-[var(--radius-panel)] border border-hairline bg-abyss/60 p-4"
+                [attr.aria-label]="'Signatory ' + (i + 1)"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="h-3 w-3 flex-none rounded-full"
+                    [style.background]="colourAt(i)"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="eyebrow flex-1">
+                    {{
+                      draft().executionMode === ExecutionMode.SEQUENTIAL
+                        ? 'Signs ' +
+                          (i + 1) +
+                          (i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th')
+                        : 'Signatory ' + (i + 1)
+                    }}
+                  </span>
+                  @if (draft().executionMode === ExecutionMode.SEQUENTIAL) {
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--icon"
+                      (click)="moveSignatory(i, -1)"
+                      [disabled]="first"
+                      aria-label="Move up"
+                    >
+                      <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost btn--icon"
+                      (click)="moveSignatory(i, 1)"
+                      [disabled]="last"
+                      aria-label="Move down"
+                    >
+                      <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon text-crimson"
+                    (click)="removeSignatory(i)"
+                    [disabled]="draft().signatories.length === 1"
+                    aria-label="Remove recipient"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div class="field">
+                    <label [for]="'sig-name-' + i">Full name *</label>
+                    <input
+                      [id]="'sig-name-' + i"
+                      class="field-control"
+                      autocomplete="off"
+                      [formField]="row.fullName"
+                    />
+                    <app-field-errors [field]="row.fullName" />
+                  </div>
+                  <div class="field">
+                    <label [for]="'sig-email-' + i">Email *</label>
+                    <input
+                      [id]="'sig-email-' + i"
+                      class="field-control"
+                      type="email"
+                      autocomplete="off"
+                      [formField]="row.emailAddress"
+                    />
+                    <app-field-errors [field]="row.emailAddress" />
+                    @if (isMember(draft().signatories[i].emailAddress)) {
+                      <span class="field__hint text-cyan"
+                        ><i class="bi bi-person-check" aria-hidden="true"></i> StarSign user · it
+                        will also be in their Signing inbox</span
+                      >
+                    }
+                  </div>
+                  <div class="field">
+                    <label [for]="'sig-type-' + i">Signatory type</label>
+                    <select
+                      [id]="'sig-type-' + i"
+                      class="field-control"
+                      [formField]="row.signatoryType"
+                    >
+                      @for (type of signatoryTypes; track type.value) {
+                        <option [value]="type.value">{{ type.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label [for]="'sig-designation-' + i">Designation</label>
+                    <input
+                      [id]="'sig-designation-' + i"
+                      class="field-control"
+                      placeholder="e.g. Chief Financial Officer"
+                      [formField]="row.designation"
+                    />
+                  </div>
+                  @if (!row.organisationName().hidden()) {
+                    <div class="field md:col-span-2">
+                      <label [for]="'sig-org-' + i">Represents organisation *</label>
+                      <input
+                        [id]="'sig-org-' + i"
+                        class="field-control"
+                        [formField]="row.organisationName"
+                      />
+                      <app-field-errors [field]="row.organisationName" />
+                    </div>
+                  }
+                  <div class="field">
+                    <label [for]="'sig-verify-' + i">Identity verification</label>
+                    <select
+                      [id]="'sig-verify-' + i"
+                      class="field-control"
+                      [formField]="row.verificationMethod"
+                    >
+                      <option value="">Workflow default</option>
+                      @for (method of verificationMethods; track method.value) {
+                        <option [value]="method.value">{{ method.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label [for]="'sig-phone-' + i"
+                      >Mobile {{ row.phoneNumber().required() ? '*' : '' }}</label
+                    >
+                    <input
+                      [id]="'sig-phone-' + i"
+                      class="field-control font-mono"
+                      type="tel"
+                      placeholder="+26771234567"
+                      [formField]="row.phoneNumber"
+                    />
+                    <app-field-errors [field]="row.phoneNumber" />
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                  <label class="check"
+                    ><input type="checkbox" [formField]="row.mandatory" /> Must sign</label
+                  >
+                  @if (!row.canDecline().hidden()) {
+                    <label class="check"
+                      ><input type="checkbox" [formField]="row.canDecline" /> May decline</label
+                    >
+                  }
+                  <label class="check"
+                    ><input type="checkbox" [formField]="row.notifyBySms" /> SMS
+                    notifications</label
+                  >
+                </div>
+              </fieldset>
+            </li>
+          }
+        </ol>
+
+        <app-field-errors [field]="workflowForm.signatories" />
+        <button
+          type="button"
+          class="btn btn--secondary self-start"
+          (click)="addSignatory()"
+          [disabled]="draft().signatories.length >= maxSignatories"
+        >
+          <i class="bi bi-person-plus" aria-hidden="true"></i> Add recipient
+        </button>
+      </section>
+
+      <details class="card flex flex-col gap-5" aria-labelledby="wf-policy-title">
+        <summary class="card__title cursor-pointer" id="wf-policy-title">
+          <span class="eyebrow">03</span> Deadline, verification &amp; options
+          <span class="ml-2 text-body-sm font-normal text-ink-muted">Expires {{ draft().expiresAt }}</span>
+        </summary>
+        <div class="mt-5 flex flex-col gap-5">
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="field">
+            <label for="wf-expires">Expires on *</label>
+            <input
+              id="wf-expires"
+              class="field-control"
+              type="date"
+              [formField]="workflowForm.expiresAt"
+            />
+            <app-field-errors [field]="workflowForm.expiresAt" />
+          </div>
+          <div class="field">
+            <label for="wf-verify">Default verification</label>
+            <select
+              id="wf-verify"
+              class="field-control"
+              [formField]="workflowForm.verificationMethod"
+            >
+              @for (method of verificationMethods; track method.value) {
+                <option [value]="method.value">{{ method.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="wf-remind">Reminder every (hours)</label>
+            <input
+              id="wf-remind"
+              class="field-control"
+              type="number"
+              [formField]="workflowForm.reminderIntervalHours"
+            />
+            <app-field-errors [field]="workflowForm.reminderIntervalHours" />
+          </div>
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="check"
+            ><input type="checkbox" [formField]="workflowForm.singleUseInvitations" />
+            <span>Single-use invitation links</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" [formField]="workflowForm.sendCompletedCopy" />
+            <span>Send the sealed copy to every signatory</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" [formField]="workflowForm.allowDecline" />
+            <span>Signatories may decline</span></label
+          >
+          <label
+            class="check"
+            [class.opacity-50]="workflowForm.declineTerminatesWorkflow().disabled()"
+          >
+            <input type="checkbox" [formField]="workflowForm.declineTerminatesWorkflow" />
+            <span>A decline ends the workflow</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <span class="field__label">Allowed signature methods</span>
+          <div class="flex gap-6">
+            <label class="check"
+              ><input type="checkbox" [formField]="workflowForm.captureDrawn" /> Drawn</label
+            >
+            <label class="check"
+              ><input type="checkbox" [formField]="workflowForm.captureTyped" /> Typed</label
+            >
+          </div>
+          <app-field-errors [field]="workflowForm.captureTyped" />
+        </div>
+        </div>
+      </details>
+        </div>
+      }
+      @case ('fields') {
+        <app-field-placer
+          [documentId]="draft().documentId"
+          [recipients]="recipients()"
+          [(fields)]="fields"
+        />
+      }
+      @case ('review') {
+        <div class="mx-auto grid w-full max-w-4xl gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section class="card flex flex-col gap-4" aria-labelledby="wf-review-title">
+            <h2 class="card__title" id="wf-review-title">
+              <span class="eyebrow">04</span> Review
+            </h2>
+            <div>
+              <p class="m-0 font-medium text-ink">{{ draft().title }}</p>
+              <p class="m-0 mono text-ink-muted">
+                {{ selectedDocument()?.title }} · {{ selectedDocument()?.pageCount ?? '?' }} pp
+              </p>
+              @if (draft().message) {
+                <p class="mt-2 mb-0 text-ink-muted">“{{ draft().message }}”</p>
+              }
+            </div>
+            <ol class="m-0 flex list-none flex-col gap-3 p-0">
+              @for (sig of draft().signatories; track sig.key; let i = $index) {
+                <li class="flex items-start gap-3">
+                  <span
+                    class="grid h-7 w-7 flex-none place-items-center rounded-full font-mono text-label-sm text-white"
+                    [style.background]="colourAt(i)"
+                    >{{ draft().executionMode === ExecutionMode.SEQUENTIAL ? i + 1 : '•' }}</span
+                  >
+                  <div class="min-w-0">
+                    <p class="m-0 font-medium text-ink">
+                      {{ sig.fullName }}
+                      @if (isMember(sig.emailAddress)) {
+                        <span class="chip chip--progress ml-1">StarSign user</span>
+                      }
+                    </p>
+                    <p class="m-0 mono text-ink-muted truncate">{{ sig.emailAddress }}</p>
+                    <p class="m-0 text-body-sm text-ink-muted">{{ fieldSummary(sig.key) }}</p>
+                  </div>
+                </li>
+              }
+            </ol>
+            <p class="m-0 text-body-sm text-ink-muted">
+              {{
+                draft().executionMode === ExecutionMode.SEQUENTIAL
+                  ? 'Only the first recipient is notified now; each next one when the previous has signed.'
+                  : 'Everyone is notified as soon as you send.'
+              }}
+              Expires {{ draft().expiresAt }}.
+            </p>
+          </section>
+
+          <aside class="flex flex-col gap-4">
+            @if (formError()) {
+              <div class="alert alert--danger" role="alert">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ formError() }}
+              </div>
+            }
+            @if (validationIssues().length) {
+              <div class="alert alert--danger" role="alert">
+                <ul class="m-0 pl-4">
+                  @for (issue of validationIssues(); track $index) {
+                    <li>{{ issue }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            <label class="check glass p-4"
+              ><input type="checkbox" [formField]="workflowForm.sendNow" />
+              <span>Send now (otherwise save as a draft)</span></label
+            >
+            <button
+              type="submit"
+              class="btn btn--primary btn--block min-h-11"
+              [disabled]="workflowForm().submitting()"
+            >
+              @if (submitStep(); as progress) {
+                <span class="spinner" aria-hidden="true"></span> {{ progress }}
+              } @else {
+                <i class="bi" [class]="draft().sendNow ? 'bi-send' : 'bi-save'" aria-hidden="true"></i>
+                {{ draft().sendNow ? 'Send for signing' : 'Save draft' }}
+              }
+            </button>
+          </aside>
+        </div>
+      }
+    }
+
+    @if (stepError()) {
+      <div class="alert alert--danger mx-auto w-full max-w-4xl" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ stepError() }}
+      </div>
+    }
+
+    <div class="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-3">
+      @if (stepIndex() > 0) {
+        <button type="button" class="btn btn--secondary" (click)="back()">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+        </button>
+      } @else {
+        <a class="btn btn--secondary" routerLink="/workflows">Cancel</a>
+      }
+      @if (step() !== 'review') {
+        <button type="button" class="btn btn--primary ml-auto" (click)="next()">
+          Next <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+  </form>
+</div>

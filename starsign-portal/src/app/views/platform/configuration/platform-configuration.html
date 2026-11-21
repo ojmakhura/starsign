@@ -1,0 +1,283 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Configuration</span>
+      </nav>
+      <h1 class="page-title">Platform configuration</h1>
+      <p class="page-subtitle">System settings and the security policy every organisation runs under.</p>
+    </div>
+    <button *appCan="'admin-configuration:edit'" type="button" class="btn btn--primary" (click)="create()">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> New setting
+    </button>
+  </header>
+
+  <!-- ---- Security policy ---- -->
+  <form class="card flex flex-col gap-5" [formRoot]="policyForm" aria-labelledby="policy-title">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <div>
+        <h2 id="policy-title" class="m-0 text-headline-sm">Security policy</h2>
+        <p class="m-0 text-body-sm text-ink-muted">
+          Applies to every organisation; organisation signing policies can only be stricter.
+          @if (policy()?.modifiedAt) {
+            Last changed {{ policy()!.modifiedAt | date: 'dd MMM yyyy, HH:mm' }}.
+          }
+        </p>
+      </div>
+      @if (!canConfigure()) {
+        <span class="chip chip--neutral"><i class="bi bi-lock" aria-hidden="true"></i> Read only</span>
+      }
+    </div>
+
+    @if (policyError()) {
+      <div class="alert alert--danger" role="alert">{{ policyError() }}</div>
+    }
+
+    @if (policy()) {
+      <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        @for (field of policyNumbers; track field.key) {
+          <div class="field">
+            <label [for]="'policy-' + field.key">{{ field.label }}</label>
+            <input
+              [id]="'policy-' + field.key"
+              class="field-control"
+              type="number"
+              step="1"
+              [formField]="$any(policyForm[field.key])"
+            />
+            <span class="field__hint">{{ field.min }}–{{ field.max }} {{ field.unit }}</span>
+            <app-field-errors [field]="$any(policyForm[field.key])" />
+          </div>
+        }
+        <div class="field">
+          <label for="policy-assurance">Minimum signature assurance</label>
+          <select id="policy-assurance" class="field-control" [formField]="policyForm.minimumAssuranceLevel">
+            @for (level of assuranceLevels; track level) {
+              <option [value]="level">{{ humanise(level) }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <fieldset class="m-0 grid gap-4 border-0 p-0 md:grid-cols-2 xl:grid-cols-3">
+        <legend class="eyebrow mb-3">Controls</legend>
+        @for (flag of policyFlags; track flag.key) {
+          <label class="check">
+            <input type="checkbox" [formField]="$any(policyForm[flag.key])" />
+            <span class="flex flex-col">
+              <span>{{ flag.label }}</span>
+              <span class="text-body-sm text-ink-muted">{{ flag.hint }}</span>
+            </span>
+          </label>
+        }
+      </fieldset>
+
+      @if (policyServerError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ policyServerError() }}
+        </div>
+      }
+
+      @if (canConfigure()) {
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn btn--ghost" (click)="resetPolicy()" [disabled]="!policyForm().dirty()">
+            Discard changes
+          </button>
+          <button type="submit" class="btn btn--primary" [disabled]="policyForm().submitting()">
+            @if (policyForm().submitting()) {
+              <span class="spinner" aria-hidden="true"></span> Saving…
+            } @else {
+              <i class="bi bi-shield-check" aria-hidden="true"></i> Save policy
+            }
+          </button>
+        </div>
+      }
+    } @else if (!policyError()) {
+      <p class="m-0 text-ink-muted">Loading the security policy…</p>
+    }
+  </form>
+
+  <!-- ---- Settings ---- -->
+  @if (editorOpen()) {
+    <form class="card flex flex-col gap-5" [formRoot]="settingForm" aria-labelledby="setting-editor-title">
+      <h2 id="setting-editor-title" class="m-0 text-headline-sm">
+        {{ editing() ? 'Edit ' + editing()!.configKey : 'New setting' }}
+      </h2>
+      <div class="grid gap-5 md:grid-cols-3">
+        <div class="field">
+          <label for="setting-key">Key *</label>
+          <input id="setting-key" class="field-control mono" [formField]="settingForm.configKey" />
+          <app-field-errors [field]="settingForm.configKey" />
+        </div>
+        <div class="field">
+          <label for="setting-category">Category *</label>
+          <input id="setting-category" class="field-control" list="setting-categories" [formField]="settingForm.category" />
+          <datalist id="setting-categories">
+            @for (category of categories(); track category) {
+              <option [value]="category"></option>
+            }
+          </datalist>
+          <app-field-errors [field]="settingForm.category" />
+        </div>
+        <div class="field">
+          <label for="setting-type">Value type *</label>
+          <select id="setting-type" class="field-control" [formField]="settingForm.valueType">
+            @for (type of valueTypes; track type) {
+              <option [value]="type">{{ humanise(type) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field md:col-span-3">
+          <label for="setting-value">Value</label>
+          @if (settingModel().valueType === 'JSON') {
+            <textarea id="setting-value" class="field-control mono" rows="6" [formField]="settingForm.configValue"></textarea>
+          } @else if (settingModel().valueType === 'BOOLEAN' && settingModel().configValue !== redacted) {
+            <select id="setting-value" class="field-control" [formField]="settingForm.configValue">
+              <option value="">Choose…</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          } @else {
+            <input
+              id="setting-value"
+              class="field-control mono"
+              [type]="settingModel().sensitive ? 'password' : 'text'"
+              autocomplete="off"
+              [formField]="settingForm.configValue"
+            />
+          }
+          @if (editing()?.sensitive) {
+            <span class="field__hint">Sensitive: the stored value is never shown. Leave {{ redacted }} to keep it.</span>
+          } @else if (settingModel().valueType === 'DURATION') {
+            <span class="field__hint">ISO-8601, e.g. PT15M or P1D.</span>
+          }
+          <app-field-errors [field]="settingForm.configValue" />
+        </div>
+        <div class="field md:col-span-2">
+          <label for="setting-description">Description</label>
+          <input id="setting-description" class="field-control" [formField]="settingForm.description" />
+          <app-field-errors [field]="settingForm.description" />
+        </div>
+        <label class="check self-end pb-2">
+          <input type="checkbox" [formField]="settingForm.sensitive" />
+          <span class="flex flex-col">
+            <span>Sensitive</span>
+            <span class="text-body-sm text-ink-muted">Hidden from now on; cannot be undone.</span>
+          </span>
+        </label>
+      </div>
+      @if (settingServerError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ settingServerError() }}
+        </div>
+      }
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="editorOpen.set(false)">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="settingForm().submitting()">
+          @if (settingForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check-lg" aria-hidden="true"></i> Save setting
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  <section class="table-panel" aria-labelledby="settings-title">
+    <div class="flex flex-wrap items-end justify-between gap-4 px-5 pt-4">
+      <h2 id="settings-title" class="m-0 text-headline-sm">System settings</h2>
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="field">
+          <label for="settings-search">Search</label>
+          <input
+            id="settings-search"
+            class="field-control"
+            type="search"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+        </div>
+        <div class="field">
+          <label for="settings-category">Category</label>
+          <select
+            id="settings-category"
+            class="field-control"
+            [value]="category()"
+            (change)="category.set($any($event.target).value)"
+          >
+            <option value="">All categories</option>
+            @for (c of categories(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="alert alert--danger m-5" role="alert">{{ error() }}</div>
+    }
+
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Key</th>
+            <th scope="col">Value</th>
+            <th scope="col">Type</th>
+            <th scope="col">Category</th>
+            <th scope="col">Changed</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (setting of visibleSettings(); track setting.configKey) {
+            <tr>
+              <td>
+                <span class="cell-title mono">{{ setting.configKey }}</span>
+                @if (setting.description) {
+                  <div class="cell-note">{{ setting.description }}</div>
+                }
+              </td>
+              <td class="mono max-w-80 break-all">
+                @if (setting.sensitive) {
+                  <span class="text-ink-muted"><i class="bi bi-lock" aria-hidden="true"></i> {{ redacted }}</span>
+                } @else {
+                  {{ setting.configValue }}
+                }
+              </td>
+              <td><span class="chip chip--neutral">{{ setting.valueType }}</span></td>
+              <td>{{ setting.category }}</td>
+              <td class="mono text-ink-muted">
+                {{ ((setting.modifiedAt ?? setting.createdAt) | date: 'dd MMM yyyy') || '—' }}
+              </td>
+              <td>
+                @if (canEdit()) {
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon"
+                    [attr.aria-label]="'Edit ' + setting.configKey"
+                    (click)="edit(setting)"
+                  >
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-sliders" aria-hidden="true"></i>
+                  <span>{{ loading() ? 'Loading settings…' : 'No settings match.' }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

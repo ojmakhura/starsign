@@ -1,0 +1,158 @@
+<div class="page max-w-4xl mx-auto">
+  <header class="page-header">
+    <div>
+      <div class="flex items-center gap-3">
+        <img src="/mark.svg" alt="" class="h-8 w-8" />
+        <span class="font-display text-headline-sm font-bold">StarSign</span>
+      </div>
+      <h1 class="page-title mt-6">Register your organisation</h1>
+      <p class="page-subtitle">
+        You become the organisation's administrator and can then invite the people who upload
+        documents and send them for signing.
+      </p>
+    </div>
+  </header>
+
+  @if (registered(); as done) {
+    <section class="card flex flex-col gap-4" aria-live="polite">
+      <span class="eyebrow">Registered</span>
+      <h2 class="m-0 text-headline-sm">{{ done.organisation.name }} is registered</h2>
+      <p class="m-0 text-ink-muted">
+        We've emailed <strong class="text-ink">{{ done.adminEmail }}</strong> a link to verify the
+        address and choose a password. Once that's done, sign in to invite your users.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <button type="button" class="btn btn--primary" (click)="signIn()">
+          <i class="bi bi-shield-lock" aria-hidden="true"></i> Sign in
+        </button>
+        <a class="btn btn--secondary" routerLink="/">Back to start</a>
+      </div>
+    </section>
+  } @else {
+    <form class="flex flex-col gap-6" [formRoot]="registerForm" aria-label="Register organisation">
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Organisation</legend>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="reg-name">Registered name *</label>
+            <input id="reg-name" class="field-control" autocomplete="organization" [formField]="registerForm.name" />
+            <app-field-errors [field]="registerForm.name" />
+          </div>
+          <div class="field">
+            <label for="reg-number">Registration number *</label>
+            <input id="reg-number" class="field-control font-mono" [formField]="registerForm.registrationNumber" />
+            <app-field-errors [field]="registerForm.registrationNumber" />
+          </div>
+          <div class="field">
+            <label for="reg-trading">Trading name</label>
+            <input id="reg-trading" class="field-control" [formField]="registerForm.tradingName" />
+            <app-field-errors [field]="registerForm.tradingName" />
+          </div>
+          <div class="field">
+            <label for="reg-email">Organisation email *</label>
+            <input id="reg-email" class="field-control" type="email" autocomplete="email" [formField]="registerForm.emailAddress" />
+            <app-field-errors [field]="registerForm.emailAddress" />
+          </div>
+          <div class="field">
+            <label for="reg-phone">Phone</label>
+            <input id="reg-phone" class="field-control" type="tel" autocomplete="tel" [formField]="registerForm.phoneNumber" />
+            <app-field-errors [field]="registerForm.phoneNumber" />
+          </div>
+          <div class="field">
+            <label for="reg-website">Website</label>
+            <input id="reg-website" class="field-control" type="url" placeholder="example.co.bw" [formField]="registerForm.website" />
+            <app-field-errors [field]="registerForm.website" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Physical address</legend>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field md:col-span-2">
+            <label for="reg-line1">Address line 1 *</label>
+            <input id="reg-line1" class="field-control" autocomplete="address-line1" [formField]="registerForm.line1" />
+            <app-field-errors [field]="registerForm.line1" />
+          </div>
+          <div class="field md:col-span-2">
+            <label for="reg-line2">Address line 2</label>
+            <input id="reg-line2" class="field-control" autocomplete="address-line2" [formField]="registerForm.line2" />
+          </div>
+          <div class="field">
+            <label for="reg-city">City or town *</label>
+            <input id="reg-city" class="field-control" autocomplete="address-level2" [formField]="registerForm.city" />
+            <app-field-errors [field]="registerForm.city" />
+          </div>
+          <div class="field">
+            <label for="reg-postal">Postal code</label>
+            <input id="reg-postal" class="field-control" autocomplete="postal-code" [formField]="registerForm.postalCode" />
+          </div>
+          <div class="field">
+            <label for="reg-country">Country *</label>
+            <input id="reg-country" class="field-control" autocomplete="country-name" [formField]="registerForm.country" />
+            <app-field-errors [field]="registerForm.country" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Administrator</legend>
+        <p class="m-0 text-ink-muted">
+          This person gets a StarSign account and manages the organisation's users.
+        </p>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="reg-first">First name *</label>
+            <input id="reg-first" class="field-control" autocomplete="given-name" [formField]="registerForm.adminFirstName" />
+            <app-field-errors [field]="registerForm.adminFirstName" />
+          </div>
+          <div class="field">
+            <label for="reg-last">Last name *</label>
+            <input id="reg-last" class="field-control" autocomplete="family-name" [formField]="registerForm.adminLastName" />
+            <app-field-errors [field]="registerForm.adminLastName" />
+          </div>
+          <div class="field">
+            <label for="reg-admin-email">Email *</label>
+            <input id="reg-admin-email" class="field-control" type="email" [formField]="registerForm.adminEmailAddress" />
+            <app-field-errors [field]="registerForm.adminEmailAddress" />
+          </div>
+          <div class="field">
+            <label for="reg-admin-phone">Phone</label>
+            <input id="reg-admin-phone" class="field-control" type="tel" [formField]="registerForm.adminPhoneNumber" />
+            <app-field-errors [field]="registerForm.adminPhoneNumber" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="flex flex-col gap-4">
+        <label class="flex items-start gap-2">
+          <input type="checkbox" class="mt-1" [formField]="registerForm.acceptTerms" />
+          <span>I accept the StarSign terms of service and privacy policy on behalf of the organisation.</span>
+        </label>
+        <app-field-errors [field]="registerForm.acceptTerms" />
+
+        @if (serverError()) {
+          <div class="alert alert--danger" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+          </div>
+        }
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" class="btn btn--primary min-h-11" [disabled]="registerForm().submitting()">
+            @if (registerForm().submitting()) {
+              <span class="spinner" aria-hidden="true"></span> Registering…
+            } @else {
+              <i class="bi bi-building-add" aria-hidden="true"></i> Register organisation
+            }
+          </button>
+          <a class="btn btn--ghost" routerLink="/">Cancel</a>
+          @if (!keycloak.authenticated) {
+            <span class="text-ink-muted">
+              Already registered? <button type="button" class="btn btn--ghost !px-1" (click)="signIn()">Sign in</button>
+            </span>
+          }
+        </div>
+      </div>
+    </form>
+  }
+</div>

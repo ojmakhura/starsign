@@ -1,0 +1,123 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Organisations</span>
+      </nav>
+      <h1 class="page-title">Organisations</h1>
+      <p class="page-subtitle">Every tenant on the platform. Open one to change its status or see its usage.</p>
+    </div>
+    <button type="button" class="btn btn--secondary" (click)="reload()" [disabled]="loading()">
+      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
+    </button>
+  </header>
+
+  <form
+    class="card grid gap-4 md:grid-cols-2 xl:grid-cols-5"
+    (submit)="$event.preventDefault()"
+    aria-label="Search organisations"
+  >
+    <div class="field">
+      <label for="org-name">Name</label>
+      <input id="org-name" class="field-control" type="search" [formField]="filterForm.name" />
+    </div>
+    <div class="field">
+      <label for="org-reg">Registration number</label>
+      <input
+        id="org-reg"
+        class="field-control"
+        type="search"
+        [formField]="filterForm.registrationNumber"
+      />
+    </div>
+    <div class="field">
+      <label for="org-status">Status</label>
+      <select id="org-status" class="field-control" [formField]="filterForm.status">
+        <option value="">Any status</option>
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ humanise(status) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="org-from">Created from</label>
+      <input id="org-from" class="field-control" type="date" [formField]="filterForm.createdFrom" />
+    </div>
+    <div class="field">
+      <label for="org-to">Created to</label>
+      <input id="org-to" class="field-control" type="date" [formField]="filterForm.createdTo" />
+      <app-field-errors [field]="filterForm.createdTo" />
+    </div>
+    <div class="flex justify-end xl:col-span-5">
+      <button type="button" class="btn btn--ghost" (click)="reset()">Clear filters</button>
+    </div>
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Organisations">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Organisation</th>
+            <th scope="col">Registration</th>
+            <th scope="col">Status</th>
+            <th scope="col">Users</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (org of organisations(); track org.id) {
+            <tr>
+              <td>
+                <a class="cell-title" [routerLink]="org.id">{{ org.name || '—' }}</a>
+                @if (org.tenantId) {
+                  <div class="cell-note mono">{{ org.tenantId }}</div>
+                }
+              </td>
+              <td class="mono">{{ org.registrationNumber || '—' }}</td>
+              <td>
+                <span class="chip" [class]="'chip--' + tone(org.status)">{{ humanise(org.status) }}</span>
+              </td>
+              <td class="mono">{{ org.userCount ?? '—' }}</td>
+              <td class="mono text-ink-muted">{{ (org.createdAt | date: 'dd MMM yyyy') || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <i class="bi bi-buildings" aria-hidden="true"></i>
+                  <span>{{ loading() ? 'Searching…' : 'No organisations match these criteria.' }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <nav class="flex items-center justify-end gap-3" aria-label="Pages">
+    <span class="mono text-ink-muted">Page {{ page() + 1 }}</span>
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [disabled]="page() === 0 || loading()"
+      (click)="page.set(page() - 1)"
+    >
+      <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+    </button>
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [disabled]="!hasNext() || loading()"
+      (click)="page.set(page() + 1)"
+    >
+      Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </button>
+  </nav>
+</div>

@@ -1,0 +1,182 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Statistics</span>
+      </nav>
+      <h1 class="page-title">Platform statistics</h1>
+      <p class="page-subtitle">Activity across every organisation. Counts only — no document contents.</p>
+    </div>
+    <button type="button" class="btn btn--secondary" [disabled]="!stats()" (click)="exportCsv()">
+      <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+    </button>
+  </header>
+
+  <form
+    class="card flex flex-wrap items-end gap-4"
+    (submit)="$event.preventDefault()"
+    aria-label="Statistics period"
+  >
+    <div class="segmented" role="group" aria-label="Quick periods">
+      @for (days of presets; track days) {
+        <label>
+          <input type="radio" name="preset" [checked]="isPreset(days)" (change)="preset(days)" />{{
+            days === 365 ? '12 months' : days + ' days'
+          }}
+        </label>
+      }
+    </div>
+    <div class="field">
+      <label for="stats-from">From</label>
+      <input id="stats-from" class="field-control" type="date" [formField]="periodForm.from" />
+      <app-field-errors [field]="periodForm.from" />
+    </div>
+    <div class="field">
+      <label for="stats-to">To</label>
+      <input id="stats-to" class="field-control" type="date" [formField]="periodForm.to" />
+      <app-field-errors [field]="periodForm.to" />
+    </div>
+    @if (loading()) {
+      <span class="spinner mb-3" role="status" aria-label="Loading statistics"></span>
+    }
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @if (stats(); as s) {
+    <div class="stat-grid">
+      <article class="stat-card">
+        <i class="bi bi-people stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Active users</span>
+        <span class="stat-card__value">{{ s.activeUsers ?? 0 | number }}</span>
+        <span class="stat-card__sub">Right now, across {{ organisationTotal() | number }} organisations</span>
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-file-earmark-arrow-up stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Documents uploaded</span>
+        <span class="stat-card__value">{{ s.documentsUploaded ?? 0 | number }}</span>
+        <span class="stat-card__sub">In the period</span>
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-diagram-3 stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Workflows</span>
+        <span class="stat-card__value">{{ s.workflowsInitiated ?? 0 | number }}</span>
+        <span class="stat-card__sub">
+          {{ s.workflowsCompleted ?? 0 | number }} completed
+          @if (completionRate() !== null) {
+            · {{ completionRate() }}%
+          }
+        </span>
+      </article>
+      <article class="stat-card stat-card--gold">
+        <i class="bi bi-pen stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Signatures completed</span>
+        <span class="stat-card__value">{{ s.signaturesCompleted ?? 0 | number }}</span>
+        <span class="stat-card__sub">In the period</span>
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-hdd-stack stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Storage in use</span>
+        <span class="stat-card__value">{{ formatBytes(s.storageBytes) }}</span>
+        <span class="stat-card__sub">Right now, all organisations</span>
+      </article>
+      <article class="stat-card">
+        <i class="bi bi-exclamation-octagon stat-card__icon" aria-hidden="true"></i>
+        <span class="stat-card__label">Failed notifications</span>
+        <span class="stat-card__value">{{ s.notificationsFailed ?? 0 | number }}</span>
+        <span class="stat-card__sub">In the period</span>
+      </article>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="card flex flex-col gap-4" aria-labelledby="orgs-title">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 id="orgs-title" class="eyebrow m-0">Organisations by status</h2>
+          <span class="mono text-ink-muted">{{ organisationTotal() | number }} total</span>
+        </div>
+        <app-bar-list-chart [data]="organisationsByStatus()" label="Organisations by status" />
+        <a class="text-body-sm self-start" routerLink="/platform/organisations">Browse organisations</a>
+      </section>
+
+      <section class="table-panel" aria-labelledby="period-title">
+        <h2 id="period-title" class="m-0 px-5 pt-4 text-headline-sm">Period totals</h2>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Metric</th>
+                <th scope="col" class="text-right">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (metric of activity; track metric.key) {
+                <tr>
+                  <td>{{ metric.label }}</td>
+                  <td class="mono text-right">{{ s[metric.key] ?? 0 | number }}</td>
+                </tr>
+              }
+              <tr>
+                <td>Notifications failed</td>
+                <td class="mono text-right">{{ s.notificationsFailed ?? 0 | number }}</td>
+              </tr>
+              <tr>
+                <td>Active users (now)</td>
+                <td class="mono text-right">{{ s.activeUsers ?? 0 | number }}</td>
+              </tr>
+              <tr>
+                <td>Storage in use (now)</td>
+                <td class="mono text-right">{{ formatBytes(s.storageBytes) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  }
+
+  <section class="card flex flex-col gap-5" aria-labelledby="trend-title">
+    <div>
+      <h2 id="trend-title" class="eyebrow m-0">Last six months</h2>
+      <p class="m-0 text-body-sm text-ink-muted">Calendar months; the current month so far. Hover a bar for its value.</p>
+    </div>
+    @if (trendError()) {
+      <div class="alert alert--danger" role="alert">{{ trendError() }}</div>
+    } @else if (trendLoading()) {
+      <p class="m-0 text-ink-muted">Loading the monthly trend…</p>
+    } @else {
+      <div class="grid gap-6 md:grid-cols-2">
+        @for (series of trend(); track series.key) {
+          <app-column-chart [title]="series.label" [data]="series.data" [summary]="series.summary" />
+        }
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <caption class="sr-only">Monthly platform activity</caption>
+          <thead>
+            <tr>
+              <th scope="col">Month</th>
+              @for (metric of activity; track metric.key) {
+                <th scope="col" class="text-right">{{ metric.label }}</th>
+              }
+              <th scope="col" class="text-right">Failed notifications</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (month of months(); track month.from) {
+              <tr>
+                <th scope="row" class="mono font-normal">{{ month.label }}</th>
+                @for (metric of activity; track metric.key) {
+                  <td class="mono text-right">{{ month.stats[metric.key] ?? 0 | number }}</td>
+                }
+                <td class="mono text-right">{{ month.stats.notificationsFailed ?? 0 | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

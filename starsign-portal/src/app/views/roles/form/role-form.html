@@ -1,0 +1,81 @@
+<div class="page max-w-5xl">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/roles">Roles</a><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        @if (!isNew()) {
+          <a [routerLink]="['/roles', id()]">{{ role()?.name || role()?.code || 'Role' }}</a
+          ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        }
+        <span class="breadcrumb__current">{{ isNew() ? 'New' : 'Edit' }}</span>
+      </nav>
+      <h1 class="page-title">{{ isNew() ? 'New role' : 'Edit role' }}</h1>
+      <p class="page-subtitle">
+        @if (isNew()) {
+          A custom role for your organisation. Choose its permissions once it is created.
+        } @else if (builtIn()) {
+          This is a built-in role: only its description can change.
+        } @else {
+          The code cannot change once a role is created.
+        }
+      </p>
+    </div>
+  </header>
+
+  @if (loadError()) {
+    <div class="alert alert--danger" role="alert">{{ loadError() }}</div>
+  }
+
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="roleForm"
+    [attr.aria-label]="isNew() ? 'New role' : 'Edit role'"
+  >
+    <div class="card flex flex-col gap-5">
+      <div class="grid gap-5 md:grid-cols-2">
+        <div class="field">
+          <label for="role-name">Name *</label>
+          <input id="role-name" class="field-control" [formField]="roleForm.name" />
+          <app-field-errors [field]="roleForm.name" />
+        </div>
+        <div class="field">
+          <label for="role-code">Code *</label>
+          <input
+            id="role-code"
+            class="field-control mono"
+            [formField]="roleForm.code"
+            (blur)="normaliseCode()"
+            aria-describedby="role-code-hint"
+          />
+          <span id="role-code-hint" class="field__hint">Also the Keycloak role name, e.g. CONTRACT_REVIEWER.</span>
+          <app-field-errors [field]="roleForm.code" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="role-description">Description</label>
+        <textarea id="role-description" class="field-control" [formField]="roleForm.description"></textarea>
+        <app-field-errors [field]="roleForm.description" />
+      </div>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+      <button
+        type="submit"
+        class="btn btn--primary btn--block min-h-11"
+        [disabled]="roleForm().submitting() || (!isNew() && !role())"
+      >
+        @if (roleForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Saving…
+        } @else {
+          <i class="bi bi-check2" aria-hidden="true"></i> {{ isNew() ? 'Create role' : 'Save role' }}
+        }
+      </button>
+      <a class="btn btn--secondary btn--block" [routerLink]="isNew() ? '/roles' : ['/roles', id()]">Cancel</a>
+    </aside>
+  </form>
+</div>

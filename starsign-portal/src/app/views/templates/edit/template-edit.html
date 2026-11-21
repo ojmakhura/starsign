@@ -1,0 +1,457 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/templates">Signing templates</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        @if (editing()) {
+          <a [routerLink]="['/templates', id()]">{{ draft().name || 'Template' }}</a
+          ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+          <span class="breadcrumb__current">Edit</span>
+        } @else {
+          <span class="breadcrumb__current">New</span>
+        }
+      </nav>
+      <h1 class="page-title">{{ editing() ? 'Edit template' : 'New signing template' }}</h1>
+      <p class="page-subtitle">
+        Define the signatory roles, the stages they sign in and where their fields go. People are
+        filled in each time the template is used.
+      </p>
+    </div>
+  </header>
+
+  @if (loadError()) {
+    <div class="alert alert--danger" role="alert">{{ loadError() }}</div>
+  }
+  @if (archived()) {
+    <div class="alert alert--danger" role="alert">
+      This template is archived and can no longer be changed.
+    </div>
+  }
+  @if (active()) {
+    <div class="alert alert--info" role="note">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      The template is active: saving creates a new version. Workflows already made from it keep
+      their own copy.
+    </div>
+  }
+
+  <form
+    class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
+    [formRoot]="templateForm"
+    aria-label="Signing template"
+  >
+    <div class="flex min-w-0 flex-col gap-6">
+      <!-- 1 · Details -->
+      <section class="card flex flex-col gap-5" aria-labelledby="tpl-details-title">
+        <h2 class="card__title" id="tpl-details-title"><span class="eyebrow">01</span> Details</h2>
+        <div class="field">
+          <label for="tpl-name">Name *</label>
+          <input id="tpl-name" class="field-control" [formField]="templateForm.name" />
+          <app-field-errors [field]="templateForm.name" />
+        </div>
+        <div class="field">
+          <label for="tpl-description">Description</label>
+          <textarea id="tpl-description" class="field-control" [formField]="templateForm.description"></textarea>
+          <app-field-errors [field]="templateForm.description" />
+        </div>
+        <div class="field">
+          <label for="tpl-message">Default message to signatories</label>
+          <textarea
+            id="tpl-message"
+            class="field-control"
+            [formField]="templateForm.message"
+            placeholder="Shown in the invitation email; can be changed each time the template is used"
+          ></textarea>
+          <span class="field__hint text-right">{{ draft().message.length }}/2000</span>
+          <app-field-errors [field]="templateForm.message" />
+        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="field">
+            <label for="tpl-base">Base document</label>
+            <select id="tpl-base" class="field-control" [formField]="templateForm.baseDocumentId">
+              <option value="">None</option>
+              @for (doc of documentList(); track doc.id) {
+                <option [value]="doc.id">{{ doc.title }} · {{ doc.pageCount ?? 0 }} pp</option>
+              }
+            </select>
+            <span class="field__hint">The PDF the field layout was designed on (optional).</span>
+          </div>
+          <div class="field">
+            <label for="tpl-pages">Page count</label>
+            <input
+              id="tpl-pages"
+              class="field-control"
+              type="number"
+              [formField]="templateForm.pageCount"
+            />
+            <span class="field__hint">Blank = taken from the base document.</span>
+            <app-field-errors [field]="templateForm.pageCount" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 · Roles -->
+      <section class="card flex flex-col gap-5" aria-labelledby="tpl-roles-title">
+        <div class="card__header !mb-0">
+          <h2 class="card__title" id="tpl-roles-title">
+            <span class="eyebrow">02</span> Signatory roles &amp; stages
+          </h2>
+          <div class="segmented" role="radiogroup" aria-label="Signing order within a stage">
+            <label
+              ><input
+                type="radio"
+                [value]="ExecutionMode.SEQUENTIAL"
+                [formField]="templateForm.executionMode"
+              />Sequential</label
+            >
+            <label
+              ><input
+                type="radio"
+                [value]="ExecutionMode.PARALLEL"
+                [formField]="templateForm.executionMode"
+              />Parallel</label
+            >
+          </div>
+        </div>
+        <p class="m-0 text-ink-muted">
+          Stages run one after the other. Within a stage,
+          {{
+            draft().executionMode === ExecutionMode.SEQUENTIAL
+              ? 'roles sign in the order listed.'
+              : 'every role is invited at once.'
+          }}
+        </p>
+
+        <ol class="timeline">
+          @for (role of templateForm.roles; track role; let i = $index, first = $first, last = $last) {
+            <li class="timeline__item">
+              <span class="timeline__node" [class.timeline__node--done]="role().valid()" aria-hidden="true"></span>
+              <fieldset
+                class="m-0 flex flex-col gap-4 rounded-[var(--radius-panel)] border border-hairline bg-abyss/60 p-4"
+                [attr.aria-label]="'Role ' + (i + 1)"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="eyebrow flex-1">Role {{ i + 1 }} · stage {{ draft().roles[i].stageNumber }}</span>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon"
+                    (click)="moveRole(i, -1)"
+                    [disabled]="first"
+                    aria-label="Move role up"
+                  >
+                    <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon"
+                    (click)="moveRole(i, 1)"
+                    [disabled]="last"
+                    aria-label="Move role down"
+                  >
+                    <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--icon text-crimson"
+                    (click)="removeRole(i)"
+                    [disabled]="draft().roles.length === 1"
+                    aria-label="Remove role"
+                  >
+                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                  </button>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                  <div class="field">
+                    <label [for]="'role-name-' + i">Role name *</label>
+                    <input
+                      [id]="'role-name-' + i"
+                      class="field-control"
+                      placeholder="e.g. Buyer, Witness, Approver"
+                      [formField]="role.roleName"
+                    />
+                    <app-field-errors [field]="role.roleName" />
+                  </div>
+                  <div class="field">
+                    <label [for]="'role-stage-' + i">Stage *</label>
+                    <input
+                      [id]="'role-stage-' + i"
+                      class="field-control"
+                      type="number"
+                      [formField]="role.stageNumber"
+                    />
+                    <app-field-errors [field]="role.stageNumber" />
+                  </div>
+                  <div class="field">
+                    <label [for]="'role-type-' + i">Signatory type</label>
+                    <select [id]="'role-type-' + i" class="field-control" [formField]="role.signatoryType">
+                      @for (type of signatoryTypes; track type.value) {
+                        <option [value]="type.value">{{ type.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label [for]="'role-verify-' + i">Identity verification</label>
+                    <select
+                      [id]="'role-verify-' + i"
+                      class="field-control"
+                      [formField]="role.verificationMethod"
+                    >
+                      <option value="">Template default</option>
+                      @for (method of verificationMethods; track method.value) {
+                        <option [value]="method.value">{{ method.label }}</option>
+                      }
+                    </select>
+                    <app-field-errors [field]="role.verificationMethod" />
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                  <label class="check"><input type="checkbox" [formField]="role.mandatory" /> Must sign</label>
+                  <label class="check"><input type="checkbox" [formField]="role.canDecline" /> May decline</label>
+                </div>
+              </fieldset>
+            </li>
+          }
+        </ol>
+
+        <app-field-errors [field]="templateForm.roles" />
+        <button
+          type="button"
+          class="btn btn--secondary self-start"
+          (click)="addRole()"
+          [disabled]="draft().roles.length >= maxRoles"
+        >
+          <i class="bi bi-person-plus" aria-hidden="true"></i> Add role
+        </button>
+      </section>
+
+      <!-- 3 · Fields -->
+      <section class="card flex flex-col gap-5" aria-labelledby="tpl-fields-title">
+        <h2 class="card__title" id="tpl-fields-title"><span class="eyebrow">03</span> Fields</h2>
+        <p class="m-0 text-ink-muted">
+          Position and size are percentages of the page, measured from its top-left corner. Every role
+          that must sign needs a signature field before the template can be activated.
+        </p>
+
+        @if (unsignedRoles().length) {
+          <div class="alert alert--danger" role="status">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span class="flex-1">No signature field yet for: {{ unsignedRoles().join(', ') }}.</span>
+            <button type="button" class="btn btn--secondary" (click)="addMissingSignatures()">
+              Add signature fields
+            </button>
+          </div>
+        }
+
+        @for (field of templateForm.fields; track field; let i = $index) {
+          <fieldset
+            class="m-0 flex flex-col gap-4 rounded-[var(--radius-panel)] border border-hairline bg-abyss/60 p-4"
+            [attr.aria-label]="'Field ' + (i + 1)"
+          >
+            <div class="flex items-center gap-2">
+              <span class="eyebrow flex-1">
+                Field {{ i + 1 }} · {{ roleLabel(draft().fields[i].roleKey) || 'unassigned' }}
+              </span>
+              <button
+                type="button"
+                class="btn btn--ghost btn--icon text-crimson"
+                (click)="removeField(i)"
+                aria-label="Remove field"
+              >
+                <i class="bi bi-trash3" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="grid gap-4 md:grid-cols-3">
+              <div class="field">
+                <label [for]="'field-role-' + i">Role *</label>
+                <select [id]="'field-role-' + i" class="field-control" [formField]="field.roleKey">
+                  <option value="">Choose a role…</option>
+                  @for (role of draft().roles; track role.key; let r = $index) {
+                    <option [value]="role.key">{{ role.roleName || 'Role ' + (r + 1) }}</option>
+                  }
+                </select>
+                <app-field-errors [field]="field.roleKey" />
+              </div>
+              <div class="field">
+                <label [for]="'field-type-' + i">Type</label>
+                <select [id]="'field-type-' + i" class="field-control" [formField]="field.fieldType">
+                  @for (type of fieldTypes; track type.value) {
+                    <option [value]="type.value">{{ type.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
+                <label [for]="'field-label-' + i">Label</label>
+                <input [id]="'field-label-' + i" class="field-control" [formField]="field.label" />
+                <app-field-errors [field]="field.label" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+              <div class="field">
+                <label [for]="'field-page-' + i">Page *</label>
+                <input
+                  [id]="'field-page-' + i"
+                  class="field-control"
+                  type="number"
+                  [formField]="field.pageNumber"
+                />
+                <app-field-errors [field]="field.pageNumber" />
+              </div>
+              <div class="field">
+                <label [for]="'field-x-' + i">Left %</label>
+                <input [id]="'field-x-' + i" class="field-control" type="number" step="0.1" [formField]="field.x" />
+                <app-field-errors [field]="field.x" />
+              </div>
+              <div class="field">
+                <label [for]="'field-y-' + i">Top %</label>
+                <input [id]="'field-y-' + i" class="field-control" type="number" step="0.1" [formField]="field.y" />
+                <app-field-errors [field]="field.y" />
+              </div>
+              <div class="field">
+                <label [for]="'field-w-' + i">Width %</label>
+                <input
+                  [id]="'field-w-' + i"
+                  class="field-control"
+                  type="number"
+                  step="0.1"
+                  [formField]="field.width"
+                />
+                <app-field-errors [field]="field.width" />
+              </div>
+              <div class="field">
+                <label [for]="'field-h-' + i">Height %</label>
+                <input
+                  [id]="'field-h-' + i"
+                  class="field-control"
+                  type="number"
+                  step="0.1"
+                  [formField]="field.height"
+                />
+                <app-field-errors [field]="field.height" />
+              </div>
+            </div>
+            @if (!field.options().hidden()) {
+              <div class="field">
+                <label [for]="'field-options-' + i">Options *</label>
+                <input
+                  [id]="'field-options-' + i"
+                  class="field-control"
+                  placeholder="Yes, No, Not applicable"
+                  [formField]="field.options"
+                />
+                <app-field-errors [field]="field.options" />
+              </div>
+            }
+            @if (draft().fields[i].fieldType === FieldType.SIGNATURE) {
+              <span class="field__hint">Signature fields are always required.</span>
+            } @else {
+              <label class="check"><input type="checkbox" [formField]="field.required" /> Required</label>
+            }
+          </fieldset>
+        } @empty {
+          <p class="m-0 text-ink-muted">No fields placed yet.</p>
+        }
+
+        <app-field-errors [field]="templateForm.fields" />
+        <button
+          type="button"
+          class="btn btn--secondary self-start"
+          (click)="addField()"
+          [disabled]="draft().fields.length >= maxFields"
+        >
+          <i class="bi bi-plus-square" aria-hidden="true"></i> Add field
+        </button>
+      </section>
+
+      <!-- 4 · Policy -->
+      <section class="card flex flex-col gap-5" aria-labelledby="tpl-policy-title">
+        <h2 class="card__title" id="tpl-policy-title"><span class="eyebrow">04</span> Security &amp; expiry</h2>
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="field">
+            <label for="tpl-expiry">Workflows expire after (days) *</label>
+            <input
+              id="tpl-expiry"
+              class="field-control"
+              type="number"
+              [formField]="templateForm.defaultExpiryDays"
+            />
+            <app-field-errors [field]="templateForm.defaultExpiryDays" />
+          </div>
+          <div class="field">
+            <label for="tpl-assurance">Assurance level</label>
+            <select id="tpl-assurance" class="field-control" [formField]="templateForm.assuranceLevel">
+              <option value="">Organisation default</option>
+              @for (level of assuranceLevels; track level.value) {
+                <option [value]="level.value">{{ level.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="tpl-verify">Default verification</label>
+            <select id="tpl-verify" class="field-control" [formField]="templateForm.verificationMethod">
+              <option value="">Organisation default</option>
+              @for (method of verificationMethods; track method.value) {
+                @if (method.value !== 'INTERNAL_ACCOUNT') {
+                  <option [value]="method.value">{{ method.label }}</option>
+                }
+              }
+            </select>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Summary tray -->
+    <aside class="flex flex-col gap-4 xl:sticky xl:top-20 xl:self-start">
+      <div class="glass flex flex-col gap-4 p-5">
+        <span class="eyebrow">Template summary</span>
+        <p class="m-0 font-medium">{{ draft().name || 'Unnamed template' }}</p>
+        @for (stage of stageSummary(); track stage[0]) {
+          <div>
+            <p class="m-0 eyebrow">Stage {{ stage[0] }}</p>
+            <ol class="m-0 flex list-none flex-col gap-1 p-0">
+              @for (name of stage[1]; track $index) {
+                <li class="truncate">{{ name }}</li>
+              }
+            </ol>
+          </div>
+        }
+        <hr class="divider" />
+        <dl class="m-0 grid grid-cols-2 gap-2 text-body-sm">
+          <dt class="text-ink-muted">Fields</dt>
+          <dd class="m-0 text-right mono">{{ draft().fields.length }}</dd>
+          <dt class="text-ink-muted">Mode</dt>
+          <dd class="m-0 text-right mono">{{ draft().executionMode }}</dd>
+          <dt class="text-ink-muted">Expiry</dt>
+          <dd class="m-0 text-right mono">{{ draft().defaultExpiryDays }} d</dd>
+        </dl>
+        @if (templateForm().invalid() && templateForm().touched()) {
+          <p class="m-0 text-body-sm text-crimson">Some entries need attention.</p>
+        }
+      </div>
+
+      @if (formError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ formError() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn btn--primary btn--block min-h-11"
+        [disabled]="templateForm().submitting() || archived() || original.isLoading()"
+      >
+        @if (templateForm().submitting()) {
+          <span class="spinner" aria-hidden="true"></span> Saving…
+        } @else {
+          <i class="bi bi-save" aria-hidden="true"></i> {{ editing() ? 'Save template' : 'Create template' }}
+        }
+      </button>
+      <a class="btn btn--secondary btn--block" [routerLink]="editing() ? ['/templates', id()] : ['/templates']"
+        >Cancel</a
+      >
+    </aside>
+  </form>
+</div>

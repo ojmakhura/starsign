@@ -1,0 +1,288 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><a routerLink="/platform/organisations">Organisations</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">{{ organisation()?.name || 'Organisation' }}</span>
+      </nav>
+      <h1 class="page-title">{{ organisation()?.name || (loading() ? 'Loading…' : 'Organisation') }}</h1>
+      @if (organisation(); as org) {
+        <p class="page-subtitle flex flex-wrap items-center gap-2">
+          <span class="chip" [class]="'chip--' + tone(org.status)">{{ humanise(org.status) }}</span>
+          @if (org.tradingName) {
+            <span>Trading as {{ org.tradingName }}</span>
+          }
+          <span class="mono">{{ org.registrationNumber }}</span>
+        </p>
+      }
+    </div>
+    @if (organisation() && transitions().length) {
+      <div class="page-actions">
+        <button type="button" class="btn btn--primary" (click)="openStatus()">
+          <i class="bi bi-toggles" aria-hidden="true"></i> Change status
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ error() }}
+    </div>
+  }
+
+  @if (organisation(); as org) {
+    @if (org.status === 'PENDING_VERIFICATION') {
+      <div class="alert alert--info">
+        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <span class="flex-1">
+          This organisation is waiting for approval{{ org.emailVerified ? '' : ' and has not verified its email address yet' }}.
+        </span>
+        <button type="button" class="btn btn--secondary" (click)="openStatus(activeStatus)">Activate</button>
+      </div>
+    }
+    @if (org.statusReason) {
+      <p class="m-0 text-body-sm text-ink-muted">
+        Status reason: <span class="text-ink">{{ org.statusReason }}</span>
+      </p>
+    }
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="card flex flex-col gap-4" aria-labelledby="profile-title">
+        <h2 id="profile-title" class="eyebrow m-0">Profile</h2>
+        <dl class="m-0 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-body-sm text-ink-muted">Email</dt>
+            <dd class="m-0">
+              {{ org.emailAddress || '—' }}
+              @if (org.emailAddress) {
+                <span class="chip" [class]="org.emailVerified ? 'chip--sealed' : 'chip--pending'">{{
+                  org.emailVerified ? 'Verified' : 'Unverified'
+                }}</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Phone</dt>
+            <dd class="m-0">{{ org.phoneNumber || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Website</dt>
+            <dd class="m-0 break-all">{{ org.website || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Tenant id</dt>
+            <dd class="m-0 mono">{{ org.tenantId || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Time zone · locale</dt>
+            <dd class="m-0">{{ org.timeZone || '—' }} · {{ org.locale || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Registered</dt>
+            <dd class="m-0 mono">{{ (org.createdAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Activated</dt>
+            <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-body-sm text-ink-muted">Last changed</dt>
+            <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-body-sm text-ink-muted">Physical address</dt>
+            <dd class="m-0">{{ address(org.physicalAddress) }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-body-sm text-ink-muted">Postal address</dt>
+            <dd class="m-0">{{ address(org.postalAddress) }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      @if (canSeeSubscription()) {
+        <section class="card flex flex-col gap-4" aria-labelledby="subscription-title">
+          <h2 id="subscription-title" class="eyebrow m-0">Subscription</h2>
+          @if (subscriptionError()) {
+            <div class="alert alert--danger" role="alert">{{ subscriptionError() }}</div>
+          }
+          @if (subscription(); as sub) {
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-headline-sm text-ink">{{ sub.plan?.name || sub.plan?.code || 'Plan' }}</span>
+              <span class="chip chip--neutral">{{ humanise(sub.status) }}</span>
+              <span class="chip chip--neutral">{{ humanise(sub.billingCycle) }}</span>
+              @if (sub.autoRenew) {
+                <span class="chip chip--progress">Auto-renews</span>
+              }
+            </div>
+            <dl class="m-0 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <div>
+                <dt class="text-body-sm text-ink-muted">Current period</dt>
+                <dd class="m-0 mono">
+                  {{ (sub.currentPeriodStart | date: 'dd MMM yyyy') || '—' }} –
+                  {{ (sub.currentPeriodEnd | date: 'dd MMM yyyy') || '—' }}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-body-sm text-ink-muted">Trial ends</dt>
+                <dd class="m-0 mono">{{ (sub.trialEndsAt | date: 'dd MMM yyyy') || '—' }}</dd>
+              </div>
+            </dl>
+          } @else if (!subscriptionError()) {
+            <p class="m-0 text-ink-muted">This organisation has no subscription.</p>
+          }
+
+          @if (usageSummary()?.metrics?.length) {
+            <h3 class="m-0 text-body-sm text-ink-muted">Usage this month</h3>
+            <ul class="m-0 flex list-none flex-col gap-3 p-0">
+              @for (m of usageSummary()!.metrics!; track m.metric) {
+                <li>
+                  <div class="mb-1 flex justify-between gap-2 text-body-sm">
+                    <span>{{ metricLabel(m.metric) }}</span>
+                    <span class="mono text-ink-muted">
+                      {{ m.metric === 'STORAGE_BYTES' ? formatBytes(m.used) : (m.used ?? 0 | number) }} /
+                      {{ metricValue(m.metric, m.limit) }}
+                    </span>
+                  </div>
+                  @if (m.limit !== null && m.limit !== undefined) {
+                    <div
+                      class="progress"
+                      role="progressbar"
+                      [attr.aria-label]="metricLabel(m.metric)"
+                      [attr.aria-valuenow]="m.percentage ?? 0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                    >
+                      <div class="progress__bar" [style.width.%]="clampPercent(m.percentage)"></div>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
+      @if (canSeeStorage()) {
+        <section class="card flex flex-col gap-4" aria-labelledby="storage-title">
+          <div class="flex items-center justify-between gap-2">
+            <h2 id="storage-title" class="eyebrow m-0">Storage</h2>
+            <button
+              *appCan="'admin-storage:edit'"
+              type="button"
+              class="btn btn--secondary"
+              [disabled]="reconciling()"
+              (click)="runReconciliation()"
+            >
+              @if (reconciling()) {
+                <span class="spinner" aria-hidden="true"></span>
+              } @else {
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+              }
+              Reconcile
+            </button>
+          </div>
+          @if (usageError()) {
+            <div class="alert alert--danger" role="alert">{{ usageError() }}</div>
+          }
+          @if (usage(); as u) {
+            <div class="flex flex-wrap items-baseline gap-3">
+              <span class="text-headline-md text-ink">{{ formatBytes(u.totalBytes) }}</span>
+              <span class="text-ink-muted">in {{ u.objectCount ?? 0 | number }} objects</span>
+            </div>
+            <table class="data-table">
+              <caption class="sr-only">Storage by kind</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Kind</th>
+                  <th scope="col">Size</th>
+                  <th scope="col" class="min-w-32">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (part of storageBreakdown(); track part.label) {
+                  <tr>
+                    <td>{{ part.label }}</td>
+                    <td class="mono">{{ formatBytes(part.bytes) }}</td>
+                    <td>
+                      <div class="progress" [attr.aria-label]="part.label + ' share'">
+                        <div class="progress__bar" [style.width.%]="part.percent"></div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else if (!usageError()) {
+            <p class="m-0 text-ink-muted">Loading storage usage…</p>
+          }
+          @if (reconciliation(); as run) {
+            <p class="m-0 text-body-sm text-ink-muted" role="status">
+              Last run {{ run.finishedAt | date: 'dd MMM yyyy, HH:mm' }}: {{ run.objectsScanned ?? 0 }} objects and
+              {{ run.referencesScanned ?? 0 }} references scanned, {{ run.issuesDetected ?? 0 }} issues detected,
+              {{ run.issuesResolved ?? 0 }} resolved.
+              <a routerLink="/platform/storage" *appCan="'admin-storage:list'">See open issues</a>
+            </p>
+          }
+        </section>
+      }
+    </div>
+  }
+</div>
+
+@if (statusOpen()) {
+  <div class="modal-backdrop" (click)="statusOpen.set(false)">
+    <form
+      class="modal flex flex-col gap-4"
+      [formRoot]="statusForm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="status-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="status-title" class="m-0 text-headline-sm">Change the organisation's status</h2>
+      <p class="m-0 text-ink-muted">
+        Currently <strong class="text-ink">{{ humanise(organisation()?.status) }}</strong>. The change is recorded in
+        the audit trail and the organisation's administrators are told.
+      </p>
+      <fieldset class="flex flex-col gap-2 border-0 p-0">
+        <legend class="field__label mb-2">New status *</legend>
+        @for (status of transitions(); track status) {
+          <label class="check">
+            <input type="radio" [value]="status" [formField]="statusForm.status" />
+            <span class="flex flex-col">
+              <span>{{ humanise(status) }}</span>
+              <span class="text-body-sm text-ink-muted">{{ statusEffects[status] }}</span>
+            </span>
+          </label>
+        }
+        <app-field-errors [field]="statusForm.status" />
+      </fieldset>
+      <div class="field">
+        <label for="status-reason">Reason{{ statusModel().status === 'ACTIVE' ? '' : ' *' }}</label>
+        <textarea id="status-reason" class="field-control" [formField]="statusForm.reason"></textarea>
+        <app-field-errors [field]="statusForm.reason" />
+      </div>
+      @if (statusServerError()) {
+        <div class="alert alert--danger" role="alert">{{ statusServerError() }}</div>
+      }
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="statusOpen.set(false)">Cancel</button>
+        <button
+          type="submit"
+          class="btn"
+          [class]="statusModel().status === 'CLOSED' || statusModel().status === 'SUSPENDED' ? 'btn--danger' : 'btn--primary'"
+          [disabled]="statusForm().submitting()"
+        >
+          @if (statusForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span>
+          }
+          {{ statusModel().status ? humanise(statusModel().status) : 'Change status' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

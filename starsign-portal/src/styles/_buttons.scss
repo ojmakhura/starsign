@@ -1,0 +1,117 @@
+@use 'mixins' as *;
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 36px;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-control);
+    border: 1px solid transparent;
+    font: 500 var(--text-label-lg) / var(--text-label-lg--line-height) var(--font-sans);
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      box-shadow 0.15s,
+      color 0.15s;
+
+    &:disabled,
+    &[aria-disabled='true'] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    i {
+      font-size: 1rem;
+      line-height: 1;
+    }
+  }
+
+  // Primary Action (Sign / Complete)
+  .btn--primary {
+    background: var(--color-cyan);
+    color: var(--color-abyss);
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 0 18px rgb(0 229 255 / 0.35);
+    }
+
+    &:focus-visible {
+      box-shadow: var(--shadow-focus);
+    }
+  }
+
+  // Secondary Action (Review / Reject)
+  .btn--secondary {
+    background: transparent;
+    border-color: var(--color-hairline-strong);
+    color: var(--color-ink);
+
+    &:hover:not(:disabled) {
+      background: rgb(255 255 255 / 0.05);
+    }
+  }
+
+  // Verification Trigger
+  .btn--verify {
+    background: rgb(229 185 76 / 0.08);
+    border-color: rgb(229 185 76 / 0.45);
+    color: var(--color-gold);
+
+    &:hover:not(:disabled) {
+      box-shadow: var(--shadow-seal);
+    }
+  }
+
+  .btn--danger {
+    background: transparent;
+    border-color: rgb(255 92 108 / 0.45);
+    color: var(--color-crimson);
+
+    &:hover:not(:disabled) {
+      background: rgb(255 92 108 / 0.08);
+    }
+  }
+
+  .btn--ghost {
+    background: transparent;
+    color: var(--color-ink-muted);
+
+    &:hover:not(:disabled) {
+      color: var(--color-ink);
+      background: rgb(255 255 255 / 0.04);
+    }
+  }
+
+  .btn--icon {
+    min-height: 36px;
+    width: 36px;
+    padding: 0;
+  }
+
+  .btn--block {
+    width: 100%;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

@@ -1,0 +1,118 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Signing templates</span>
+      </nav>
+      <h1 class="page-title">Signing templates</h1>
+      <p class="page-subtitle">
+        Reusable routing: signatory roles, stages and field layout, ready to apply to a document.
+      </p>
+    </div>
+    <a *appCan="'templates:edit'" class="btn btn--primary" routerLink="new"
+      ><i class="bi bi-plus-lg" aria-hidden="true"></i> New template</a
+    >
+  </header>
+
+  <div class="segmented self-start" role="tablist" aria-label="Template status">
+    @for (tab of tabs; track tab.label) {
+      <label role="tab" [attr.aria-selected]="filter().status === tab.status">
+        <input
+          type="radio"
+          name="template-status-tab"
+          [checked]="filter().status === tab.status"
+          (change)="selectTab(tab.status)"
+        />{{ tab.label }}
+      </label>
+    }
+  </div>
+
+  <form class="card grid gap-4 md:grid-cols-3" (submit)="$event.preventDefault()" aria-label="Search templates">
+    <div class="field md:col-span-2">
+      <label for="tpl-name">Name</label>
+      <input id="tpl-name" class="field-control" type="search" [formField]="filterForm.name" />
+    </div>
+    <div class="field">
+      <label for="tpl-status">Status</label>
+      <select id="tpl-status" class="field-control" [formField]="filterForm.status">
+        <option value="">Any status</option>
+        <option value="DRAFT">Draft</option>
+        <option value="ACTIVE">Active</option>
+        <option value="ARCHIVED">Archived</option>
+      </select>
+    </div>
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Templates">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Template</th>
+            <th scope="col">Status</th>
+            <th scope="col">Routing</th>
+            <th scope="col">Fields</th>
+            <th scope="col">Updated</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tpl of list(); track tpl.id) {
+            <tr>
+              <td>
+                <a class="cell-title" [routerLink]="tpl.id">{{ tpl.name }}</a>
+                <div class="cell-note">
+                  <span class="mono">v{{ tpl.templateVersion ?? 1 }}</span>
+                  @if (tpl.description) {
+                    · {{ tpl.description }}
+                  }
+                </div>
+              </td>
+              <td>
+                <span class="chip" [class]="templateTone(tpl.status)">{{ tpl.status }}</span>
+              </td>
+              <td>
+                <span class="mono text-ink-muted">{{ tpl.executionMode || '—' }}</span>
+                <div class="cell-note">
+                  {{ tpl.signatories?.length ?? 0 }} role(s) · {{ stageCount(tpl) }} stage(s)
+                </div>
+              </td>
+              <td class="mono text-ink-muted">{{ tpl.fields?.length ?? 0 }}</td>
+              <td class="mono text-ink-muted">
+                {{ (tpl.modifiedAt || tpl.createdAt | date: 'dd MMM yyyy') || '—' }}
+              </td>
+              <td>
+                @if (tpl.status === 'ACTIVE') {
+                  <div class="flex justify-end">
+                    <a
+                      *appCan="'templates:initiate'"
+                      class="btn btn--secondary"
+                      [routerLink]="[tpl.id, 'use']"
+                      ><i class="bi bi-send-plus" aria-hidden="true"></i> Use</a
+                    >
+                  </div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-files" aria-hidden="true"></i>
+                  <span>{{
+                    templates.isLoading() ? 'Searching…' : 'No templates match these criteria.'
+                  }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

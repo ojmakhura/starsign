@@ -1,0 +1,587 @@
+<div class="page">
+  <header class="page-header">
+    <div class="min-w-0">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/signing">Signing inbox</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i>
+        <span class="breadcrumb__current">{{
+          session()?.workflowReference || 'Signing request'
+        }}</span>
+      </nav>
+      <h1 class="page-title break-words">
+        {{ session()?.workflowTitle || session()?.documentTitle || 'Signing request' }}
+      </h1>
+      @if (session(); as s) {
+        <p class="page-subtitle">
+          @if (s.organisationName) {
+            {{ s.organisationName }} ·
+          }
+          {{ s.documentTitle }}
+          @if (pageCount()) {
+            · {{ pageCount() }} page{{ pageCount() === 1 ? '' : 's' }}
+          }
+        </p>
+      }
+    </div>
+    @if (session(); as s) {
+      <app-status-chip [status]="result()?.signatoryStatus ?? s.signatoryStatus" />
+    }
+  </header>
+
+  @switch (view()) {
+    @case ('loading') {
+      <section class="card flex items-center justify-center gap-3 p-10" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="text-ink-muted">Opening your signing request…</span>
+      </section>
+    }
+
+    @case ('unavailable') {
+      <section
+        class="card mx-auto flex w-full max-w-2xl flex-col gap-4"
+        aria-labelledby="unavailable-title"
+      >
+        <h2 id="unavailable-title" class="m-0 text-headline-sm">
+          This signing request cannot be opened
+        </h2>
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>{{ loadError() }}
+        </div>
+        <a class="btn btn--secondary self-start" routerLink="/signing">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to inbox
+        </a>
+      </section>
+    }
+
+    @case ('result') {
+      @if (result(); as r) {
+        <section class="stage mx-auto w-full max-w-2xl p-6 text-center sm:p-8" aria-live="polite">
+          @if (r.signatoryStatus === 'DECLINED') {
+            <span class="chip chip--voided">Declined</span>
+            <h2 class="mt-6 mb-2 text-headline-md">You declined to sign</h2>
+            <p class="m-0 text-ink-muted">{{ r.message || 'The sender has been notified.' }}</p>
+          } @else {
+            <div class="seal mx-auto">
+              <i class="bi bi-patch-check-fill" aria-hidden="true"></i
+              ><span class="mono">SIGNATURE RECORDED</span>
+            </div>
+            <h2 class="mt-6 mb-2 text-headline-md">Signature applied</h2>
+            <p class="m-0 text-ink-muted">
+              {{
+                r.message ||
+                  'Your signature has been bound to the document and recorded in the audit chain.'
+              }}
+            </p>
+          }
+          <dl class="mt-6 grid gap-3 text-left">
+            @if (r.signedAt) {
+              <div>
+                <dt class="eyebrow">Timestamp</dt>
+                <dd class="m-0 mono">{{ r.signedAt | date: 'yyyy-MM-dd HH:mm:ss z' }}</dd>
+              </div>
+            }
+            @if (r.documentSha256) {
+              <div>
+                <dt class="eyebrow">Document SHA-256</dt>
+                <dd class="m-0 hash break-all">{{ r.documentSha256 }}</dd>
+              </div>
+            }
+            @if (r.evidenceSha256) {
+              <div>
+                <dt class="eyebrow">Evidence SHA-256</dt>
+                <dd class="m-0 hash break-all">{{ r.evidenceSha256 }}</dd>
+              </div>
+            }
+            <div>
+              <dt class="eyebrow">Signing request</dt>
+              <dd class="m-0"><app-status-chip [status]="r.workflowStatus" /></dd>
+            </div>
+          </dl>
+          <button type="button" class="btn btn--primary mt-8" (click)="backToInbox()">
+            Back to inbox
+          </button>
+        </section>
+      }
+    }
+
+    @case ('signed') {
+      <section class="stage mx-auto flex w-full max-w-2xl flex-col gap-4 p-6 text-center sm:p-8">
+        <div class="seal mx-auto">
+          <i class="bi bi-patch-check-fill" aria-hidden="true"></i
+          ><span class="mono">ALREADY SIGNED</span>
+        </div>
+        <h2 class="m-0 text-headline-md">You have already signed this document</h2>
+        <p class="m-0 text-ink-muted">Nothing more is needed from you.</p>
+        <a class="btn btn--secondary self-center" routerLink="/signing">Back to inbox</a>
+      </section>
+    }
+
+    @case ('declined') {
+      <section class="card mx-auto flex w-full max-w-2xl flex-col gap-4 text-center">
+        <span class="chip chip--voided self-center">Declined</span>
+        <h2 class="m-0 text-headline-md">You declined to sign this document</h2>
+        <p class="m-0 text-ink-muted">
+          The sender has been told. If you declined by mistake, ask them for a new signing request.
+        </p>
+        <a class="btn btn--secondary self-center" routerLink="/signing">Back to inbox</a>
+      </section>
+    }
+
+    @case ('waiting') {
+      <section class="card mx-auto flex w-full max-w-2xl flex-col gap-4 text-center">
+        <i class="bi bi-hourglass-split text-4xl text-cyan" aria-hidden="true"></i>
+        <h2 class="m-0 text-headline-md">It is not your turn to sign yet</h2>
+        <p class="m-0 text-ink-muted">
+          Other people need to sign this document before you. It will appear in your signing inbox,
+          and you will be notified, when it is ready for your signature.
+        </p>
+        <a class="btn btn--secondary self-center" routerLink="/signing">Back to inbox</a>
+      </section>
+    }
+
+    @case ('closed') {
+      <section class="card mx-auto flex w-full max-w-2xl flex-col gap-4 text-center">
+        <i class="bi bi-x-octagon text-4xl text-ink-muted" aria-hidden="true"></i>
+        <h2 class="m-0 text-headline-md">This signing request is closed</h2>
+        <p class="m-0 text-ink-muted">{{ closedMessage() }}</p>
+        <a class="btn btn--secondary self-center" routerLink="/signing">Back to inbox</a>
+      </section>
+    }
+
+    @case ('sign') {
+      @if (session(); as s) {
+        @if (submitError()) {
+          <div class="alert alert--danger" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ submitError() }}
+          </div>
+        }
+        @if (s.message) {
+          <div class="glass p-4 text-body-sm">
+            <span class="eyebrow">Message from the sender</span>
+            <p class="m-0 mt-1 whitespace-pre-line">{{ s.message }}</p>
+          </div>
+        }
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <!-- Document -->
+          <section class="viewer-frame min-w-0" aria-label="Document">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <span class="eyebrow">Document review</span>
+              @if (pdfUrl()) {
+                <a class="btn btn--ghost" [href]="pdfUrl()" target="_blank" rel="noopener">
+                  <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Open full PDF
+                </a>
+              }
+            </div>
+
+            @if (documentError()) {
+              <div class="alert alert--danger mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ documentError() }}
+              </div>
+            }
+
+            <div class="relative mx-auto w-full max-w-[720px]">
+              @if (pageUrls()[currentPage()]; as url) {
+                <div class="relative">
+                  <img
+                    [src]="url"
+                    [alt]="'Page ' + currentPage() + ' of ' + (s.documentTitle || 'the document')"
+                    class="block h-auto w-full rounded bg-white shadow"
+                  />
+                  @for (field of pageFields(); track field.id) {
+                    @let label = field.label || typeLabel(field.fieldType);
+                    @let active = activeFieldId() === field.id;
+                    <button
+                      type="button"
+                      class="absolute flex items-center overflow-hidden rounded-sm border-2 px-1 text-left text-slate-900 transition-colors"
+                      [class]="
+                        field.completed
+                          ? 'border-slate-400 bg-slate-200/40'
+                          : active
+                            ? 'border-solid border-cyan-600 bg-cyan-300/30'
+                            : 'border-dashed border-cyan-500 bg-cyan-400/15 hover:bg-cyan-400/25'
+                      "
+                      [style.left.%]="(field.xRatio ?? 0) * 100"
+                      [style.top.%]="(field.yRatio ?? 0) * 100"
+                      [style.width.%]="(field.widthRatio ?? 0) * 100"
+                      [style.height.%]="(field.heightRatio ?? 0) * 100"
+                      [attr.aria-label]="
+                        (field.completed ? 'Completed: ' : 'Go to ') +
+                        label +
+                        (field.required ? ' (required)' : '')
+                      "
+                      [disabled]="!!field.completed || !!field.readOnly"
+                      (click)="focusField(field)"
+                    >
+                      <span
+                        class="pointer-events-none absolute -top-4 left-0 whitespace-nowrap rounded bg-cyan-600 px-1 font-mono text-[9px] uppercase text-white"
+                        >{{ label }}{{ field.required ? ' *' : '' }}</span
+                      >
+                      @if (isSignatureField(field)) {
+                        @if (signaturePreview(field); as preview) {
+                          @if (preview.image) {
+                            <img
+                              [src]="preview.image"
+                              alt=""
+                              class="pointer-events-none h-full w-full object-contain [filter:brightness(0.3)]"
+                            />
+                          } @else {
+                            <span
+                              class="pointer-events-none truncate font-display italic leading-none"
+                              [style.font-size.px]="14"
+                              >{{ preview.text }}</span
+                            >
+                          }
+                        }
+                      } @else if (fieldPreview(field); as value) {
+                        <span class="pointer-events-none truncate text-[11px] leading-none">{{
+                          value
+                        }}</span>
+                      }
+                    </button>
+                  }
+                </div>
+              } @else if (pageError()) {
+                <div class="alert alert--danger" role="alert">
+                  <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ pageError() }}
+                </div>
+              } @else {
+                <div
+                  class="paper-plate flex aspect-[1/1.414] w-full items-center justify-center"
+                  aria-live="polite"
+                >
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="sr-only">Loading page {{ currentPage() }}</span>
+                </div>
+              }
+            </div>
+
+            @if (pageCount() > 1) {
+              <nav class="mt-4 flex items-center justify-center gap-3" aria-label="Pages">
+                <button
+                  type="button"
+                  class="btn btn--secondary btn--icon"
+                  aria-label="Previous page"
+                  [disabled]="currentPage() <= 1 || pageLoading()"
+                  (click)="showPage(currentPage() - 1)"
+                >
+                  <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="mono text-ink-muted" aria-live="polite"
+                  >PAGE {{ currentPage() }} / {{ pageCount() }}
+                  @if (fieldPages().has(currentPage())) {
+                    · YOUR FIELDS
+                  }
+                </span>
+                <button
+                  type="button"
+                  class="btn btn--secondary btn--icon"
+                  aria-label="Next page"
+                  [disabled]="currentPage() >= pageCount() || pageLoading()"
+                  (click)="showPage(currentPage() + 1)"
+                >
+                  <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+              </nav>
+            }
+          </section>
+
+          <!-- Signing tray -->
+          <form
+            class="stage flex min-w-0 flex-col gap-5 p-4 sm:p-6"
+            [formRoot]="signatureForm"
+            aria-label="Sign document"
+          >
+            <p class="m-0">
+              Signing as <strong class="text-ink">{{ s.signatoryName }}</strong>
+              <span class="block text-body-sm text-ink-muted">With your StarSign account</span>
+            </p>
+
+            <ol class="timeline">
+              @for (step of steps(); track step.label) {
+                <li class="timeline__item">
+                  <span
+                    class="timeline__node"
+                    [class.timeline__node--done]="step.done"
+                    aria-hidden="true"
+                  ></span>
+                  <span [class.text-cyan]="step.done">{{ step.label }}</span>
+                </li>
+              }
+            </ol>
+
+            <hr class="divider" />
+
+            @if (signature().fieldValues.length) {
+              <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
+                <legend class="eyebrow mb-3">
+                  Your fields · {{ completedFields() }}/{{ signature().fieldValues.length }}
+                </legend>
+                @for (row of signatureForm.fieldValues; track row; let i = $index) {
+                  @let meta = signature().fieldValues[i];
+                  <div (focusin)="onRowFocus(meta)">
+                    @switch (meta.type) {
+                      @case (FieldType.CHECKBOX) {
+                        <label class="check">
+                          <input
+                            type="checkbox"
+                            [id]="'field-' + meta.fieldId"
+                            [formField]="row.checked"
+                          />
+                          <span>{{ meta.label }}{{ meta.required ? ' *' : '' }}</span>
+                        </label>
+                        <app-field-errors [field]="row.checked" />
+                      }
+                      @case (FieldType.RADIO) {
+                        <div class="field">
+                          <label [for]="'field-' + meta.fieldId"
+                            >{{ meta.label }}{{ meta.required ? ' *' : '' }}</label
+                          >
+                          <select
+                            [id]="'field-' + meta.fieldId"
+                            class="field-control"
+                            [formField]="row.value"
+                          >
+                            <option value="">Choose…</option>
+                            @for (option of meta.options; track option) {
+                              <option [value]="option">{{ option }}</option>
+                            }
+                          </select>
+                          <app-field-errors [field]="row.value" />
+                        </div>
+                      }
+                      @case (FieldType.DATE) {
+                        <div class="field">
+                          <label [for]="'field-' + meta.fieldId"
+                            >{{ meta.label }}{{ meta.required ? ' *' : '' }}</label
+                          >
+                          <input
+                            [id]="'field-' + meta.fieldId"
+                            type="date"
+                            class="field-control"
+                            [formField]="row.value"
+                          />
+                          <app-field-errors [field]="row.value" />
+                        </div>
+                      }
+                      @case (FieldType.COMMENT) {
+                        <div class="field">
+                          <label [for]="'field-' + meta.fieldId"
+                            >{{ meta.label }}{{ meta.required ? ' *' : '' }}</label
+                          >
+                          <textarea
+                            [id]="'field-' + meta.fieldId"
+                            class="field-control"
+                            rows="3"
+                            [placeholder]="meta.placeholder"
+                            [formField]="row.value"
+                          ></textarea>
+                          <app-field-errors [field]="row.value" />
+                        </div>
+                      }
+                      @default {
+                        <div class="field">
+                          <label [for]="'field-' + meta.fieldId"
+                            >{{ meta.label }}{{ meta.required ? ' *' : '' }}</label
+                          >
+                          <input
+                            [id]="'field-' + meta.fieldId"
+                            class="field-control"
+                            [attr.autocomplete]="
+                              meta.type === FieldType.FULL_NAME
+                                ? 'name'
+                                : meta.type === FieldType.ORGANISATION
+                                  ? 'organization'
+                                  : meta.type === FieldType.JOB_TITLE
+                                    ? 'organization-title'
+                                    : null
+                            "
+                            [placeholder]="meta.placeholder"
+                            [formField]="row.value"
+                          />
+                          <app-field-errors [field]="row.value" />
+                        </div>
+                      }
+                    }
+                    @if (pageCount() > 1) {
+                      <span class="mono text-[10px] text-ink-muted"
+                        >PAGE {{ meta.pageNumber }}</span
+                      >
+                    }
+                  </div>
+                }
+              </fieldset>
+            }
+
+            <div id="signature-capture" class="flex flex-col gap-4" tabindex="-1">
+              @if (captureMethods().length > 1) {
+                <div class="field">
+                  <span class="field__label">Signature method</span>
+                  <div class="segmented self-start" role="radiogroup" aria-label="Signature method">
+                    @for (method of captureMethods(); track method) {
+                      <label
+                        ><input
+                          type="radio"
+                          [value]="method"
+                          [formField]="signatureForm.captureMethod"
+                          (change)="onMethodChange()"
+                        />{{ captureLabel[method] }}</label
+                      >
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (signature().captureMethod === Capture.DRAWN) {
+                <div>
+                  <app-signature-pad [formField]="signatureForm.signatureImage" />
+                  <app-field-errors [field]="signatureForm.signatureImage" />
+                </div>
+              }
+
+              @if (signature().captureMethod === Capture.UPLOADED_IMAGE) {
+                <div class="field">
+                  <label for="signature-upload">Signature image (PNG, up to 1 MB)</label>
+                  <input
+                    #fileInput
+                    id="signature-upload"
+                    type="file"
+                    accept="image/png"
+                    class="field-control"
+                    (change)="onUpload($event)"
+                  />
+                  @if (signature().signatureImage) {
+                    <div class="mt-2 flex items-center justify-between gap-3 rounded bg-white p-2">
+                      <img
+                        [src]="signature().signatureImage"
+                        alt="Your uploaded signature"
+                        class="h-14 max-w-[70%] object-contain"
+                      />
+                      <button type="button" class="btn btn--ghost" (click)="clearUpload(fileInput)">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i> Remove
+                      </button>
+                    </div>
+                  }
+                  @if (uploadError()) {
+                    <p class="field-errors m-0" role="alert">{{ uploadError() }}</p>
+                  }
+                  <app-field-errors [field]="signatureForm.signatureImage" />
+                </div>
+              }
+
+              @if (!signatureForm.typedName().hidden()) {
+                <div class="field">
+                  <label for="typed-name">Full legal name</label>
+                  <input
+                    id="typed-name"
+                    class="field-control font-display text-lg"
+                    autocomplete="name"
+                    [formField]="signatureForm.typedName"
+                  />
+                  <app-field-errors [field]="signatureForm.typedName" />
+                </div>
+              }
+            </div>
+
+            <div class="glass flex flex-col gap-3 p-4">
+              @if (s.consentText) {
+                <p class="m-0 max-h-28 overflow-y-auto text-body-sm text-ink-muted">
+                  {{ s.consentText }}
+                </p>
+              }
+              <label class="check">
+                <input type="checkbox" [formField]="signatureForm.consentAccepted" />
+                <span>I agree to use electronic records and signatures for this document.</span>
+              </label>
+              <app-field-errors [field]="signatureForm.consentAccepted" />
+              <label class="check" [class.opacity-50]="signatureForm.intentConfirmed().disabled()">
+                <input type="checkbox" [formField]="signatureForm.intentConfirmed" />
+                <span
+                  >I have reviewed this document and intend my signature to be legally
+                  binding.</span
+                >
+              </label>
+              <app-field-errors [field]="signatureForm.intentConfirmed" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <button
+                type="submit"
+                class="btn btn--primary btn--block min-h-11"
+                [disabled]="busy() || !documentSha256()"
+              >
+                @if (signatureForm().submitting()) {
+                  <span class="spinner" aria-hidden="true"></span> Applying signature…
+                } @else if (!documentSha256() && !documentError()) {
+                  <span class="spinner" aria-hidden="true"></span> Loading document…
+                } @else {
+                  <i class="bi bi-pen-fill" aria-hidden="true"></i> Sign document
+                }
+              </button>
+              @if (s.canDecline) {
+                <button
+                  type="button"
+                  class="btn btn--secondary btn--block min-h-11"
+                  [disabled]="busy()"
+                  (click)="openDecline()"
+                >
+                  Decline to sign
+                </button>
+              }
+            </div>
+
+            @if (s.expiresAt) {
+              <p class="m-0 text-center mono text-ink-muted">
+                EXPIRES {{ s.expiresAt | date: 'dd MMM yyyy, HH:mm' }}
+              </p>
+            }
+          </form>
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (declineOpen()) {
+  <div class="modal-backdrop" (click)="declineOpen.set(false)">
+    <form
+      class="modal flex flex-col gap-4"
+      [formRoot]="declineForm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="decline-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="decline-title" class="m-0 text-headline-sm">Decline to sign</h2>
+      <p class="m-0 text-ink-muted">
+        The sender will be notified{{
+          session()?.requireDeclineReason ? ' and must be given a reason' : ''
+        }}. This cannot be undone.
+      </p>
+      <div class="field">
+        <label for="decline-reason"
+          >Reason{{ session()?.requireDeclineReason ? ' *' : ' (optional)' }}</label
+        >
+        <textarea
+          id="decline-reason"
+          class="field-control"
+          rows="4"
+          [formField]="declineForm.reason"
+        ></textarea>
+        <app-field-errors [field]="declineForm.reason" />
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="btn btn--secondary" (click)="declineOpen.set(false)">
+          Keep reviewing
+        </button>
+        <button type="submit" class="btn btn--danger" [disabled]="declineForm().submitting()">
+          @if (declineForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Declining…
+          } @else {
+            Decline
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}

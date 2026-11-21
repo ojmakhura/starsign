@@ -1,0 +1,143 @@
+@if (loadError()) {
+  <div class="alert alert--danger" role="alert">
+    {{ loadError() }}
+    <button type="button" class="btn btn--ghost" (click)="load()">Retry</button>
+  </div>
+}
+
+@if (loading()) {
+  <p class="m-0 text-ink-muted"><span class="spinner" aria-hidden="true"></span> Loading the notification settings…</p>
+} @else if (settings()) {
+  <form
+    class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+    [formRoot]="settingsForm"
+    aria-label="Notification settings"
+  >
+    <div class="flex flex-col gap-6">
+      <fieldset class="card flex flex-col gap-4">
+        <legend class="eyebrow">Channels</legend>
+        <div class="grid gap-3 md:grid-cols-3">
+          <label class="check">
+            <input type="checkbox" [formField]="settingsForm.emailEnabled" />
+            <span>Email<br /><span class="text-body-sm text-ink-muted">Invitations, reminders and copies.</span></span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formField]="settingsForm.smsEnabled" />
+            <span>SMS<br /><span class="text-body-sm text-ink-muted">Invitations and one-time codes by text.</span></span>
+          </label>
+          <label class="check">
+            <input type="checkbox" [formField]="settingsForm.inAppEnabled" />
+            <span>In-app<br /><span class="text-body-sm text-ink-muted">The bell in the portal, for your users.</span></span>
+          </label>
+        </div>
+        <app-field-errors [field]="settingsForm.emailEnabled" />
+      </fieldset>
+
+      <section class="card flex flex-col gap-5" aria-labelledby="ns-sender-title">
+        <h2 id="ns-sender-title" class="eyebrow m-0">Sender</h2>
+        <div class="grid gap-5 md:grid-cols-2">
+          <div class="field">
+            <label for="ns-sender">Sender name</label>
+            <input id="ns-sender" class="field-control" [formField]="settingsForm.senderDisplayName" placeholder="Your organisation's name" aria-describedby="ns-sender-hint" />
+            <span id="ns-sender-hint" class="field__hint">Shown as the "From" name. Up to 100 characters.</span>
+            <app-field-errors [field]="settingsForm.senderDisplayName" />
+          </div>
+          <div class="field">
+            <label for="ns-reply">Reply-to address</label>
+            <input id="ns-reply" class="field-control" type="email" [formField]="settingsForm.replyToEmail" placeholder="signing@example.co.bw" aria-describedby="ns-reply-hint" />
+            <span id="ns-reply-hint" class="field__hint">Where replies from signatories go.</span>
+            <app-field-errors [field]="settingsForm.replyToEmail" />
+          </div>
+        </div>
+      </section>
+
+      <fieldset class="card flex flex-col gap-5">
+        <legend class="eyebrow">Reminders</legend>
+        <label class="check">
+          <input type="checkbox" [formField]="settingsForm.remindersEnabled" />
+          <span>Remind signatories who have not signed</span>
+        </label>
+        @if (model().remindersEnabled) {
+          <div class="grid gap-5 md:grid-cols-2">
+            <div class="field">
+              <label for="ns-inactive">First reminder after inactivity (hours)</label>
+              <input id="ns-inactive" class="field-control" type="number" [formField]="settingsForm.reminderAfterInactivityHours" />
+              <app-field-errors [field]="settingsForm.reminderAfterInactivityHours" />
+            </div>
+            <div class="field">
+              <label for="ns-repeat">Then every (hours)</label>
+              <input id="ns-repeat" class="field-control" type="number" [formField]="settingsForm.reminderRepeatIntervalHours" />
+              <app-field-errors [field]="settingsForm.reminderRepeatIntervalHours" />
+            </div>
+            <div class="field">
+              <label for="ns-deadline">Before the deadline (hours)</label>
+              <input id="ns-deadline" class="field-control" type="number" [formField]="settingsForm.reminderBeforeDeadlineHours" />
+              <app-field-errors [field]="settingsForm.reminderBeforeDeadlineHours" />
+            </div>
+            <div class="field">
+              <label for="ns-max">Most reminders per signatory</label>
+              <input id="ns-max" class="field-control" type="number" [formField]="settingsForm.maxReminders" aria-describedby="ns-max-hint" />
+              <span id="ns-max-hint" class="field__hint">0 to {{ maxRemindersLimit }}.</span>
+              <app-field-errors [field]="settingsForm.maxReminders" />
+            </div>
+          </div>
+          <p class="m-0 text-body-sm text-ink-muted">Hours are 1 to {{ maxHours }} (30 days).</p>
+        }
+      </fieldset>
+
+      <fieldset class="card flex flex-col gap-4">
+        <legend class="eyebrow">Escalation</legend>
+        <label class="check">
+          <input type="checkbox" [formField]="settingsForm.escalateToOwner" />
+          <span>Tell the workflow owner when a signatory keeps ignoring reminders</span>
+        </label>
+        @if (model().escalateToOwner) {
+          <div class="field md:max-w-xs">
+            <label for="ns-escalate">Escalate after (reminders)</label>
+            <input id="ns-escalate" class="field-control" type="number" [formField]="settingsForm.escalateAfterReminders" />
+            <app-field-errors [field]="settingsForm.escalateAfterReminders" />
+          </div>
+        }
+      </fieldset>
+    </div>
+
+    <aside class="flex flex-col gap-4">
+      <div class="glass flex flex-col gap-3 p-5">
+        <span class="eyebrow">What signatories get</span>
+        <p class="m-0 text-body-sm">{{ reminderSummary() }}</p>
+        @if (canSeeTemplates()) {
+          <a class="text-body-sm text-cyan" routerLink="/notification-templates"
+            ><i class="bi bi-envelope-paper" aria-hidden="true"></i> Change the wording in Email Templates</a
+          >
+        }
+      </div>
+
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+
+      @if (canEdit()) {
+        <button
+          type="submit"
+          class="btn btn--primary btn--block min-h-11"
+          [disabled]="settingsForm().submitting() || !settingsForm().dirty()"
+        >
+          @if (settingsForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check2" aria-hidden="true"></i> Save settings
+          }
+        </button>
+        <button type="button" class="btn btn--secondary btn--block" [disabled]="settingsForm().submitting()" (click)="load()">
+          Discard changes
+        </button>
+      } @else {
+        <p class="m-0 text-body-sm text-ink-muted">
+          <i class="bi bi-lock" aria-hidden="true"></i> Read-only: changing these needs the organisations:configure permission.
+        </p>
+      }
+    </aside>
+  </form>
+}

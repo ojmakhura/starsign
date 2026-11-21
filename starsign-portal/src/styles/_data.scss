@@ -1,0 +1,143 @@
+@use 'mixins' as *;
+
+@layer components {
+  .table-panel {
+    @include slab;
+    overflow: hidden;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      @include mono-label(sm);
+      text-align: left;
+      padding: 0.75rem 1rem;
+      color: var(--color-ink-muted);
+      background: rgb(255 255 255 / 0.02);
+      border-bottom: 1px solid var(--color-hairline);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid var(--color-hairline);
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      transition: background-color 0.15s;
+
+      &:hover {
+        background: rgb(0 229 255 / 0.03);
+      }
+
+      &:last-child td {
+        border-bottom: 0;
+      }
+    }
+  }
+
+  .cell-title {
+    color: var(--color-ink);
+    font-weight: 500;
+    text-decoration: none;
+
+    @at-root a#{&}:hover {
+      color: var(--color-cyan);
+    }
+  }
+
+  .cell-note {
+    font-size: var(--text-body-sm);
+    color: var(--color-ink-muted);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-label-md);
+    letter-spacing: 0.02em;
+  }
+
+  .hash {
+    @extend .mono;
+    color: var(--color-ink-muted);
+    word-break: break-all;
+  }
+
+  .progress {
+    height: 4px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.08);
+    overflow: hidden;
+
+    &__bar {
+      height: 100%;
+      background: var(--color-cyan);
+      box-shadow: 0 0 8px rgb(0 229 255 / 0.6);
+      transition: width 0.3s;
+    }
+
+    &--gold &__bar {
+      background: var(--color-gold);
+      box-shadow: var(--shadow-seal);
+    }
+  }
+
+  // Signatory tray & timeline — step indicators joined by 1px cyan routing lines.
+  .timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0 0 0 1.75rem;
+    list-style: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 6px;
+      bottom: 6px;
+      width: 1px;
+      background: linear-gradient(var(--color-cyan), rgb(0 229 255 / 0.15));
+    }
+
+    &__item {
+      position: relative;
+    }
+
+    &__node {
+      position: absolute;
+      left: -1.75rem;
+      top: 3px;
+      width: 15px;
+      height: 15px;
+      border-radius: 9999px;
+      border: 1px solid var(--color-cyan);
+      background: var(--color-abyss);
+
+      &--done {
+        background: var(--color-cyan);
+        box-shadow: 0 0 10px rgb(0 229 255 / 0.5);
+      }
+
+      &--sealed {
+        border-color: var(--color-gold);
+        background: var(--color-gold);
+        box-shadow: var(--shadow-seal);
+      }
+
+      &--void {
+        border-color: var(--color-crimson);
+        background: var(--color-crimson);
+      }
+    }
+  }
+}

@@ -1,0 +1,92 @@
+@use 'mixins' as *;
+
+// Audit-trail chips: JetBrains Mono uppercase, compact, status-coded.
+$chip-tones: (
+  pending: (
+    fg: var(--color-cyan),
+    bg: rgb(0 229 255 / 0.1),
+    border: rgb(0 229 255 / 0.35),
+  ),
+  sealed: (
+    fg: var(--color-gold),
+    bg: rgb(229 185 76 / 0.1),
+    border: rgb(229 185 76 / 0.45),
+  ),
+  voided: (
+    fg: var(--color-crimson),
+    bg: rgb(255 92 108 / 0.1),
+    border: rgb(255 92 108 / 0.4),
+  ),
+  neutral: (
+    fg: var(--color-ink-muted),
+    bg: rgb(255 255 255 / 0.04),
+    border: var(--color-hairline-strong),
+  ),
+  progress: (
+    fg: var(--color-secondary),
+    bg: rgb(186 197 238 / 0.08),
+    border: rgb(186 197 238 / 0.3),
+  ),
+);
+
+@layer components {
+  .chip {
+    @include mono-label(sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-control);
+    border: 1px solid;
+    white-space: nowrap;
+
+    &::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 9999px;
+      background: currentColor;
+    }
+
+    @each $name, $tone in $chip-tones {
+      &--#{$name} {
+        color: map-get($tone, fg);
+        background: map-get($tone, bg);
+        border-color: map-get($tone, border);
+      }
+    }
+
+    &--sealed {
+      box-shadow: var(--shadow-seal);
+    }
+  }
+
+  .badge-count {
+    @include mono-label(sm);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--color-cyan);
+    color: var(--color-abyss);
+    font-weight: 700;
+  }
+
+  .seal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-panel);
+    border: 1px solid rgb(229 185 76 / 0.45);
+    background: rgb(229 185 76 / 0.06);
+    color: var(--color-gold);
+    box-shadow: var(--shadow-seal);
+
+    i {
+      font-size: 1.25rem;
+    }
+  }
+}

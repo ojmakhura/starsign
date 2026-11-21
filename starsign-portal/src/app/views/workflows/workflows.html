@@ -1,0 +1,123 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Signing workflows</span>
+      </nav>
+      <h1 class="page-title">Signing workflows</h1>
+      <p class="page-subtitle">
+        {{ counts().active }} in progress · {{ counts().expiringSoon }} expiring within 3 days
+      </p>
+    </div>
+    <a *appCan="'workflows:edit'" class="btn btn--primary" routerLink="new"
+      ><i class="bi bi-send-plus" aria-hidden="true"></i> New workflow</a
+    >
+  </header>
+
+  <div class="segmented self-start" role="tablist" aria-label="Workflow status">
+    @for (tab of tabs; track tab.label) {
+      <label role="tab" [attr.aria-selected]="filter().status === tab.status">
+        <input
+          type="radio"
+          name="status-tab"
+          [checked]="filter().status === tab.status"
+          (change)="selectTab(tab.status)"
+        />{{ tab.label }}
+      </label>
+    }
+  </div>
+
+  <form
+    class="card grid gap-4 md:grid-cols-2 xl:grid-cols-5"
+    (submit)="$event.preventDefault()"
+    aria-label="Search workflows"
+  >
+    <div class="field xl:col-span-2">
+      <label for="wf-text">Title, reference or document</label>
+      <input id="wf-text" class="field-control" type="search" [formField]="filterForm.text" />
+    </div>
+    <div class="field">
+      <label for="wf-email">Signatory email</label>
+      <input
+        id="wf-email"
+        class="field-control"
+        type="search"
+        [formField]="filterForm.signatoryEmail"
+      />
+    </div>
+    <div class="field">
+      <label for="wf-from">Created from</label>
+      <input id="wf-from" class="field-control" type="date" [formField]="filterForm.createdFrom" />
+    </div>
+    <div class="field">
+      <label for="wf-to">Created to</label>
+      <input id="wf-to" class="field-control" type="date" [formField]="filterForm.createdTo" />
+      <app-field-errors [field]="filterForm.createdTo" />
+    </div>
+  </form>
+
+  @if (store.error()) {
+    <div class="alert alert--danger" role="alert">{{ store.messages()[0] }}</div>
+  }
+
+  <section class="table-panel" aria-label="Workflows">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Workflow</th>
+            <th scope="col">Status</th>
+            <th scope="col">Routing</th>
+            <th scope="col" class="min-w-40">Progress</th>
+            <th scope="col">Expires</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (wf of store.dataList(); track wf.id) {
+            <tr>
+              <td>
+                <a class="cell-title" [routerLink]="wf.id">{{ wf.title }}</a>
+                <div class="cell-note">
+                  <span class="mono">{{ wf.referenceNumber }}</span> · {{ wf.documentTitle }}
+                </div>
+              </td>
+              <td><app-status-chip [status]="wf.status" /></td>
+              <td>
+                <span class="mono text-ink-muted">{{ wf.executionMode }}</span>
+                @if (wf.stageCount) {
+                  <div class="cell-note">
+                    Stage {{ wf.currentStageNumber ?? 1 }} of {{ wf.stageCount }}
+                  </div>
+                }
+              </td>
+              <td>
+                <div class="mono mb-1.5">
+                  {{ wf.signedCount ?? 0 }}/{{ wf.signatoryCount ?? 0 }} signed
+                </div>
+                <div class="progress" [class.progress--gold]="wf.status === 'COMPLETED'">
+                  <div
+                    class="progress__bar"
+                    [style.width.%]="progress(wf.signedCount, wf.signatoryCount)"
+                  ></div>
+                </div>
+              </td>
+              <td class="mono text-ink-muted">{{ (wf.expiresAt | date: 'dd MMM yyyy') || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                  <span>{{
+                    store.loading() ? 'Searching…' : 'No workflows match these criteria.'
+                  }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

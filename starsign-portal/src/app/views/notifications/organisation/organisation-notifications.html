@@ -1,0 +1,164 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><a routerLink="/notifications">Notifications</a
+        ><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Organisation</span>
+      </nav>
+      <h1 class="page-title">Organisation notifications</h1>
+      <p class="page-subtitle">
+        Every email, SMS and in-app message sent by your organisation. Email and SMS are delivered
+        through Novu; <span class="mono">SUPPRESSED</span> means Novu delivery was switched off, so
+        nothing was sent.
+      </p>
+    </div>
+  </header>
+
+  <app-notification-tabs />
+
+  <form
+    class="card grid gap-4 md:grid-cols-3 xl:grid-cols-6"
+    (submit)="search($event)"
+    aria-label="Search notifications"
+  >
+    <div class="field">
+      <label for="nt-event">Event</label>
+      <select id="nt-event" class="field-control" [formField]="filterForm.eventType">
+        <option value="">All events</option>
+        @for (type of eventTypes; track type) {
+          <option [value]="type">{{ label(type) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="nt-channel">Channel</label>
+      <select id="nt-channel" class="field-control" [formField]="filterForm.channel">
+        <option value="">All channels</option>
+        @for (channel of channels; track channel) {
+          <option [value]="channel">{{ label(channel) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="nt-status">Status</label>
+      <select id="nt-status" class="field-control" [formField]="filterForm.status">
+        <option value="">Any status</option>
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ label(status) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="nt-workflow">Workflow ID</label>
+      <input
+        id="nt-workflow"
+        class="field-control mono"
+        type="search"
+        [formField]="filterForm.workflowId"
+      />
+    </div>
+    <div class="field">
+      <label for="nt-from">From</label>
+      <input id="nt-from" class="field-control" type="date" [formField]="filterForm.from" />
+    </div>
+    <div class="field">
+      <label for="nt-to">To</label>
+      <input id="nt-to" class="field-control" type="date" [formField]="filterForm.to" />
+      <app-field-errors [field]="filterForm.to" />
+    </div>
+    <div class="flex gap-2 xl:col-span-6">
+      <button type="submit" class="btn btn--primary" [disabled]="loading()">
+        <i class="bi bi-search" aria-hidden="true"></i> Search
+      </button>
+      <button type="button" class="btn btn--ghost" (click)="reset()">Reset</button>
+    </div>
+  </form>
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  <section class="table-panel" aria-label="Organisation notifications">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Notification</th>
+            <th scope="col">Recipient</th>
+            <th scope="col">Channel</th>
+            <th scope="col">Status</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (n of notifications(); track n.id) {
+            <tr>
+              <td>
+                <span class="cell-title">{{ n.subject || label(n.eventType) }}</span>
+                <div class="cell-note">
+                  {{ label(n.eventType) }}
+                  @if (n.workflowId) {
+                    · <a class="mono" [routerLink]="['/workflows', n.workflowId]">workflow</a>
+                  }
+                </div>
+              </td>
+              <td>
+                {{ n.recipientName || '—' }}
+                <div class="mono text-ink-muted">{{ n.recipientAddress }}</div>
+              </td>
+              <td class="mono">{{ label(n.channel) }}</td>
+              <td>
+                <span class="chip" [class]="statusChip(n.status)">{{ label(n.status) }}</span>
+                @if (n.lastError) {
+                  <div class="cell-note text-[var(--color-crimson)]">{{ n.lastError }}</div>
+                }
+              </td>
+              <td class="mono">{{ n.attempts ?? 0 }}</td>
+              <td class="mono text-ink-muted">
+                {{ n.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+                @if (n.deliveredAt) {
+                  <div class="cell-note">Delivered {{ n.deliveredAt | date: 'dd MMM, HH:mm' }}</div>
+                } @else if (n.sentAt) {
+                  <div class="cell-note">Sent {{ n.sentAt | date: 'dd MMM, HH:mm' }}</div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-envelope" aria-hidden="true"></i>
+                  <span>{{ loading() ? 'Searching…' : 'No notifications match these criteria.' }}</span>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <nav class="flex items-center justify-between gap-2 px-5 py-3" aria-label="Pages">
+      <span class="mono text-ink-muted">Page {{ page() + 1 }}</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn btn--secondary"
+          [disabled]="loading() || page() === 0"
+          (click)="load(page() - 1)"
+        >
+          <i class="bi bi-chevron-left" aria-hidden="true"></i> Previous
+        </button>
+        <button
+          type="button"
+          class="btn btn--secondary"
+          [disabled]="loading() || !hasNext()"
+          (click)="load(page() + 1)"
+        >
+          Next <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </nav>
+  </section>
+</div>

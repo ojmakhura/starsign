@@ -1,0 +1,29 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/">Command</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Organisation settings</span>
+      </nav>
+      <h1 class="page-title">{{ session.organisationName() || 'Organisation settings' }}</h1>
+      <p class="page-subtitle">Profile, signing policy, notifications and branding of your organisation.</p>
+    </div>
+  </header>
+
+  @if (!session.organisationId()) {
+    <div class="alert alert--danger" role="alert">
+      Your account is not linked to an organisation. Platform administrators manage organisations from the
+      platform area.
+    </div>
+  } @else {
+    <nav class="settings-tabs" aria-label="Organisation settings">
+      @for (tab of tabs; track tab.link) {
+        <a [routerLink]="tab.link" routerLinkActive="is-active" ariaCurrentWhenActive="page"
+          ><i class="bi" [class]="tab.icon" aria-hidden="true"></i>{{ tab.label }}</a
+        >
+      }
+    </nav>
+
+    <router-outlet />
+  }
+</div>

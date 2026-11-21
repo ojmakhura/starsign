@@ -1,0 +1,306 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/platform">Platform</a><i class="bi bi-chevron-right" aria-hidden="true"></i
+        ><span class="breadcrumb__current">Notification providers</span>
+      </nav>
+      <h1 class="page-title">Notification providers</h1>
+      <p class="page-subtitle">Email and SMS providers, tried in priority order (lowest first).</p>
+    </div>
+    <button
+      *appCan="'admin-notification-providers:edit'"
+      type="button"
+      class="btn btn--primary"
+      (click)="create()"
+    >
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Add provider
+    </button>
+  </header>
+
+  <aside class="alert alert--info" aria-labelledby="novu-title">
+    <i class="bi bi-broadcast" aria-hidden="true"></i>
+    <div class="flex flex-col gap-1">
+      <strong id="novu-title">Delivery goes through Novu</strong>
+      <span>
+        Every email and SMS StarSign sends is triggered as a Novu workflow; the providers configured here are the
+        channels Novu delivers through. Workflow ids are <span class="mono">starsign-</span> plus the event type in
+        kebab case, e.g.
+        @for (id of exampleWorkflows; track id; let last = $last) {
+          <span class="mono">{{ id }}</span>{{ last ? '.' : ', ' }}
+        }
+        Tests use <span class="mono">starsign-provider-test</span>. When Novu is disabled on the server, nothing is
+        sent.
+      </span>
+      <span>
+        Credentials are never stored here — only a reference to where they are kept, such as
+        <span class="mono">env:NOVU_SECRET_KEY</span> or <span class="mono">vault:secret/starsign/sms</span>.
+      </span>
+    </div>
+  </aside>
+
+  @if (editorOpen()) {
+    <form class="card flex flex-col gap-5" [formRoot]="providerForm" aria-labelledby="provider-editor-title">
+      <h2 id="provider-editor-title" class="m-0 text-headline-sm">
+        {{ editing() ? 'Edit ' + editing()!.name : 'Add a provider' }}
+      </h2>
+      <div class="grid gap-5 md:grid-cols-3">
+        <div class="field">
+          <label for="provider-name">Name *</label>
+          <input id="provider-name" class="field-control" [formField]="providerForm.name" />
+          <app-field-errors [field]="providerForm.name" />
+        </div>
+        <div class="field">
+          <label for="provider-channel">Channel *</label>
+          <select id="provider-channel" class="field-control" [formField]="providerForm.channel">
+            @for (channel of channels; track channel) {
+              <option [value]="channel">{{ channel }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="provider-type">Provider type *</label>
+          <input id="provider-type" class="field-control mono" list="provider-types" [formField]="providerForm.providerType" />
+          <datalist id="provider-types">
+            <option value="novu"></option>
+            <option value="smtp"></option>
+            <option value="twilio"></option>
+          </datalist>
+          <span class="field__hint">e.g. novu, smtp or twilio.</span>
+          <app-field-errors [field]="providerForm.providerType" />
+        </div>
+        <div class="field md:col-span-2">
+          <label for="provider-secret">Credentials reference *</label>
+          <input
+            id="provider-secret"
+            class="field-control mono"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="env:NOVU_SECRET_KEY"
+            [formField]="providerForm.credentialsSecretRef"
+          />
+          <span class="field__hint">
+            Where the secret is kept — env:, vault:, secret:, k8s:, aws-sm: or novu: followed by a key. Never paste the
+            secret itself.
+          </span>
+          <app-field-errors [field]="providerForm.credentialsSecretRef" />
+        </div>
+        <div class="field">
+          <label for="provider-sender">Sender</label>
+          <input
+            id="provider-sender"
+            class="field-control"
+            [placeholder]="model().channel === 'SMS' ? 'StarSign' : 'no-reply@starsign.co.bw'"
+            [formField]="providerForm.senderAddress"
+          />
+          <span class="field__hint">{{
+            model().channel === 'SMS' ? 'Sender id or number.' : 'From address.'
+          }}</span>
+          <app-field-errors [field]="providerForm.senderAddress" />
+        </div>
+        <div class="field">
+          <label for="provider-endpoint">Endpoint URL</label>
+          <input id="provider-endpoint" class="field-control mono" type="url" [formField]="providerForm.endpointUrl" />
+          <app-field-errors [field]="providerForm.endpointUrl" />
+        </div>
+        <div class="field">
+          <label for="provider-priority">Priority</label>
+          <input id="provider-priority" class="field-control" type="number" step="1" [formField]="providerForm.priority" />
+          <span class="field__hint">Lower is tried first; default 100.</span>
+          <app-field-errors [field]="providerForm.priority" />
+        </div>
+        <div class="field">
+          <label for="provider-rate">Rate limit (per minute)</label>
+          <input
+            id="provider-rate"
+            class="field-control"
+            type="number"
+            step="1"
+            placeholder="No limit"
+            [formField]="providerForm.rateLimitPerMinute"
+          />
+          <app-field-errors [field]="providerForm.rateLimitPerMinute" />
+        </div>
+        <label class="check md:col-span-3">
+          <input type="checkbox" [formField]="providerForm.active" /> Active
+        </label>
+      </div>
+      @if (serverError()) {
+        <div class="alert alert--danger" role="alert">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ serverError() }}
+        </div>
+      }
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="editorOpen.set(false)">Cancel</button>
+        <button type="submit" class="btn btn--primary" [disabled]="providerForm().submitting()">
+          @if (providerForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            <i class="bi bi-check-lg" aria-hidden="true"></i> Save provider
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (error()) {
+    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  }
+
+  @for (group of groups(); track group.channel) {
+    <section class="table-panel" [attr.aria-labelledby]="'providers-' + group.channel">
+      <h2 [id]="'providers-' + group.channel" class="m-0 px-5 pt-4 text-headline-sm">
+        <i class="bi" [class]="group.channel === 'SMS' ? 'bi-phone' : 'bi-envelope'" aria-hidden="true"></i>
+        {{ group.channel === 'SMS' ? 'SMS' : 'Email' }}
+      </h2>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Provider</th>
+              <th scope="col">Credentials</th>
+              <th scope="col">Sender</th>
+              <th scope="col">Priority</th>
+              <th scope="col">Rate limit</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (provider of group.providers; track provider.id) {
+              <tr>
+                <td>
+                  <span class="cell-title">{{ provider.name }}</span>
+                  <div class="cell-note mono">
+                    {{ provider.providerType }}
+                    @if (provider.endpointUrl) {
+                      · {{ provider.endpointUrl }}
+                    }
+                  </div>
+                  <div class="cell-note">Changed {{ (provider.modifiedAt ?? provider.createdAt) | date: 'dd MMM yyyy' }}</div>
+                </td>
+                <td class="mono text-ink-muted">
+                  <i class="bi bi-key" aria-hidden="true"></i> {{ provider.credentialsSecretRef }}
+                </td>
+                <td>{{ provider.senderAddress || '—' }}</td>
+                <td class="mono">{{ provider.priority ?? 100 }}</td>
+                <td class="mono">{{ provider.rateLimitPerMinute ? provider.rateLimitPerMinute + '/min' : '—' }}</td>
+                <td>
+                  <span class="chip" [class]="provider.active === false ? 'chip--neutral' : 'chip--sealed'">{{
+                    provider.active === false ? 'Inactive' : 'Active'
+                  }}</span>
+                </td>
+                <td>
+                  <div class="flex justify-end gap-1">
+                    <button
+                      *appCan="'admin-notification-providers:edit'"
+                      type="button"
+                      class="btn btn--secondary"
+                      [disabled]="busyId() === provider.id"
+                      (click)="openTest(provider)"
+                    >
+                      <i class="bi bi-send" aria-hidden="true"></i> Test
+                    </button>
+                    <button
+                      *appCan="'admin-notification-providers:edit'"
+                      type="button"
+                      class="btn btn--ghost btn--icon"
+                      [attr.aria-label]="'Edit ' + provider.name"
+                      (click)="edit(provider)"
+                    >
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      *appCan="'admin-notification-providers:delete'"
+                      type="button"
+                      class="btn btn--ghost btn--icon"
+                      [attr.aria-label]="'Remove ' + provider.name"
+                      [disabled]="busyId() === provider.id"
+                      (click)="remove(provider)"
+                    >
+                      <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <div class="empty-state">
+                    <i class="bi bi-broadcast" aria-hidden="true"></i>
+                    <span>{{ loading() ? 'Loading providers…' : 'No ' + humanise(group.channel).toLowerCase() + ' providers.' }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+@if (testing(); as provider) {
+  <div class="modal-backdrop" (click)="closeTest()">
+    <form
+      class="modal flex flex-col gap-4"
+      [formRoot]="testForm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="test-title"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 id="test-title" class="m-0 text-headline-sm">Test {{ provider.name }}</h2>
+      <p class="m-0 text-ink-muted">
+        Sends a short test {{ provider.channel === 'SMS' ? 'SMS' : 'email' }} through the Novu workflow
+        <span class="mono">starsign-provider-test</span>.
+      </p>
+      <div class="field">
+        <label for="test-recipient">{{ provider.channel === 'SMS' ? 'Phone number' : 'Email address' }} *</label>
+        <input
+          id="test-recipient"
+          class="field-control"
+          [type]="provider.channel === 'SMS' ? 'tel' : 'email'"
+          [formField]="testForm.recipientAddress"
+        />
+        <app-field-errors [field]="testForm.recipientAddress" />
+      </div>
+
+      @if (testResult(); as result) {
+        @switch (result.outcome) {
+          @case ('sent') {
+            <div class="alert alert--seal" role="status">
+              <i class="bi bi-check-circle" aria-hidden="true"></i>
+              <span>Novu accepted the test message to {{ result.recipient }}. Check that it arrives.</span>
+            </div>
+          }
+          @case ('disabled') {
+            <div class="alert alert--info" role="status">
+              <i class="bi bi-info-circle" aria-hidden="true"></i>
+              <span>
+                Nothing was sent: Novu delivery is disabled on the server (<span class="mono">app.novu.enabled=false</span>),
+                so the test was only logged. Enable Novu for messages to go out.
+              </span>
+            </div>
+          }
+          @case ('failed') {
+            <div class="alert alert--danger" role="alert">
+              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i><span>{{ result.message }}</span>
+            </div>
+          }
+        }
+      }
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn--secondary" (click)="closeTest()">Close</button>
+        <button type="submit" class="btn btn--primary" [disabled]="testForm().submitting()">
+          @if (testForm().submitting()) {
+            <span class="spinner" aria-hidden="true"></span> Sending…
+          } @else {
+            <i class="bi bi-send" aria-hidden="true"></i> Send test
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+}
