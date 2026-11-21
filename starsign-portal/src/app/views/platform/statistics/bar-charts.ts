@@ -52,7 +52,7 @@ function niceMax(value: number): number {
     .bar { fill: var(--color-cyan); opacity: 0.85; transition: opacity 0.15s; }
     .bar--active { opacity: 1; }
     .dim .bar:not(.bar--active) { opacity: 0.35; }
-    .grid { stroke: var(--color-hairline, rgb(255 255 255 / 0.08)); stroke-width: 1; }
+    .grid { stroke: var(--color-hairline, color-mix(in srgb, var(--color-ink) 8%, transparent)); stroke-width: 1; }
     .axis-label { fill: var(--color-ink-muted); font: 10px var(--font-mono); }
     .hit { fill: transparent; cursor: default; }
   `,
@@ -160,7 +160,7 @@ export class ColumnChart {
     :host { display: block; }
     .bar { fill: var(--color-cyan); opacity: 0.85; }
     .bar--active { opacity: 1; }
-    .track { fill: rgb(255 255 255 / 0.04); }
+    .track { fill: color-mix(in srgb, var(--color-ink) 4%, transparent); }
     .label { fill: var(--color-ink-muted); font: 12px var(--font-sans); }
     .value { fill: var(--color-ink); font: 12px var(--font-mono); }
   `,

@@ -7,7 +7,7 @@ export interface EventMeta {
   variables: string[];
 }
 
-const COMMON = ['recipientName', 'organisationName', 'appName'];
+const COMMON = ['recipientName', 'organisationName', 'appName', 'emailLogoUrl'];
 
 export const EVENT_META: Record<NotificationEventType, EventMeta> = {
   [NotificationEventType.SIGNING_INVITATION]: {
@@ -97,6 +97,8 @@ export const SAMPLE_MODEL: Record<string, string> = {
   recipientName: 'Neo Kgosi',
   organisationName: 'Acme Holdings (Pty) Ltd',
   appName: 'StarSign',
+  // The API sends the uploaded e-mail logo, else the StarSign one the portal serves
+  emailLogoUrl: `${globalThis.location?.origin ?? ''}/brand/email-logo.png`,
   workflowTitle: 'Service agreement 2026',
   workflowReference: 'WF-2026-0142',
   documentTitle: 'Service agreement.pdf',
@@ -161,3 +163,63 @@ export const NOVU_PAYLOAD: Partial<Record<NotificationChannel, string[]>> = {
   [NotificationChannel.EMAIL]: ['subject', 'body', 'text', 'from', 'eventType', 'notificationId', 'recipientName', 'link', 'replyTo', 'senderName'],
   [NotificationChannel.SMS]: ['body', 'senderId'],
 };
+
+/** True when an e-mail body is a whole HTML document, which the API sends without its layout. */
+export function isEmailDocument(html: string): boolean {
+  return /<\s*(html|body)[\s>]/i.test(html);
+}
+
+/**
+ * The default e-mail layout around a rendered body, for previews: the same markup as the API's
+ * EmailLayout.wrap (starsign-api core, bw.co.starsign.notification.EmailLayout). Change both together.
+ */
+export function emailLayout(body: string, subject: string, model: Record<string, unknown>): string {
+  if (isEmailDocument(body)) {
+    return body;
+  }
+  const text = (key: string) => (typeof model[key] === 'string' ? (model[key] as string).trim() : '');
+  const appName = text('appName') || 'StarSign';
+  const organisation = text('organisationName');
+  const logo = text('emailLogoUrl');
+  const footer = text('emailFooter');
+  const supportEmail = text('supportEmail');
+  const supportUrl = text('supportUrl');
+  const isDefaultLogo = logo.endsWith('/brand/email-logo.png');
+  const link = 'color:#0273b1;text-decoration:underline;';
+
+  const logoHtml = /^https?:\/\//i.test(logo)
+    ? isDefaultLogo
+      ? `<img src="${escapeHtml(logo)}" width="200" height="56" alt="${escapeHtml(appName)}" style="display:block;width:200px;height:56px;border:0;outline:none;">`
+      : `<img src="${escapeHtml(logo)}" height="56" alt="${escapeHtml(appName)}" style="display:block;height:56px;width:auto;max-width:280px;border:0;outline:none;">`
+    : `<span style="font:700 22px/28px Arial,Helvetica,sans-serif;color:#0f172a;">${escapeHtml(appName)}</span>`;
+
+  const support = [
+    supportEmail
+      ? `Questions? <a href="mailto:${escapeHtml(supportEmail)}" style="${link}">${escapeHtml(supportEmail)}</a>`
+      : '',
+    /^https?:\/\//i.test(supportUrl) ? `<a href="${escapeHtml(supportUrl)}" style="${link}">Help centre</a>` : '',
+  ]
+    .filter(Boolean)
+    .join(' &middot; ');
+
+  return (
+    '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">' +
+    `<title>${escapeHtml(subject)}</title></head>` +
+    '<body style="margin:0;padding:0;background:#f4f7fb;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f7fb;" bgcolor="#f4f7fb"><tr><td align="center" style="padding:32px 12px;">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">' +
+    '<tr><td bgcolor="#ffffff" style="background:#ffffff;padding:24px 32px 20px;border-radius:8px 8px 0 0;border:1px solid #e2e8f0;border-bottom:3px solid #0284c7;">' +
+    logoHtml +
+    '</td></tr>' +
+    '<tr><td bgcolor="#ffffff" style="background:#ffffff;padding:28px 32px 32px;border:1px solid #e2e8f0;border-top:0;border-radius:0 0 8px 8px;font:15px/1.6 Arial,Helvetica,sans-serif;color:#1e293b;">' +
+    body +
+    '</td></tr>' +
+    '<tr><td style="padding:20px 32px 0;font:12px/1.6 Arial,Helvetica,sans-serif;color:#64748b;" align="center">' +
+    (footer ? `<p style="margin:0 0 8px;">${escapeHtml(footer).replaceAll('\n', '<br>')}</p>` : '') +
+    (support ? `<p style="margin:0 0 8px;">${support}</p>` : '') +
+    `<p style="margin:0;">Sent by ${escapeHtml(appName)}${organisation ? ` on behalf of ${escapeHtml(organisation)}` : ''}</p>` +
+    '</td></tr></table></td></tr></table></body></html>'
+  );
+}

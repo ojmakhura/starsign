@@ -80,17 +80,20 @@
             @let src = assetSrc(slot.url(current));
             <div class="flex flex-col gap-2">
               <span class="field__label">{{ slot.label }}</span>
-              <div class="asset-box" [class.bg-white]="slot.kind !== 'LOGO_DARK'" [class.bg-obsidian]="slot.kind === 'LOGO_DARK'">
+              <!-- Fixed backgrounds, not theme tokens: each logo is judged on the surface it is made for -->
+              <div class="asset-box" [style.background]="slot.kind === 'LOGO_DARK' ? '#0f172a' : '#ffffff'">
                 @if (src) {
                   <img [src]="src" [alt]="slot.label" />
                 } @else {
-                  <span class="text-body-sm text-ink-muted">None</span>
+                  <img [src]="defaultAsset(slot.slug)" [alt]="'StarSign default ' + slot.label" />
                 }
               </div>
               <span class="field__hint">
                 {{ slot.hint }}
                 @if (src && !ownAsset(slot)) {
                   · from the platform
+                } @else if (!src) {
+                  · StarSign default
                 }
               </span>
               @if (canEdit()) {

@@ -39,7 +39,7 @@ import { Can } from '@auth/can.directive';
       text-decoration: none;
     }
     .segmented a[aria-current='page'] {
-      background: rgb(0 229 255 / 0.12);
+      background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
       color: var(--color-cyan);
     }
     .segmented a:focus-visible {

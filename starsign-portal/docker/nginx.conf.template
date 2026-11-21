@@ -26,6 +26,18 @@ server {
         add_header Cache-Control "no-store";
     }
 
+    location = /manifest.webmanifest {
+        default_type application/manifest+json;
+        add_header Cache-Control "public, max-age=86400";
+        try_files $uri =404;
+    }
+
+    # Brand files and icons keep their names across releases: cache them for a day, not forever
+    location ~* ^/(?:brand/|favicon\.(?:ico|svg)$|mark\.svg$|apple-touch-icon\.png$) {
+        add_header Cache-Control "public, max-age=86400";
+        try_files $uri =404;
+    }
+
     # Hashed bundles
     location ~* \.(?:js|css|woff2?|svg|png|ico)$ {
         expires 1y;

@@ -61,12 +61,12 @@
         [class]="integrityPassed() ? 'alert alert--seal' : 'alert alert--danger'"
         aria-live="polite"
       >
-        <i
-          class="bi text-xl"
-          [class]="integrityPassed() ? 'bi-patch-check-fill' : 'bi-shield-exclamation'"
-          aria-hidden="true"
-        ></i>
-        <div class="flex-1">
+        @if (integrityPassed()) {
+          <img src="/brand/seal.svg" alt="Valid digital seal" class="h-20 w-20 flex-none" />
+        } @else {
+          <i class="bi bi-shield-exclamation text-xl" aria-hidden="true"></i>
+        }
+        <div class="flex-1 self-center">
           <strong class="mono"
             >{{ report.overallResult }} ·
             {{ report.verifiedAt | date: 'yyyy-MM-dd HH:mm:ss' }}</strong

@@ -1,4 +1,6 @@
 import { DatePipe } from '@angular/common';
+import { ThemeService } from '@core/theme/theme.service';
+import { BRAND_LOGO } from '@shared/brand-logo/brand-logo';
 import { Component, computed, DestroyRef, effect, inject, OnInit, signal } from '@angular/core';
 import {
   disabled,
@@ -172,7 +174,8 @@ export class OrganisationBranding implements OnInit {
   protected readonly loadError = signal<string | null>(null);
   protected readonly preview = signal<BrandingPreviewDTO | null>(null);
   protected readonly previewing = signal(false);
-  protected readonly previewMode = signal<'light' | 'dark'>('light');
+  /** Starts in the mode the portal is showing. */
+  protected readonly previewMode = signal<'light' | 'dark'>(inject(ThemeService).mode());
   /** Slug of the asset being uploaded or removed. */
   protected readonly busyAsset = signal<string | null>(null);
   protected readonly resetting = signal(false);
@@ -268,7 +271,7 @@ export class OrganisationBranding implements OnInit {
       return null;
     }
     const url = this.previewMode() === 'light' ? branding.logoLightUrl : (branding.logoDarkUrl ?? branding.logoLightUrl);
-    return this.assetSrc(url);
+    return this.assetSrc(url) ?? BRAND_LOGO.lockup[this.previewMode()];
   });
 
   private previewTimer: ReturnType<typeof setTimeout> | undefined;
@@ -306,6 +309,14 @@ export class OrganisationBranding implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** The StarSign file shown while neither the organisation nor the platform has uploaded one. */
+  protected defaultAsset(slug: string): string {
+    return (
+      { 'logo-light': BRAND_LOGO.lockup.light, 'logo-dark': BRAND_LOGO.lockup.dark, favicon: '/favicon.svg' }[slug] ??
+      '/brand/email-logo.png'
+    );
   }
 
   protected assetSrc(url: string | null | undefined): string | null {

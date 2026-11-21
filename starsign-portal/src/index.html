@@ -5,8 +5,34 @@
   <title>StarSign Portal</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <link rel="icon" type="image/svg+xml" href="mark.svg">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="StarSign: secure digital signatures and a cryptographically chained audit trail.">
+  <meta name="theme-color" content="#f4f7fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#050914" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="StarSign">
+  <meta property="og:title" content="StarSign — Secure digital signatures & audit">
+  <meta property="og:description" content="Review, sign and verify binding documents with tamper-evident seals and a cryptographically chained audit trail.">
+  <meta property="og:image" content="/brand/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>
+    // Apply the saved light/dark choice before first paint (ThemeService takes over once Angular boots).
+    (function () {
+      var mode;
+      try { mode = localStorage.getItem('starsign.theme'); } catch (e) {}
+      if (mode !== 'light' && mode !== 'dark') {
+        mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', mode);
+      document.documentElement.style.colorScheme = mode;
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">

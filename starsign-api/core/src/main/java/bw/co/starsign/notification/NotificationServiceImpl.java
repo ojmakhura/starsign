@@ -811,8 +811,23 @@ public class NotificationServiceImpl
             payload.put("senderName", settings.getSenderDisplayName().trim());
         }
         String subject = StringUtils.defaultIfBlank(notification.getSubject(), humanise(notification.getEventType()));
-        String html = StringUtils.defaultIfBlank(body, NotificationTemplates.escapeHtml(subject));
-        String text = StringUtils.defaultIfBlank(NotificationTemplates.toText(html), subject);
+        String content = StringUtils.defaultIfBlank(body, NotificationTemplates.escapeHtml(subject));
+        String contentText = StringUtils.defaultIfBlank(NotificationTemplates.toText(content), subject);
+        // The stored body is the message alone; the logo header and footer go around it as it is sent,
+        // with the organisation's current branding. A template that is a whole HTML document is sent as it is.
+        String html;
+        String text;
+        if (EmailLayout.isDocument(content))
+        {
+            html = content;
+            text = contentText;
+        }
+        else
+        {
+            EmailLayout.Brand brand = emailBrand(notification.getOrganisation());
+            html = EmailLayout.wrap(content, subject, brand);
+            text = contentText + "\n\n--\n" + EmailLayout.textFooter(brand);
+        }
         return GatewayCall.with(hint, () -> emailGateway.send(from, notification.getRecipientAddress(), subject, html,
                 text, headers));
     }
@@ -1137,11 +1152,11 @@ public class NotificationServiceImpl
         {
             putIfPresent(model, "supportEmail", branding.getSupportEmail());
             putIfPresent(model, "supportUrl", branding.getSupportUrl());
-            putIfPresent(model, "emailLogoUrl", branding.getEmailLogoUrl());
             putIfPresent(model, "emailFooter", branding.getEmailFooter());
         }
         model.put("portalUrl", portalUrl);
         model.put("signingPortalUrl", signingPortalUrl);
+        putIfPresent(model, "emailLogoUrl", emailLogoUrl(branding));
 
         if (request.getTemplateModel() != null)
         {
@@ -1159,6 +1174,42 @@ public class NotificationServiceImpl
             model.put("link", link(asString(model.get("linkPath"))));
         }
         return model;
+    }
+
+    /** What the e-mail layout shows around a message for this organisation (platform branding without one). */
+    private EmailLayout.Brand emailBrand(Organisation organisation)
+    {
+        BrandingDTO branding = branding(organisation);
+        String logoUrl = emailLogoUrl(branding);
+        boolean defaultLogo = logoUrl != null && logoUrl.equals(portalUrl + EmailLayout.DEFAULT_LOGO_PATH);
+        return new EmailLayout.Brand(
+                branding == null || StringUtils.isBlank(branding.getAppName()) ? "StarSign" : branding.getAppName(),
+                organisation == null ? null
+                        : StringUtils.defaultIfBlank(organisation.getTradingName(), organisation.getName()),
+                logoUrl,
+                defaultLogo,
+                branding == null ? null : branding.getEmailFooter(),
+                branding == null ? null : branding.getSupportEmail(),
+                branding == null ? null : branding.getSupportUrl());
+    }
+
+    /**
+     * An absolute URL for the e-mail header logo ({{emailLogoUrl}}): the organisation's or platform's upload
+     * (an API path, reached through the portal's /api proxy), else the StarSign logo the portal serves
+     * (public/brand/email-logo.png). Null when the portal URL is not configured.
+     */
+    private String emailLogoUrl(BrandingDTO branding)
+    {
+        if (StringUtils.isBlank(portalUrl))
+        {
+            return null;
+        }
+        String uploaded = branding == null ? null : branding.getEmailLogoUrl();
+        if (StringUtils.isBlank(uploaded))
+        {
+            return portalUrl + EmailLayout.DEFAULT_LOGO_PATH;
+        }
+        return uploaded.matches("(?i)^(https?:)?//.*") ? uploaded : portalUrl + "/api" + uploaded;
     }
 
     /** Signatory pages live on the signing portal, everything else on the main portal. */

@@ -5,10 +5,9 @@
     }
     <aside id="side-nav" class="sidebar" [class.sidebar--open]="mobileMenuOpen()">
       <div class="sidebar-brand">
-        <img src="/mark.svg" alt="" class="h-7 w-7" />
         <div class="min-w-0">
-          <div class="brand-name">StarSign</div>
-          <div class="eyebrow truncate">{{ session.organisationName() || 'Precision Trust' }}</div>
+          <a routerLink="/" aria-label="StarSign home"><app-brand-logo variant="wordmark" height="2.25rem" /></a>
+          <div class="eyebrow truncate mt-1 pl-0.5">{{ session.organisationName() || 'Precision Trust' }}</div>
         </div>
         <button type="button" class="btn btn--ghost btn--icon ml-auto md:hidden" aria-label="Close menu" (click)="mobileMenuOpen.set(false)">
           <i class="bi bi-x-lg" aria-hidden="true"></i>
@@ -89,6 +88,11 @@
                   <p class="m-0 mono text-ink-muted truncate">{{ session.profile()?.email }}</p>
                 </div>
                 <hr class="divider" />
+                <div class="px-4 py-3">
+                  <span class="field__label mb-2 block">Theme</span>
+                  <app-theme-toggle [labels]="true" />
+                </div>
+                <hr class="divider" />
                 <a class="menu-item" role="menuitem" routerLink="/profile">
                   <i class="bi bi-person" aria-hidden="true"></i> My profile
                 </a>
@@ -116,9 +120,9 @@
       } @else {
         <div class="login-screen">
           <div class="login-card stage">
-            <div class="flex items-center gap-3">
-              <img src="/mark.svg" alt="" class="h-9 w-9" />
-              <span class="font-display text-headline-sm font-bold">StarSign</span>
+            <div class="flex items-start justify-between gap-3">
+              <app-brand-logo height="4.5rem" alt="StarSign — Secure digital signatures and audit" />
+              <app-theme-toggle />
             </div>
             <span class="eyebrow mt-8 block">Signing Portal</span>
             <h1 class="mt-2 mb-0 text-display-mobile md:text-display font-bold">Sign with certainty.</h1>
@@ -148,4 +152,4 @@
   </div>
 </div>
 <app-loader />
-<ngx-sonner-toaster theme="dark" position="top-right" richColors />
+<ngx-sonner-toaster [theme]="theme.mode()" position="top-right" richColors />

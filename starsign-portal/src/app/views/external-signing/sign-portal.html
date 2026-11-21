@@ -3,11 +3,21 @@
   <header class="page-header">
     <div class="min-w-0">
       <div class="flex items-center gap-3">
-        <img src="/mark.svg" alt="" class="h-8 w-8" />
-        <span class="font-display text-headline-sm font-bold">{{
-          branding()?.appName || 'StarSign'
-        }}</span>
+        @if (branding()?.logoLightUrl || branding()?.logoDarkUrl) {
+          <app-brand-logo
+            [lightUrl]="branding()?.logoLightUrl"
+            [darkUrl]="branding()?.logoDarkUrl"
+            [alt]="branding()?.appName || 'Organisation logo'"
+            height="2.25rem"
+          />
+        } @else if (branding()?.appName && branding()?.appName !== 'StarSign') {
+          <img src="/mark.svg" alt="" class="h-8 w-8" />
+          <span class="font-display text-headline-sm font-bold">{{ branding()?.appName }}</span>
+        } @else {
+          <app-brand-logo variant="wordmark" height="2.25rem" />
+        }
         <span class="eyebrow hidden sm:inline">Signing portal</span>
+        <app-theme-toggle class="ml-auto" />
       </div>
       @if (session(); as s) {
         <h1 class="page-title mt-6 break-words">{{ s.workflowTitle || s.documentTitle || 'Signing request' }}</h1>

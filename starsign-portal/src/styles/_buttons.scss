@@ -36,11 +36,11 @@
   // Primary Action (Sign / Complete)
   .btn--primary {
     background: var(--color-cyan);
-    color: var(--color-abyss);
+    color: var(--color-on-cyan);
     font-weight: 700;
 
     &:hover:not(:disabled) {
-      box-shadow: 0 0 18px rgb(0 229 255 / 0.35);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--color-cyan) 35%, transparent);
     }
 
     &:focus-visible {
@@ -55,14 +55,14 @@
     color: var(--color-ink);
 
     &:hover:not(:disabled) {
-      background: rgb(255 255 255 / 0.05);
+      background: color-mix(in srgb, var(--color-ink) 5%, transparent);
     }
   }
 
   // Verification Trigger
   .btn--verify {
-    background: rgb(229 185 76 / 0.08);
-    border-color: rgb(229 185 76 / 0.45);
+    background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
     color: var(--color-gold);
 
     &:hover:not(:disabled) {
@@ -72,11 +72,11 @@
 
   .btn--danger {
     background: transparent;
-    border-color: rgb(255 92 108 / 0.45);
+    border-color: color-mix(in srgb, var(--color-crimson) 45%, transparent);
     color: var(--color-crimson);
 
     &:hover:not(:disabled) {
-      background: rgb(255 92 108 / 0.08);
+      background: color-mix(in srgb, var(--color-crimson) 8%, transparent);
     }
   }
 
@@ -86,7 +86,7 @@
 
     &:hover:not(:disabled) {
       color: var(--color-ink);
-      background: rgb(255 255 255 / 0.04);
+      background: color-mix(in srgb, var(--color-ink) 4%, transparent);
     }
   }
 

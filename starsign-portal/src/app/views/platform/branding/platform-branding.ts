@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { ThemeService } from '@core/theme/theme.service';
 import { Component, computed, DestroyRef, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { email, form, FormField, FormRoot, maxLength, pattern } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
@@ -26,16 +27,24 @@ interface BrandingModel {
   emailFooter: string;
 }
 
-/** BrandingServiceImpl.DEFAULT_SEEDS: what an empty seed falls back to. */
+/** BrandingServiceImpl.DEFAULT_SEEDS: what an empty seed falls back to (the StarSign logo's colours). */
 const DEFAULT_SEEDS: Record<SeedKey, string> = {
-  primary: '#00e5ff',
+  primary: '#0284c7',
   secondary: '#1e2a4a',
-  tertiary: '#e5b94c',
-  neutral: '#10131a',
+  tertiary: '#fcd34d',
+  neutral: '#0f172a',
   error: '#ff5c6c',
   success: '#2e7d32',
-  warning: '#e5a000',
+  warning: '#f59e0b',
   info: '#0288d1',
+};
+
+/** The StarSign files (public/, built by brand/build.py) used while a slot has no upload. */
+const DEFAULT_ASSETS: Record<string, string> = {
+  'logo-light': '/brand/logo-light.svg',
+  'logo-dark': '/brand/logo-dark.svg',
+  favicon: '/favicon.svg',
+  'email-logo': '/brand/email-logo.png',
 };
 const SEED_KEYS = Object.keys(DEFAULT_SEEDS) as SeedKey[];
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -107,6 +116,7 @@ export class PlatformBranding implements OnInit {
   protected readonly seedKeys = SEED_KEYS;
   protected readonly defaults = DEFAULT_SEEDS;
   protected readonly assets = ASSETS;
+  protected readonly defaultAssets = DEFAULT_ASSETS;
 
   protected readonly branding = signal<BrandingDTO | null>(null);
   protected readonly loading = signal(true);
@@ -118,7 +128,7 @@ export class PlatformBranding implements OnInit {
     (path) => {
       maxLength(path.appName, 100, { message: 'Keep the name under 100 characters.' });
       for (const key of SEED_KEYS) {
-        pattern(path.seeds[key], HEX, { message: 'A hex colour such as #00e5ff, or empty for the default.' });
+        pattern(path.seeds[key], HEX, { message: 'A hex colour such as #0284c7, or empty for the default.' });
       }
       email(path.supportEmail, { message: 'Enter a valid email address.' });
       maxLength(path.supportEmail, 254);
@@ -153,7 +163,8 @@ export class PlatformBranding implements OnInit {
   // ---- Live preview (POST /branding/preview) ----
   protected readonly preview = signal<BrandingPreviewDTO | null>(null);
   protected readonly previewError = signal<string | null>(null);
-  protected readonly previewMode = signal<'light' | 'dark'>('dark');
+  /** Starts in the mode the portal is showing. */
+  protected readonly previewMode = signal<'light' | 'dark'>(inject(ThemeService).mode());
   protected readonly previewTokens = computed(() => {
     const tokens = this.preview()?.tokens?.[this.previewMode()] ?? {};
     return Object.entries(tokens)
