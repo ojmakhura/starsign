@@ -64,7 +64,7 @@ import { firstValueFrom } from 'rxjs';
               <span class="chip chip--voided">{{ r.overallResult || 'NOT VERIFIED' }}</span>
             }
             <span class="mono ml-auto text-ink-muted">{{
-              r.verifiedAt | date: 'yyyy-MM-dd HH:mm:ss'
+              r.verifiedAt | date: 'dd-MM-yyyy HH:mm:ss'
             }}</span>
           </div>
           <dl class="mt-6 grid gap-4 md:grid-cols-2">

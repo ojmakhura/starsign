@@ -326,7 +326,7 @@
       <details class="card flex flex-col gap-5" aria-labelledby="wf-policy-title">
         <summary class="card__title cursor-pointer" id="wf-policy-title">
           <span class="eyebrow">03</span> Deadline, verification &amp; options
-          <span class="ml-2 text-body-sm font-normal text-ink-muted">Expires {{ draft().expiresAt }}</span>
+          <span class="ml-2 text-body-sm font-normal text-ink-muted">Expires {{ draft().expiresAt | date: 'dd-MM-yyyy' }}</span>
         </summary>
         <div class="mt-5 flex flex-col gap-5">
         <div class="grid gap-4 md:grid-cols-3">
@@ -451,7 +451,7 @@
                   ? 'Only the first recipient is notified now; each next one when the previous has signed.'
                   : 'Everyone is notified as soon as you send.'
               }}
-              Expires {{ draft().expiresAt }}.
+              Expires {{ draft().expiresAt | date: 'dd-MM-yyyy' }}.
             </p>
           </section>
 

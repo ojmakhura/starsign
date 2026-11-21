@@ -144,7 +144,7 @@
                 }
               </td>
               <td class="mono text-ink-muted">{{ issue.objectId || '—' }}</td>
-              <td class="mono text-ink-muted">{{ (issue.detectedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+              <td class="mono text-ink-muted">{{ (issue.detectedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</td>
               <td class="mono">{{ issue.attempts ?? 0 }}</td>
               <td>
                 @if (issue.resolution === 'OPEN') {
@@ -179,7 +179,7 @@
                   }
                 } @else {
                   <span class="chip chip--neutral">{{ humanise(issue.resolution) }}</span>
-                  <div class="cell-note mono">{{ issue.resolvedAt | date: 'dd MMM yyyy, HH:mm' }}</div>
+                  <div class="cell-note mono">{{ issue.resolvedAt | date: 'dd-MM-yyyy HH:mm' }}</div>
                 }
               </td>
             </tr>

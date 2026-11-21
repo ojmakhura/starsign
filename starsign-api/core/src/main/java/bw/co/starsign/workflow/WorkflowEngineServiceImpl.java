@@ -19,6 +19,7 @@ import bw.co.starsign.document.DocumentStatus;
 import bw.co.starsign.messaging.OutboxService;
 import bw.co.starsign.notification.NotificationEventType;
 import bw.co.starsign.notification.NotificationService;
+import bw.co.starsign.signing.CompletedCopyLinks;
 import bw.co.starsign.signing.InvitationStatus;
 import bw.co.starsign.signing.PdfSigningEngine;
 import bw.co.starsign.signing.SignatoryInvitationDTO;
@@ -63,6 +64,7 @@ public class WorkflowEngineServiceImpl
     private final WorkflowSupport support;
     private final WorkflowViews views;
     private final DocumentArtifactRepository documentArtifactRepository;
+    private final CompletedCopyLinks completedCopyLinks;
     private final TransactionTemplate newTransaction;
 
     public WorkflowEngineServiceImpl(
@@ -82,6 +84,7 @@ public class WorkflowEngineServiceImpl
         WorkflowSupport support,
         WorkflowViews views,
         DocumentArtifactRepository documentArtifactRepository,
+        CompletedCopyLinks completedCopyLinks,
         PlatformTransactionManager transactionManager) {
 
         super(
@@ -101,6 +104,7 @@ public class WorkflowEngineServiceImpl
         this.support = support;
         this.views = views;
         this.documentArtifactRepository = documentArtifactRepository;
+        this.completedCopyLinks = completedCopyLinks;
         this.newTransaction = new TransactionTemplate(transactionManager);
         this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -469,13 +473,26 @@ public class WorkflowEngineServiceImpl
         support.publish(workflow, "WORKFLOW_COMPLETED", Map.of("finalArtifactId", artifact.getId().toString(),
                 "finalDocumentSha256", StringUtils.defaultString(artifact.getSha256())));
 
-        Map<String, Object> model = support.model(workflow);
-        support.notifyOwner(workflow, NotificationEventType.WORKFLOW_COMPLETED, model);
+        // The owner opens the completed request in the portal ({{link}} and the in-app notification)
+        Map<String, Object> ownerModel = support.model(workflow);
+        ownerModel.put("linkPath", "/workflows/" + workflow.getId());
+        support.notifyOwner(workflow, NotificationEventType.WORKFLOW_COMPLETED, ownerModel);
         if (workflow.isSendCompletedCopy())
         {
             workflow.getSignatories().stream()
                     .filter(s -> s.getStatus() == SignatoryStatus.SIGNED && s.isReceiveCompletedCopy())
-                    .forEach(s -> support.notifySignatory(s, NotificationEventType.COMPLETED_COPY, model));
+                    .forEach(s -> {
+                        // Each signatory gets their own link: external ones a download-only token, internal ones
+                        // the request in the portal
+                        Map<String, Object> copyModel = support.model(workflow);
+                        copyModel.put("link", completedCopyLinks.linkFor(s));
+                        if (s.getSignatoryType() == SignatoryType.INTERNAL_USER && s.getInternalUser() != null)
+                        {
+                            copyModel.put("linkPath",
+                                    "/signing/workflows/" + workflow.getId() + "/signatories/" + s.getId());
+                        }
+                        support.notifySignatory(s, NotificationEventType.COMPLETED_COPY, copyModel);
+                    });
         }
         return signingWorkflowRepository.save(workflow);
     }

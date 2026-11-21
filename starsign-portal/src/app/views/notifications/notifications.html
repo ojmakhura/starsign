@@ -57,7 +57,7 @@
             }
             <span class="cell-note">
               <span class="sr-only">{{ n.readAt ? 'Read' : 'Unread' }} · </span>
-              {{ label(n.eventType) }} · {{ n.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+              {{ label(n.eventType) }} · {{ n.createdAt | date: 'dd-MM-yyyy HH:mm' }}
             </span>
           </div>
           @if (!n.readAt) {

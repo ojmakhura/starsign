@@ -38,7 +38,16 @@ const TOP_N = 10;
 /** Organisation reporting: dashboard KPIs plus period reports with charts, tables and export. */
 @Component({
   selector: 'app-reports',
-  imports: [Can, DatePipe, DecimalPipe, FieldErrors, FormField, PercentPipe, RouterLink, TrendChart],
+  imports: [
+    Can,
+    DatePipe,
+    DecimalPipe,
+    FieldErrors,
+    FormField,
+    PercentPipe,
+    RouterLink,
+    TrendChart,
+  ],
   templateUrl: './reports.html',
 })
 export class Reports {
@@ -85,20 +94,51 @@ export class Reports {
     return { organisationId, from: f.from || null, to: f.to || null, grouping: f.grouping };
   });
 
+  /** API periods: day 2026-11-19 -> 19-11-2026, month 2026-11 -> 11-2026; ISO weeks (2026-W47) as they are. */
+  protected periodLabel(period: string | null | undefined): string {
+    const value = period ?? '';
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (day) {
+      return `${day[3]}-${day[2]}-${day[1]}`;
+    }
+    const month = /^(\d{4})-(\d{2})$/.exec(value);
+    return month ? `${month[2]}-${month[1]}` : value;
+  }
+
   // Chart inputs ---------------------------------------------------------------
 
-  protected readonly volumeLabels = computed(() => this.volume().map((r) => r.period ?? ''));
+  protected readonly volumeLabels = computed(() =>
+    this.volume().map((r) => this.periodLabel(r.period)),
+  );
   protected readonly volumeSeries = computed<ChartSeries[]>(() => [
-    { name: 'Created', color: 'var(--color-secondary)', values: this.volume().map((r) => r.created ?? 0) },
+    {
+      name: 'Created',
+      color: 'var(--color-secondary)',
+      values: this.volume().map((r) => r.created ?? 0),
+    },
     { name: 'Signed', color: 'var(--color-cyan)', values: this.volume().map((r) => r.signed ?? 0) },
-    { name: 'Declined', color: 'var(--color-crimson)', values: this.volume().map((r) => r.declined ?? 0) },
+    {
+      name: 'Declined',
+      color: 'var(--color-crimson)',
+      values: this.volume().map((r) => r.declined ?? 0),
+    },
   ]);
 
   protected readonly performanceRows = computed(() => this.performance()?.rows ?? []);
-  protected readonly performanceLabels = computed(() => this.performanceRows().map((r) => r.period ?? ''));
+  protected readonly performanceLabels = computed(() =>
+    this.performanceRows().map((r) => this.periodLabel(r.period)),
+  );
   protected readonly performanceSeries = computed<ChartSeries[]>(() => [
-    { name: 'Sent', color: 'var(--color-secondary)', values: this.performanceRows().map((r) => r.sent ?? 0) },
-    { name: 'Signed', color: 'var(--color-cyan)', values: this.performanceRows().map((r) => r.signed ?? 0) },
+    {
+      name: 'Sent',
+      color: 'var(--color-secondary)',
+      values: this.performanceRows().map((r) => r.sent ?? 0),
+    },
+    {
+      name: 'Signed',
+      color: 'var(--color-cyan)',
+      values: this.performanceRows().map((r) => r.signed ?? 0),
+    },
   ]);
 
   private readonly topSignatories = computed(() =>
@@ -108,8 +148,16 @@ export class Reports {
     this.topSignatories().map((r) => r.signatoryName || r.signatoryEmail || '—'),
   );
   protected readonly signatorySeries = computed<ChartSeries[]>(() => [
-    { name: 'Invited', color: 'var(--color-secondary)', values: this.topSignatories().map((r) => r.invited ?? 0) },
-    { name: 'Signed', color: 'var(--color-cyan)', values: this.topSignatories().map((r) => r.signed ?? 0) },
+    {
+      name: 'Invited',
+      color: 'var(--color-secondary)',
+      values: this.topSignatories().map((r) => r.invited ?? 0),
+    },
+    {
+      name: 'Signed',
+      color: 'var(--color-cyan)',
+      values: this.topSignatories().map((r) => r.signed ?? 0),
+    },
   ]);
 
   private readonly topUsers = computed(() =>
@@ -119,8 +167,16 @@ export class Reports {
   );
   protected readonly userLabels = computed(() => this.topUsers().map((r) => r.userName || '—'));
   protected readonly userSeries = computed<ChartSeries[]>(() => [
-    { name: 'Documents uploaded', color: 'var(--color-secondary)', values: this.topUsers().map((r) => r.documentsUploaded ?? 0) },
-    { name: 'Workflows initiated', color: 'var(--color-cyan)', values: this.topUsers().map((r) => r.workflowsInitiated ?? 0) },
+    {
+      name: 'Documents uploaded',
+      color: 'var(--color-secondary)',
+      values: this.topUsers().map((r) => r.documentsUploaded ?? 0),
+    },
+    {
+      name: 'Workflows initiated',
+      color: 'var(--color-cyan)',
+      values: this.topUsers().map((r) => r.workflowsInitiated ?? 0),
+    },
   ]);
 
   protected readonly storageRows = computed(() => {
@@ -136,7 +192,11 @@ export class Reports {
   });
   protected readonly storageLabels = computed(() => this.storageRows().map((r) => r.label));
   protected readonly storageSeries = computed<ChartSeries[]>(() => [
-    { name: 'MB', color: 'var(--color-cyan)', values: this.storageRows().map((r) => +(r.bytes / 1_048_576).toFixed(2)) },
+    {
+      name: 'MB',
+      color: 'var(--color-cyan)',
+      values: this.storageRows().map((r) => +(r.bytes / 1_048_576).toFixed(2)),
+    },
   ]);
 
   constructor() {
@@ -177,7 +237,9 @@ export class Reports {
           this.volume.set(await firstValueFrom(this.reportingApi.documentVolume(criteria)));
           break;
         case ReportType.SIGNING_PERFORMANCE:
-          this.performance.set(await firstValueFrom(this.reportingApi.signingPerformance(criteria)));
+          this.performance.set(
+            await firstValueFrom(this.reportingApi.signingPerformance(criteria)),
+          );
           break;
         case ReportType.SIGNATORY_ACTIVITY:
           this.signatories.set(await firstValueFrom(this.reportingApi.signatoryActivity(criteria)));
@@ -206,7 +268,9 @@ export class Reports {
     const reportFormat = format === 'CSV' ? ReportFormat.CSV : ReportFormat.PDF;
     this.exporting.set(reportFormat);
     try {
-      const blob = await firstValueFrom(this.reportingApi.export(this.tab(), reportFormat, criteria));
+      const blob = await firstValueFrom(
+        this.reportingApi.export(this.tab(), reportFormat, criteria),
+      );
       const name = this.tab().toLowerCase().replaceAll('_', '-');
       saveFile(blob, `${name}-${criteria.from ?? ''}-${criteria.to ?? ''}.${format.toLowerCase()}`);
     } catch (error) {

@@ -84,7 +84,7 @@
                 </div>
               </td>
               <td><app-status-chip [status]="user.status" /></td>
-              <td class="mono text-ink-muted">{{ (user.lastLoginAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+              <td class="mono text-ink-muted">{{ (user.lastLoginAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</td>
             </tr>
           } @empty {
             <tr>
@@ -127,7 +127,7 @@
                   </div>
                 </td>
                 <td>{{ invitation.invitedByName || '—' }}</td>
-                <td class="mono text-ink-muted">{{ (invitation.expiresAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+                <td class="mono text-ink-muted">{{ (invitation.expiresAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</td>
                 <td>
                   <div *appCan="'invitations:manage'" class="flex justify-end gap-2">
                     <button

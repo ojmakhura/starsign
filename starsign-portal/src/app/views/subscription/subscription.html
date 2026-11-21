@@ -70,24 +70,24 @@
           <div>
             <dt class="eyebrow">Current period</dt>
             <dd class="m-0 mono">
-              {{ (s.currentPeriodStart | date: 'dd MMM yyyy') || '—' }} –
-              {{ (s.currentPeriodEnd | date: 'dd MMM yyyy') || '—' }}
+              {{ (s.currentPeriodStart | date: 'dd-MM-yyyy') || '—' }} –
+              {{ (s.currentPeriodEnd | date: 'dd-MM-yyyy') || '—' }}
             </dd>
           </div>
           <div>
             <dt class="eyebrow">Started</dt>
-            <dd class="m-0 mono">{{ (s.startDate | date: 'dd MMM yyyy') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (s.startDate | date: 'dd-MM-yyyy') || '—' }}</dd>
           </div>
           @if (s.trialEndsAt) {
             <div>
               <dt class="eyebrow">Trial ends</dt>
-              <dd class="m-0 mono">{{ s.trialEndsAt | date: 'dd MMM yyyy' }}</dd>
+              <dd class="m-0 mono">{{ s.trialEndsAt | date: 'dd-MM-yyyy' }}</dd>
             </div>
           }
           @if (s.endDate) {
             <div>
               <dt class="eyebrow">Ends</dt>
-              <dd class="m-0 mono">{{ s.endDate | date: 'dd MMM yyyy' }}</dd>
+              <dd class="m-0 mono">{{ s.endDate | date: 'dd-MM-yyyy' }}</dd>
             </div>
           }
         </dl>
@@ -98,7 +98,7 @@
           <h2 id="usage-title" class="m-0 text-headline-sm">Usage</h2>
           @if (usage(); as u) {
             <p class="m-0 text-ink-muted">
-              {{ u.periodStart | date: 'dd MMM yyyy' }} – {{ u.periodEnd | date: 'dd MMM yyyy' }}
+              {{ u.periodStart | date: 'dd-MM-yyyy' }} – {{ u.periodEnd | date: 'dd-MM-yyyy' }}
             </p>
           }
         </div>

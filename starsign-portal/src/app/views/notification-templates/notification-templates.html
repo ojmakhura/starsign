@@ -118,7 +118,7 @@
                 }
               </td>
               <td class="mono text-ink-muted">{{ novuWorkflowId(template.eventType) || '—' }}</td>
-              <td class="mono text-ink-muted">{{ ((template.modifiedAt || template.createdAt) | date: 'dd MMM yyyy') || '—' }}</td>
+              <td class="mono text-ink-muted">{{ ((template.modifiedAt || template.createdAt) | date: 'dd-MM-yyyy') || '—' }}</td>
               <td>
                 <div class="flex justify-end gap-2">
                   @if (!isOwn(template) && canEdit()) {

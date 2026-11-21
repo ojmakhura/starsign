@@ -208,6 +208,9 @@ app:
   # Links in invitation emails
   portal-url: ${PORTAL_URL:http://localhost:4700}
   signing-portal-url: ${SIGNING_PORTAL_URL:http://localhost:4700/sign}
+  # Where browsers reach the API, for direct links such as a signatory's completed-copy download;
+  # blank = <portal-url>/api (the portal proxies /api to the webservice)
+  public-api-url: ${PUBLIC_API_URL:}
   # Keycloak Admin API (user provisioning) through the starsign-api service account
   keycloak-admin:
     server-url: ${AUTH_URL:http://localhost:8080}

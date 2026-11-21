@@ -70,11 +70,11 @@
                   <span class="cell-title block truncate">{{ item.workflowTitle }}</span>
                   <span class="cell-note"
                     >{{ item.requestedBy || 'Unknown sender' }} ·
-                    {{ item.requestedAt | date: 'dd MMM, HH:mm' }}</span
+                    {{ item.requestedAt | date: 'dd-MM-yyyy HH:mm' }}</span
                   >
                 </span>
                 @if (item.deadline) {
-                  <span class="chip chip--pending">Due {{ item.deadline | date: 'dd MMM' }}</span>
+                  <span class="chip chip--pending">Due {{ item.deadline | date: 'dd-MM-yyyy' }}</span>
                 }
               </a>
             </li>
@@ -116,7 +116,7 @@
                 >{{ workflow.signedCount ?? 0 }}/{{ workflow.signatoryCount ?? 0 }} signed</span
               >
             </span>
-            <span class="mono text-cyan">{{ workflow.expiresAt | date: 'dd MMM' }}</span>
+            <span class="mono text-cyan">{{ workflow.expiresAt | date: 'dd-MM-yyyy' }}</span>
           </a>
         } @empty {
           <p class="m-0 text-ink-muted">No workflows expire in the next few days.</p>
@@ -154,7 +154,7 @@
                 </td>
                 <td><app-status-chip [status]="doc.status" /></td>
                 <td class="mono">{{ doc.signedCount ?? 0 }}/{{ doc.signatoryCount ?? 0 }}</td>
-                <td class="cell-note">{{ doc.createdAt | date: 'dd MMM yyyy' }}</td>
+                <td class="cell-note">{{ doc.createdAt | date: 'dd-MM-yyyy' }}</td>
               </tr>
             }
           </tbody>

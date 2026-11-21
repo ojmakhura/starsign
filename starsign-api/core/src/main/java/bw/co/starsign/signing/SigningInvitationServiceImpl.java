@@ -150,7 +150,7 @@ public class SigningInvitationServiceImpl
 
         signingEventRecorder.record(SigningEventType.INVITATION_ISSUED, workflow, signatory,
                 SigningEventRecorder.Actor.system(), "invitation:" + invitation.getId(),
-                "Signing link sent by " + channel + ", valid until " + invitation.getExpiresAt(), null, null);
+                "Signing link sent by " + channel + ", valid until " + (invitation.getExpiresAt() == null ? "-" : invitation.getExpiresAt().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"))), null, null);
         return toDTO(invitation);
     }
 

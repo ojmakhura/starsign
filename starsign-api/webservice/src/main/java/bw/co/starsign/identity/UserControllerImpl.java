@@ -7,7 +7,9 @@ package bw.co.starsign.identity;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +21,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import bw.co.starsign.auth.Permissions;
 import bw.co.starsign.auth.RoleAssignmentRules;
@@ -93,10 +97,16 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<CurrentUserDTO> getCurrentUser() throws Exception {
 
         CurrentUserDTO current = organisationUserService.getCurrentUser();
+        Jwt jwt = jwt();
+
+        // The portal loads the current user after every Keycloak sign-in: record a new one here. This is what moves
+        // an invited or newly registered user to ACTIVE; nothing else calls recordLogin.
+        if (recordSignInIfNew(current, jwt)) {
+            current = organisationUserService.getCurrentUser();
+        }
         current.setPermissions(new ArrayList<>(Permissions.current()));
 
         // Accounts without a profile whose Keycloak details could not be read still get a name
-        Jwt jwt = jwt();
         OrganisationUserDTO user = current.getUser();
         if (jwt != null && user != null) {
             user.setUsername(StringUtils.defaultIfBlank(user.getUsername(), jwt.getClaimAsString("preferred_username")));
@@ -192,6 +202,44 @@ public class UserControllerImpl implements UserController {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication instanceof JwtAuthenticationToken token ? token.getToken() : null;
+    }
+
+    /**
+     * Records the caller's sign-in when the token is from a sign-in not recorded yet (see {@link SignInDetector}).
+     * Accounts without a profile (platform administrators) have nothing to record. A failure is logged, never
+     * returned: loading the current user must keep working.
+     *
+     * @return true when a sign-in was recorded, so the profile changed
+     */
+    private boolean recordSignInIfNew(CurrentUserDTO current, Jwt jwt) {
+
+        OrganisationUserDTO user = current.getUser();
+        if (jwt == null || user == null || user.getId() == null || StringUtils.isBlank(jwt.getSubject())) {
+            return false;
+        }
+        if (!SignInDetector.isNewSignIn(user.getLastLoginAt(), jwt.getClaimAsInstant("auth_time"), user.getStatus(),
+            ZoneId.systemDefault())) {
+            return false;
+        }
+
+        HttpServletRequest request = currentRequest();
+        String ipAddress = request == null ? null : request.getRemoteAddr();
+        String userAgent = request == null ? null : request.getHeader("User-Agent");
+        try {
+            organisationUserService.recordLogin(jwt.getSubject(), StringUtils.defaultIfBlank(ipAddress, "unknown"),
+                StringUtils.defaultIfBlank(userAgent, "unknown"));
+            return true;
+        } catch (RuntimeException e) {
+            logger.warn("Could not record the sign-in of user {}: {}", user.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    private static HttpServletRequest currentRequest() {
+
+        return RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
+            ? attributes.getRequest()
+            : null;
     }
 
     protected OrganisationUserService getOrganisationUserService()

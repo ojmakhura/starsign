@@ -84,7 +84,7 @@
               </td>
               <td class="mono text-ink-muted">{{ tpl.fields?.length ?? 0 }}</td>
               <td class="mono text-ink-muted">
-                {{ (tpl.modifiedAt || tpl.createdAt | date: 'dd MMM yyyy') || '—' }}
+                {{ (tpl.modifiedAt || tpl.createdAt | date: 'dd-MM-yyyy') || '—' }}
               </td>
               <td>
                 @if (tpl.status === 'ACTIVE') {

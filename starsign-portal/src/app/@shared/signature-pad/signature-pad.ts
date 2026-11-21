@@ -15,7 +15,8 @@ import { FormValueControl } from '@angular/forms/signals';
 @Component({
   selector: 'app-signature-pad',
   template: `
-    <div class="sign-here bg-slate/60" [class.opacity-50]="disabled()">
+    <!-- White like paper: the ink is black, as it is stamped on the document -->
+    <div class="sign-here bg-white" [class.opacity-50]="disabled()">
       <span class="sign-here__label">Sign here <i class="bi bi-arrow-down-right" aria-hidden="true"></i></span>
       <canvas
         #canvas
@@ -57,7 +58,8 @@ export class SignaturePad implements FormValueControl<string> {
         this.context.lineWidth = 2.2;
         this.context.lineCap = 'round';
         this.context.lineJoin = 'round';
-        this.context.strokeStyle = '#00E5FF';
+        // Black ink, the colour signatures are stamped in (the server makes any signature image black too)
+        this.context.strokeStyle = '#000000';
       }
     });
   }

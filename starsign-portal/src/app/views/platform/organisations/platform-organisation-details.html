@@ -82,15 +82,15 @@
           </div>
           <div>
             <dt class="text-body-sm text-ink-muted">Registered</dt>
-            <dd class="m-0 mono">{{ (org.createdAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (org.createdAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
           </div>
           <div>
             <dt class="text-body-sm text-ink-muted">Activated</dt>
-            <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
           </div>
           <div>
             <dt class="text-body-sm text-ink-muted">Last changed</dt>
-            <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
           </div>
           <div class="sm:col-span-2">
             <dt class="text-body-sm text-ink-muted">Physical address</dt>
@@ -122,13 +122,13 @@
               <div>
                 <dt class="text-body-sm text-ink-muted">Current period</dt>
                 <dd class="m-0 mono">
-                  {{ (sub.currentPeriodStart | date: 'dd MMM yyyy') || '—' }} –
-                  {{ (sub.currentPeriodEnd | date: 'dd MMM yyyy') || '—' }}
+                  {{ (sub.currentPeriodStart | date: 'dd-MM-yyyy') || '—' }} –
+                  {{ (sub.currentPeriodEnd | date: 'dd-MM-yyyy') || '—' }}
                 </dd>
               </div>
               <div>
                 <dt class="text-body-sm text-ink-muted">Trial ends</dt>
-                <dd class="m-0 mono">{{ (sub.trialEndsAt | date: 'dd MMM yyyy') || '—' }}</dd>
+                <dd class="m-0 mono">{{ (sub.trialEndsAt | date: 'dd-MM-yyyy') || '—' }}</dd>
               </div>
             </dl>
           } @else if (!subscriptionError()) {
@@ -221,7 +221,7 @@
           }
           @if (reconciliation(); as run) {
             <p class="m-0 text-body-sm text-ink-muted" role="status">
-              Last run {{ run.finishedAt | date: 'dd MMM yyyy, HH:mm' }}: {{ run.objectsScanned ?? 0 }} objects and
+              Last run {{ run.finishedAt | date: 'dd-MM-yyyy HH:mm' }}: {{ run.objectsScanned ?? 0 }} objects and
               {{ run.referencesScanned ?? 0 }} references scanned, {{ run.issuesDetected ?? 0 }} issues detected,
               {{ run.issuesResolved ?? 0 }} resolved.
               <a routerLink="/platform/storage" *appCan="'admin-storage:list'">See open issues</a>

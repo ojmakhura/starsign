@@ -118,11 +118,11 @@
               </td>
               <td class="mono">{{ n.attempts ?? 0 }}</td>
               <td class="mono text-ink-muted">
-                {{ n.createdAt | date: 'dd MMM yyyy, HH:mm' }}
+                {{ n.createdAt | date: 'dd-MM-yyyy HH:mm' }}
                 @if (n.deliveredAt) {
-                  <div class="cell-note">Delivered {{ n.deliveredAt | date: 'dd MMM, HH:mm' }}</div>
+                  <div class="cell-note">Delivered {{ n.deliveredAt | date: 'dd-MM-yyyy HH:mm' }}</div>
                 } @else if (n.sentAt) {
-                  <div class="cell-note">Sent {{ n.sentAt | date: 'dd MMM, HH:mm' }}</div>
+                  <div class="cell-note">Sent {{ n.sentAt | date: 'dd-MM-yyyy HH:mm' }}</div>
                 }
               </td>
             </tr>

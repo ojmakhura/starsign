@@ -12,7 +12,7 @@
     <groupId>bw.co.starsign</groupId>
     <artifactId>starsign</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.1</version>
+    <version>1.1.0</version>
     <name>StarSign</name>
     <description>The StarSign electronic document signing platform.</description>
     <dependencyManagement>

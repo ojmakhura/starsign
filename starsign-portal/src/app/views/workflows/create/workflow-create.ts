@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { hasPermission } from '@auth/page-permissions';
 import { form, FormField, FormRoot } from '@angular/forms/signals';
@@ -59,7 +60,7 @@ export const STEPS: { id: Step; label: string; icon: string }[] = [
  */
 @Component({
   selector: 'app-workflow-create',
-  imports: [FieldErrors, FieldPlacer, FileDrop, FormField, FormRoot, RouterLink],
+  imports: [DatePipe, FieldErrors, FieldPlacer, FileDrop, FormField, FormRoot, RouterLink],
   templateUrl: './workflow-create.html',
 })
 export class WorkflowCreate {

@@ -88,7 +88,7 @@
             @if (r.signedAt) {
               <div>
                 <dt class="eyebrow">Timestamp</dt>
-                <dd class="m-0 mono">{{ r.signedAt | date: 'yyyy-MM-dd HH:mm:ss z' }}</dd>
+                <dd class="m-0 mono">{{ r.signedAt | date: 'dd-MM-yyyy HH:mm:ss z' }}</dd>
               </div>
             }
             @if (r.documentSha256) {
@@ -300,7 +300,7 @@
 
           @if (s.expiresAt) {
             <p class="m-0 text-center mono text-ink-muted">
-              LINK EXPIRES {{ s.expiresAt | date: 'dd MMM yyyy, HH:mm' }}
+              LINK EXPIRES {{ s.expiresAt | date: 'dd-MM-yyyy HH:mm' }}
             </p>
           }
         </section>
@@ -654,7 +654,7 @@
 
             @if (s.expiresAt) {
               <p class="m-0 text-center mono text-ink-muted">
-                LINK EXPIRES {{ s.expiresAt | date: 'dd MMM yyyy, HH:mm' }}
+                LINK EXPIRES {{ s.expiresAt | date: 'dd-MM-yyyy HH:mm' }}
               </p>
             }
           </form>

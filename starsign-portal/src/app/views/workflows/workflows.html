@@ -102,7 +102,7 @@
                   ></div>
                 </div>
               </td>
-              <td class="mono text-ink-muted">{{ (wf.expiresAt | date: 'dd MMM yyyy') || '—' }}</td>
+              <td class="mono text-ink-muted">{{ (wf.expiresAt | date: 'dd-MM-yyyy') || '—' }}</td>
             </tr>
           } @empty {
             <tr>
