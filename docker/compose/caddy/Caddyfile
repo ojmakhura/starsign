@@ -1,0 +1,33 @@
+# One public ngrok domain, routed by path. Caddy runs on the host network, so every
+# upstream is a port published on localhost (the compose stack, or ng serve / the API on the host).
+{
+	admin off
+	auto_https off
+	servers {
+		# ngrok's agent connects from 127.0.0.1: keep its X-Forwarded-Proto: https
+		trusted_proxies static private_ranges
+	}
+}
+
+:{$PROXY_PORT} {
+	# Keycloak (KC_HTTP_RELATIVE_PATH=/auth)
+	handle /auth* {
+		reverse_proxy localhost:{$KEYCLOAK_PORT}
+	}
+
+	# Novu API and WebSocket, prefix stripped (the Novu dashboard stays local: it can't live under a sub-path)
+	handle_path /novu/api/* {
+		reverse_proxy localhost:{$NOVU_API_PORT}
+	}
+	handle_path /novu/ws/* {
+		reverse_proxy localhost:{$NOVU_WS_PORT}
+	}
+
+	# Everything else: the portal dev server (ng serve), whose proxy.conf.json forwards /api to the webservice.
+	# The dev server only accepts localhost as Host.
+	handle {
+		reverse_proxy {$PORTAL_UPSTREAM} {
+			header_up Host localhost
+		}
+	}
+}

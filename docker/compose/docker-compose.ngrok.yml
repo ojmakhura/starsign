@@ -1,0 +1,69 @@
+# Overlay: publishes the stack on one ngrok domain (https://$NGROK_DOMAIN).
+#
+#   https://$NGROK_DOMAIN/            -> portal container (its nginx proxies /api to the webservice)
+#   https://$NGROK_DOMAIN/auth/       -> keycloak
+#   https://$NGROK_DOMAIN/novu/api/   -> novu api
+#   https://$NGROK_DOMAIN/novu/ws/    -> novu ws
+#
+# Use it with the base file, either per command:
+#   docker compose -f docker-compose.yml -f docker-compose.ngrok.yml up -d
+# or by setting COMPOSE_FILE=docker-compose.yml:docker-compose.ngrok.yml in .env.
+# Needs NGROK_AUTHTOKEN and NGROK_DOMAIN (your static domain, without https://) in .env.
+
+services:
+  keycloak:
+    environment:
+      KC_HTTP_RELATIVE_PATH: /auth
+      # Keep /health on the management port where the healthcheck looks
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+      # Tokens carry this issuer whichever address they were requested on,
+      # so the webservice's AUTH_URL must be https://$NGROK_DOMAIN/auth too
+      KC_HOSTNAME: https://${NGROK_DOMAIN:?set NGROK_DOMAIN in .env}/auth
+      KC_PROXY_HEADERS: xforwarded
+      STARSIGN_PORTAL_URL: https://${NGROK_DOMAIN}
+
+  # Portal client also accepts the public URL
+  keycloak-client-urls:
+    environment:
+      KC_INTERNAL_URL: http://keycloak:8080/auth
+      PORTAL_URLS: http://localhost:4700 http://localhost:${PORTAL_PORT:-24700} https://${NGROK_DOMAIN}
+
+  webservice:
+    environment:
+      AUTH_URL: http://keycloak:8080/auth
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI: https://${NGROK_DOMAIN}/auth/realms/${REALM:-starsign}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/auth/realms/${REALM:-starsign}/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGINS: https://${NGROK_DOMAIN},http://localhost:4700
+      PORTAL_URL: https://${NGROK_DOMAIN}
+      SIGNING_PORTAL_URL: https://${NGROK_DOMAIN}/sign
+
+  novu-api:
+    environment:
+      API_ROOT_URL: https://${NGROK_DOMAIN}/novu/api
+
+  # Path router in front of everything (host network: upstreams are localhost ports)
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      PROXY_PORT: ${PROXY_PORT:-28000}
+      KEYCLOAK_PORT: ${KEYCLOAK_PORT:-28080}
+      NOVU_API_PORT: ${NOVU_API_PORT:-23000}
+      NOVU_WS_PORT: ${NOVU_WS_PORT:-23002}
+      # The portal container by default; localhost:4700 to serve ng serve instead
+      PORTAL_UPSTREAM: ${PORTAL_UPSTREAM:-localhost:24700}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+
+  # Stop any ngrok on the host that uses the same domain first: one domain, one agent
+  ngrok:
+    image: ngrok/ngrok:3
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - proxy
+    command: ["http", "${PROXY_PORT:-28000}", "--url=https://${NGROK_DOMAIN}", "--log=stdout"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?set NGROK_AUTHTOKEN in .env (ngrok dashboard -> Your Authtoken)}
+    # The agent's inspector (http://localhost:4040, or 4041 if taken) shows every request through the tunnel
