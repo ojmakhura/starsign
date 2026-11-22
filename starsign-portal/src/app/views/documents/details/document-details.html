@@ -61,15 +61,15 @@
         [class]="integrityPassed() ? 'alert alert--seal' : 'alert alert--danger'"
         aria-live="polite"
       >
-        <i
-          class="bi text-xl"
-          [class]="integrityPassed() ? 'bi-patch-check-fill' : 'bi-shield-exclamation'"
-          aria-hidden="true"
-        ></i>
-        <div class="flex-1">
+        @if (integrityPassed()) {
+          <img src="/brand/seal.svg" alt="Valid digital seal" class="h-20 w-20 flex-none" />
+        } @else {
+          <i class="bi bi-shield-exclamation text-xl" aria-hidden="true"></i>
+        }
+        <div class="flex-1 self-center">
           <strong class="mono"
             >{{ report.overallResult }} ·
-            {{ report.verifiedAt | date: 'yyyy-MM-dd HH:mm:ss' }}</strong
+            {{ report.verifiedAt | date: 'dd-MM-yyyy HH:mm:ss' }}</strong
           >
           <p class="m-0 mt-1">
             Audit chain {{ report.auditChainValid ? 'intact' : 'BROKEN' }} ·
@@ -89,23 +89,21 @@
     }
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section class="viewer-frame" aria-label="Document preview">
-        <div
-          class="paper-plate mx-auto flex aspect-[1/1.414] w-full max-w-[560px] flex-col items-center justify-center gap-3 p-10 text-center"
-        >
-          <i class="bi bi-file-earmark-pdf text-6xl text-slate-400" aria-hidden="true"></i>
-          <p class="m-0 font-semibold text-slate-800">{{ d.originalFileName || d.title }}</p>
-          <p class="m-0 font-mono text-[11px] tracking-[0.08em] text-slate-500">
-            {{ d.pageCount ?? 0 }} PAGES · V{{ d.currentVersionNumber ?? 1 }} ·
-            {{ (d.fileSizeBytes ?? 0) / 1048576 | number: '1.0-2' }} MB
-          </p>
-          @if (sealed()) {
+      <section class="viewer-frame flex flex-col gap-3" aria-label="Document">
+        @if (sealed()) {
+          <p class="m-0 flex items-center gap-2 text-body-sm text-ink-muted">
             <span
-              class="mt-4 rounded border border-amber-400 bg-amber-50 px-3 py-1 font-mono text-[11px] tracking-[0.08em] text-amber-700"
-              >SEALED {{ d.completedAt | date: 'dd MMM yyyy' }}</span
+              class="rounded border border-amber-400 bg-amber-50 px-2 py-0.5 font-mono text-[11px] tracking-[0.08em] text-amber-700"
+              >SEALED {{ d.completedAt | date: 'dd-MM-yyyy' }}</span
             >
-          }
-        </div>
+            The signed, sealed copy, with the signing certificate at the end.
+          </p>
+        }
+        <app-document-viewer
+          [documentId]="d.id!"
+          [title]="d.title || 'Document'"
+          [revision]="[d.currentVersionNumber, d.status]"
+        />
       </section>
 
       <aside class="flex flex-col gap-6">
@@ -128,12 +126,12 @@
             </div>
             <div>
               <dt class="eyebrow">Uploaded</dt>
-              <dd class="m-0 mono">{{ d.createdAt | date: 'yyyy-MM-dd HH:mm' }}</dd>
+              <dd class="m-0 mono">{{ d.createdAt | date: 'dd-MM-yyyy HH:mm' }}</dd>
             </div>
             @if (d.retentionUntil) {
               <div>
                 <dt class="eyebrow">Retain until</dt>
-                <dd class="m-0 mono">{{ d.retentionUntil | date: 'yyyy-MM-dd' }}</dd>
+                <dd class="m-0 mono">{{ d.retentionUntil | date: 'dd-MM-yyyy' }}</dd>
               </div>
             }
           </dl>

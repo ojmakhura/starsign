@@ -869,9 +869,9 @@ public class SigningWorkflowServiceImpl
             support.activateNextStage(workflow, reissue, actor);
         }
         support.documentSigningStatus(workflow);
-        support.changed(workflow, WorkflowChangeType.RENEWED, "Renewed until " + workflow.getExpiresAt(), before,
+        support.changed(workflow, WorkflowChangeType.RENEWED, "Renewed until " + (workflow.getExpiresAt() == null ? "-" : workflow.getExpiresAt().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"))), before,
                 renewal.getReason(), actor.id());
-        support.audit(workflow, AuditEventType.WORKFLOW_RENEWED, actor, null, "Renewed until " + workflow.getExpiresAt()
+        support.audit(workflow, AuditEventType.WORKFLOW_RENEWED, actor, null, "Renewed until " + (workflow.getExpiresAt() == null ? "-" : workflow.getExpiresAt().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")))
                 + (StringUtils.isBlank(renewal.getReason()) ? "" : ": " + renewal.getReason().trim()));
         support.publish(workflow, "WORKFLOW_RENEWED", Map.of("expiresAt", workflow.getExpiresAt().toString()));
         return views.workflow(signingWorkflowRepository.save(workflow));

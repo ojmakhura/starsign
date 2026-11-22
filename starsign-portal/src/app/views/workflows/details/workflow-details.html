@@ -70,7 +70,7 @@
         <i class="bi bi-patch-check-fill text-xl" aria-hidden="true"></i>
         <div class="min-w-0">
           <strong class="mono"
-            >CRYPTOGRAPHICALLY SEALED · {{ w.completedAt | date: 'yyyy-MM-dd HH:mm' }}</strong
+            >CRYPTOGRAPHICALLY SEALED · {{ w.completedAt | date: 'dd-MM-yyyy HH:mm' }}</strong
           >
           <p class="m-0 mt-1 hash !text-tertiary">{{ w.finalDocumentSha256 }}</p>
         </div>
@@ -91,7 +91,7 @@
           daysLeft() === null ? '—' : daysLeft()! < 0 ? 'Past' : daysLeft() + 'd'
         }}</strong>
         <span class="stat-card__sub"
-          >{{ w.expiresAt | date: 'dd MMM yyyy' }} · renewed {{ w.renewalCount ?? 0 }}×</span
+          >{{ w.expiresAt | date: 'dd-MM-yyyy' }} · renewed {{ w.renewalCount ?? 0 }}×</span
         >
       </article>
       <article class="stat-card">
@@ -147,7 +147,7 @@
                 </td>
                 <td><app-status-chip [status]="s.status" /></td>
                 <td class="mono text-ink-muted">
-                  {{ (s.signedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}
+                  {{ (s.signedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}
                 </td>
                 <td>
                   @if (canResend(s)) {
@@ -199,7 +199,7 @@
               <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <strong class="font-medium">{{ describe(entry) }}</strong>
                 <span class="mono text-ink-muted">{{
-                  entry.timestamp | date: 'yyyy-MM-dd HH:mm:ss'
+                  entry.timestamp | date: 'dd-MM-yyyy HH:mm:ss'
                 }}</span>
               </div>
               <p class="m-0 cell-note">
@@ -229,7 +229,7 @@
         </h2>
         <dl class="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 text-body-sm">
           <dt class="text-ink-muted">Initiated</dt>
-          <dd class="m-0 mono">{{ (w.initiatedAt | date: 'yyyy-MM-dd') || '—' }}</dd>
+          <dd class="m-0 mono">{{ (w.initiatedAt | date: 'dd-MM-yyyy') || '—' }}</dd>
           <dt class="text-ink-muted">Decline allowed</dt>
           <dd class="m-0 mono">{{ w.allowDecline ? 'YES' : 'NO' }}</dd>
           <dt class="text-ink-muted">Decline ends workflow</dt>
@@ -247,7 +247,7 @@
         @if (w.cancellationReason) {
           <hr class="divider my-4" />
           <span class="eyebrow !text-crimson"
-            >Cancelled {{ w.cancelledAt | date: 'yyyy-MM-dd' }}</span
+            >Cancelled {{ w.cancelledAt | date: 'dd-MM-yyyy' }}</span
           >
           <p class="m-0 mt-1">{{ w.cancellationReason }}</p>
         }

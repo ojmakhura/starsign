@@ -37,6 +37,7 @@ import bw.co.starsign.workflow.SigningFieldMapper;
 import bw.co.starsign.workflow.SigningFieldRepository;
 import bw.co.starsign.workflow.SigningWorkflow;
 import bw.co.starsign.workflow.SigningWorkflowRepository;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -71,6 +72,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
 import org.bouncycastle.asn1.cms.Attribute;
@@ -196,7 +198,12 @@ public class PdfSigningEngineImpl
                     }
                     if (signatureImage != null && image == null)
                     {
-                        image = PDImageXObject.createFromByteArray(document, signatureImage, "signature");
+                        // Stamped in black ink whatever colour it was captured in; an image Java cannot read is
+                        // stamped as it is
+                        BufferedImage ink = SignatureInk.toBlack(signatureImage);
+                        image = ink != null
+                                ? LosslessFactory.createFromImage(document, ink)
+                                : PDImageXObject.createFromByteArray(document, signatureImage, "signature");
                     }
                     String text = StringUtils.defaultIfBlank(typedName,
                             StringUtils.startsWith(value.getValueText(), "signature:") ? null : value.getValueText());
@@ -902,7 +909,15 @@ public class PdfSigningEngineImpl
             lines.add(EvidencePages.Line.field("Status", workflow.getStatus()));
         }
         lines.add(EvidencePages.Line.field("Sent for signing", when(workflow.getInitiatedAt())));
-        lines.add(EvidencePages.Line.field("Completed", when(workflow.getCompletedAt())));
+        // The certificate is built while the request completes, before its completion time is stored: the
+        // request completed with its last signature
+        LocalDateTime completed = workflow.getCompletedAt() != null ? workflow.getCompletedAt()
+                : workflow.getSignatories().stream()
+                        .map(Signatory::getSignedAt)
+                        .filter(java.util.Objects::nonNull)
+                        .max(Comparator.naturalOrder())
+                        .orElse(null);
+        lines.add(EvidencePages.Line.field("Completed", when(completed)));
 
         lines.add(EvidencePages.Line.heading("Signatories"));
         List<Signatory> signatories = new ArrayList<>(workflow.getSignatories());
@@ -975,9 +990,9 @@ public class PdfSigningEngineImpl
     }
 
     private static final java.time.format.DateTimeFormatter WHEN =
-            java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm:ss", java.util.Locale.ENGLISH);
+            java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss", java.util.Locale.ENGLISH);
 
-    /** A readable timestamp with the server's time zone, e.g. "19 Nov 2026, 22:09:37 (Africa/Gaborone)". */
+    /** A readable timestamp with the server's time zone, e.g. "19-11-2026 22:09:37 (Africa/Gaborone)". */
     private static String when(LocalDateTime time)
     {
         return time == null ? null : time.format(WHEN) + " (" + ZoneId.systemDefault() + ")";

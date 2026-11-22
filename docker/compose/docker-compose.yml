@@ -1,0 +1,460 @@
+# StarSign stack: Postgres, Redis, RabbitMQ, SeaweedFS (S3), Keycloak, Novu,
+# plus the webservice (ojmakhura/starsign-api) and portal (ojmakhura/starsign-portal) images.
+#
+#   cp .env.example .env      # then fill in the Novu secrets (see .env.example)
+#   docker compose up -d
+#   docker compose up -d --scale webservice=0 --scale portal=0   # infrastructure only
+#
+# Host ports (defaults, moved to 2xxxx to stay clear of the rogue-* stacks):
+#   portal 24700, webservice 28085,
+#   postgres 25432, redis 26379, rabbitmq 25672 / management 35672,
+#   seaweedfs s3 28333 / master 29333, keycloak 28080,
+#   novu api 23000 / ws 23002 / dashboard 24000.
+
+name: starsign-infra
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+# Settings shared by the Novu api and worker
+x-novu-common: &novu-common
+  NODE_ENV: ${NOVU_NODE_ENV:-local}
+  MONGO_URL: mongodb://${MONGO_USERNAME:-novu}:${MONGO_PASSWORD:-novu}@mongodb:27017/novu-db?authSource=admin
+  MONGO_MIN_POOL_SIZE: 5
+  MONGO_MAX_POOL_SIZE: 10
+  MONGO_AUTO_CREATE_INDEXES: "true"
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+  REDIS_DB_INDEX: 2
+  REDIS_CACHE_SERVICE_HOST: redis
+  REDIS_CACHE_SERVICE_PORT: 6379
+  # Novu stores attachments in S3: use the SeaweedFS gateway (bucket made by seaweedfs-init)
+  S3_LOCAL_STACK: http://seaweedfs:8333
+  S3_BUCKET_NAME: ${NOVU_S3_BUCKET:-novu-local}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-starsign}
+  AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-starsign-secret}
+  STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY:?set NOVU_STORE_ENCRYPTION_KEY in .env (openssl rand -hex 16)}
+  SUBSCRIBER_WIDGET_JWT_EXPIRATION_TIME: 15d
+  SENTRY_DSN: ""
+  NEW_RELIC_ENABLED: "false"
+  NEW_RELIC_APP_NAME: ""
+  NEW_RELIC_LICENSE_KEY: ""
+
+services:
+  # ---------------------------------------------------------------
+  # Postgres: the starsign database, plus a keycloak database (made by postgres/init)
+  # ---------------------------------------------------------------
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_DB: ${DB_NAME:-starsign}
+      POSTGRES_USER: ${DB_USERNAME:-starsign}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-starsign}
+      KEYCLOAK_DB_NAME: ${KEYCLOAK_DB_NAME:-keycloak}
+      KEYCLOAK_DB_USERNAME: ${KEYCLOAK_DB_USERNAME:-keycloak}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-25432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------
+  # Redis: shared by the webservice (db 0) and Novu (db 2)
+  # ---------------------------------------------------------------
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    logging: *logging
+    # An empty REDIS_PASSWORD leaves Redis without auth (local development)
+    command: ["sh", "-c", 'exec redis-server --appendonly yes $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-26379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli $${REDIS_PASSWORD:+-a "$$REDIS_PASSWORD"} --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------
+  # RabbitMQ (management UI on 15672)
+  # ---------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    restart: unless-stopped
+    logging: *logging
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-starsign}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-starsign}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-starsign}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_PORT:-25672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-35672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # ---------------------------------------------------------------
+  # SeaweedFS: S3-compatible object storage (all-in-one server with the S3 gateway)
+  # ---------------------------------------------------------------
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    restart: unless-stopped
+    logging: *logging
+    # The S3 identity is written from S3_ACCESS_KEY / S3_SECRET_KEY on every start, so the
+    # webservice, Novu and SeaweedFS always share one set of credentials (.env)
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        cat > /tmp/s3.json <<EOF
+        {"identities": [{"name": "starsign",
+          "credentials": [{"accessKey": "$$S3_ACCESS_KEY", "secretKey": "$$S3_SECRET_KEY"}],
+          "actions": ["Admin", "Read", "Write", "List", "Tagging"]}]}
+        EOF
+        exec weed server -s3 -s3.config=/tmp/s3.json -dir=/data -volume.max=0
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-starsign}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-starsign-secret}
+    volumes:
+      - seaweedfs-data:/data
+    ports:
+      - "${S3_PORT:-28333}:8333"
+      - "${SEAWEEDFS_MASTER_PORT:-29333}:9333"
+    healthcheck:
+      # Master and filer both up (buckets live in the filer); 127.0.0.1, as localhost resolves to ::1
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status && wget -q -O /dev/null http://127.0.0.1:8888/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # One-shot: creates the buckets (the webservice also creates its own when S3_CREATE_BUCKETS=true)
+  seaweedfs-init:
+    image: chrislusf/seaweedfs:3.97
+    restart: "no"
+    depends_on:
+      seaweedfs: { condition: service_healthy }
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        # Retries until every bucket is listed, then fails loudly if one never appears
+        for b in "$$S3_BUCKET" "$$NOVU_S3_BUCKET"; do
+          for i in $$(seq 1 30); do
+            echo "s3.bucket.list" | weed shell -master=seaweedfs:9333 2>/dev/null | grep -qw "$$b" && { echo "bucket $$b ready"; break; }
+            echo "s3.bucket.create -name $$b" | weed shell -master=seaweedfs:9333 >/dev/null 2>&1 || true
+            sleep 2
+          done
+          echo "s3.bucket.list" | weed shell -master=seaweedfs:9333 2>/dev/null | grep -qw "$$b" || { echo "bucket $$b missing" >&2; exit 1; }
+        done
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-starsign-documents}
+      NOVU_S3_BUCKET: ${NOVU_S3_BUCKET:-novu-local}
+
+  # ---------------------------------------------------------------
+  # Keycloak: stores its data in Postgres; the starsign realm is imported on first start
+  # ---------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8
+    restart: unless-stopped
+    logging: *logging
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: 8080
+      # e.g. KEYCLOAK_LOG_LEVEL=info,org.keycloak.services:debug to trace auth failures
+      KC_LOG_LEVEL: ${KEYCLOAK_LOG_LEVEL:-info}
+      # Every token carries the browser's address as issuer, even when the webservice reaches
+      # Keycloak over the compose network (http://keycloak:8080). Backchannel stays static on
+      # purpose: with it dynamic, the admin API checks tokens against http://keycloak:8080 and
+      # rejects them (401), which breaks registration and user provisioning.
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:28080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Placeholders the realm file reads
+      STARSIGN_API_CLIENT_SECRET: ${STARSIGN_API_CLIENT_SECRET:-}
+      STARSIGN_BOOTSTRAP_ADMIN_PASSWORD: ${STARSIGN_BOOTSTRAP_ADMIN_PASSWORD:-}
+      STARSIGN_PORTAL_URL: ${STARSIGN_PORTAL_URL:-http://localhost:4700}
+    volumes:
+      - ../../starsign-api/starsign-realm.json:/opt/keycloak/data/import/starsign-realm.json:ro
+      # StarSign login theme (logos built by brand/build.py); keycloak-client-urls selects it
+      - ./keycloak/themes/starsign:/opt/keycloak/themes/starsign:ro
+    ports:
+      - "${KEYCLOAK_PORT:-28080}:8080"
+    healthcheck:
+      # The image has no curl/wget: probe the management port's /health/ready with bash
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": *"UP"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # One-shot, safe to re-run:
+  #  - selects the StarSign login theme for the realm
+  #  - lets the portal client redirect to every address the portal is served on
+  #    (the realm file only lists http://localhost:4700)
+  #  - gives starsign-api the kc-admin-api scope: from Keycloak 26.8 the Admin API only accepts
+  #    tokens carrying it (the webservice provisions users through the Admin API)
+  keycloak-client-urls:
+    image: quay.io/keycloak/keycloak:26.8
+    restart: "no"
+    depends_on:
+      keycloak: { condition: service_healthy }
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        kc=/opt/keycloak/bin/kcadm.sh
+        $$kc config credentials --server "$$KC_INTERNAL_URL" --realm master \
+          --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"
+        id=$$($$kc get clients -r "$$REALM" -q clientId=starsign-portal --fields id --format csv --noquotes)
+        uris=$$(printf '"%s/*",' $$PORTAL_URLS); uris="[$${uris%,}]"
+        $$kc update "clients/$$id" -r "$$REALM" \
+          -s "redirectUris=$$uris" -s 'webOrigins=["+"]' -s 'attributes."post.logout.redirect.uris"=+'
+        echo "starsign-portal redirect URIs: $$uris"
+        api=$$($$kc get clients -r "$$REALM" -q clientId=starsign-api --fields id --format csv --noquotes)
+        # Plain bash: the Keycloak image has no awk
+        scope=""
+        while IFS=, read -r sid sname; do
+          [ "$$sname" = "kc-admin-api" ] && scope=$$sid
+        done < <($$kc get client-scopes -r "$$REALM" --fields id,name --format csv --noquotes)
+        # The realm is only imported once, so set the login theme here (safe to repeat)
+        $$kc update "realms/$$REALM" -s loginTheme=starsign
+        echo "$$REALM: login theme starsign"
+        if [ -n "$$scope" ]; then
+          $$kc update "clients/$$api/default-client-scopes/$$scope" -r "$$REALM"
+          echo "starsign-api: kc-admin-api scope assigned"
+        else
+          echo "kc-admin-api scope not in realm (Keycloak older than 26.8?): nothing to do"
+        fi
+    environment:
+      KC_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      REALM: ${REALM:-starsign}
+      # Space-separated: ng serve, the portal container
+      PORTAL_URLS: http://localhost:4700 ${PORTAL_PUBLIC_URL:-http://localhost:24700}
+
+  # ---------------------------------------------------------------
+  # StarSign: webservice (ojmakhura/starsign-api) and portal (ojmakhura/starsign-portal)
+  # ---------------------------------------------------------------
+  webservice:
+    image: ${API_IMAGE_NAME:-ojmakhura/starsign-api}:${API_TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+      seaweedfs-init: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-starsign}
+      DB_USERNAME: ${DB_USERNAME:-starsign}
+      DB_PASSWORD: ${DB_PASSWORD:-starsign}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      S3_ENDPOINT: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-starsign}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-starsign-secret}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-starsign-documents}
+      # Keycloak over the compose network (authorization + admin API) ...
+      AUTH_URL: http://keycloak:8080
+      REALM: ${REALM:-starsign}
+      API_CLIENT_ID: ${API_CLIENT_ID:-starsign-api}
+      STARSIGN_API_CLIENT_SECRET: ${STARSIGN_API_CLIENT_SECRET:-}
+      # ... while tokens are checked against the issuer the browser sees, with keys fetched internally
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:28080}/realms/${REALM:-starsign}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/${REALM:-starsign}/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGINS: ${PORTAL_PUBLIC_URL:-http://localhost:24700},http://localhost:4700
+      PORTAL_URL: ${PORTAL_PUBLIC_URL:-http://localhost:24700}
+      SIGNING_PORTAL_URL: ${PORTAL_PUBLIC_URL:-http://localhost:24700}/sign
+      # Novu: create an API key in the dashboard (http://localhost:24000) and set NOVU_ENABLED=true
+      NOVU_ENABLED: ${NOVU_ENABLED:-false}
+      NOVU_API_KEY: ${NOVU_API_KEY:-}
+      NOVU_BASE_URL: http://novu-api:3000
+      # Self-signed dev keystore, kept across restarts in the webservice-data volume
+      SIGNING_KEYSTORE_PATH: /home/starsign/signing/starsign-dev.p12
+      SIGNING_KEYSTORE_PASSWORD: ${SIGNING_KEYSTORE_PASSWORD:-changeit}
+      SIGNING_GENERATE_DEV_KEYSTORE: ${SIGNING_GENERATE_DEV_KEYSTORE:-true}
+    volumes:
+      - webservice-data:/home/starsign
+    ports:
+      - "${API_PORT:-28085}:8085"
+
+  portal:
+    image: ${PORTAL_IMAGE_NAME:-ojmakhura/starsign-portal}:${PORTAL_TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - webservice
+    environment:
+      # nginx proxies /api to the webservice
+      API_UPSTREAM: http://webservice:8085
+    volumes:
+      # Runtime config (apiUrl, redirectUri, authDomain, realm, clientId), edited on the host;
+      # reload the page after a change, no restart needed
+      - ${PORTAL_ENV_JSON:-./portal/env.json}:/usr/share/nginx/html/env.json:ro
+      # Turns off the image's script that would regenerate env.json from environment variables
+      - /dev/null:/docker-entrypoint.d/40-env-json.sh:ro
+    ports:
+      - "${PORTAL_PORT:-24700}:80"
+
+  # ---------------------------------------------------------------
+  # Novu (self-hosted): mongodb + api + worker + ws + dashboard
+  # ---------------------------------------------------------------
+  mongodb:
+    image: mongo:8.0.17
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-novu}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-novu}
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", 'mongosh --quiet -u "$${MONGO_INITDB_ROOT_USERNAME}" -p "$${MONGO_INITDB_ROOT_PASSWORD}" --eval "db.adminCommand(''ping'').ok" | grep -q 1']
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  novu-api:
+    image: ghcr.io/novuhq/novu/api:${NOVU_VERSION:-3.20.0}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      seaweedfs-init: { condition: service_completed_successfully }
+    environment:
+      <<: *novu-common
+      PORT: 3000
+      API_ROOT_URL: ${NOVU_API_URL:-http://localhost:23000}
+      FRONT_BASE_URL: ${NOVU_DASHBOARD_URL:-http://localhost:24000}
+      JWT_SECRET: ${NOVU_JWT_SECRET:?set NOVU_JWT_SECRET in .env (openssl rand -hex 32)}
+      NOVU_SECRET_KEY: ${NOVU_SECRET_KEY:?set NOVU_SECRET_KEY in .env (openssl rand -hex 32)}
+      NOVU_TOKEN_SIGNING_KEYS: ""
+      API_CONTEXT_PATH: ""
+      IS_API_IDEMPOTENCY_ENABLED: "false"
+      IS_API_RATE_LIMITING_ENABLED: "false"
+      IS_NEW_MESSAGES_API_RESPONSE_ENABLED: "true"
+      IS_V2_ENABLED: "true"
+      IS_SELF_HOSTED: "true"
+    ports:
+      - "${NOVU_API_PORT:-23000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/v1/health-check || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  novu-worker:
+    image: ghcr.io/novuhq/novu/worker:${NOVU_VERSION:-3.20.0}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      seaweedfs-init: { condition: service_completed_successfully }
+    environment:
+      <<: *novu-common
+      PORT: 3004
+      API_ROOT_URL: http://novu-api:3000
+      BROADCAST_QUEUE_CHUNK_SIZE: 100
+      MULTICAST_QUEUE_CHUNK_SIZE: 100
+      IS_EMAIL_INLINE_CSS_DISABLED: "false"
+      IS_USE_MERGED_DIGEST_ID_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3004/v1/health-check || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  novu-ws:
+    image: ghcr.io/novuhq/novu/ws:${NOVU_VERSION:-3.20.0}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      mongodb: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      NODE_ENV: ${NOVU_NODE_ENV:-local}
+      PORT: 3002
+      MONGO_URL: mongodb://${MONGO_USERNAME:-novu}:${MONGO_PASSWORD:-novu}@mongodb:27017/novu-db?authSource=admin
+      MONGO_MIN_POOL_SIZE: 5
+      MONGO_MAX_POOL_SIZE: 10
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${NOVU_JWT_SECRET:?set NOVU_JWT_SECRET in .env (openssl rand -hex 32)}
+      WS_CONTEXT_PATH: ""
+      NEW_RELIC_ENABLED: "false"
+      NEW_RELIC_APP_NAME: ""
+      NEW_RELIC_LICENSE_KEY: ""
+    ports:
+      - "${NOVU_WS_PORT:-23002}:3002"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3002/v1/health-check || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  novu-dashboard:
+    image: ghcr.io/novuhq/novu/dashboard:${NOVU_VERSION:-3.20.0}
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      novu-api: { condition: service_healthy }
+      novu-worker: { condition: service_healthy }
+    environment:
+      # Read by the browser, so these are host addresses
+      VITE_API_HOSTNAME: ${NOVU_API_URL:-http://localhost:23000}
+      VITE_WEBSOCKET_HOSTNAME: ${NOVU_WS_URL:-http://localhost:23002}
+    ports:
+      - "${NOVU_DASHBOARD_PORT:-24000}:4000"
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  seaweedfs-data:
+  mongodb-data:
+  webservice-data:

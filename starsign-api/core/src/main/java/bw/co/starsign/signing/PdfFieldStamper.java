@@ -2,6 +2,7 @@ package bw.co.starsign.signing;
 
 import bw.co.starsign.workflow.FieldType;
 import bw.co.starsign.workflow.SigningField;
+import java.awt.Color;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import org.apache.commons.lang3.StringUtils;
@@ -66,6 +67,9 @@ final class PdfFieldStamper
 
         content.saveGraphicsState();
         content.transform(matrix);
+        // Values are written in black ink (signature images are made black in SignatureInk)
+        content.setNonStrokingColor(Color.BLACK);
+        content.setStrokingColor(Color.BLACK);
         if (stamp.image() != null)
         {
             drawImage(content, stamp.image(), width, height);

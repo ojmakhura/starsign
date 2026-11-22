@@ -1,0 +1,59 @@
+/* StarSign palette over keycloak.v2. Light by default; .pf-v5-theme-dark when the OS (or the
+   portal's saved choice, see js/starsign-theme.js) is dark. The realm's displayNameHtml renders
+   div.kc-logo-text, which keycloak.v2 draws from --keycloak-logo-url. */
+:root {
+  --keycloak-logo-url: url('../img/logo-light.svg');
+  --keycloak-bg-logo-url: none;
+  --keycloak-logo-height: 84px;
+  --keycloak-logo-width: 300px;
+  --keycloak-card-top-color: #0284c7;
+
+  --pf-v5-global--primary-color--100: #0273b1;
+  --pf-v5-global--primary-color--200: #025a8c;
+  --pf-v5-global--link--Color: #0273b1;
+  --pf-v5-global--link--Color--hover: #025a8c;
+  --pf-v5-global--active-color--100: #0273b1;
+  --pf-v5-global--FontFamily--text: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.pf-v5-theme-dark {
+  --keycloak-logo-url: url('../img/logo-dark.svg');
+  --keycloak-card-top-color: #38bdf8;
+
+  --pf-v5-global--primary-color--100: #38bdf8;
+  --pf-v5-global--primary-color--200: #7dd3fc;
+  --pf-v5-global--link--Color: #38bdf8;
+  --pf-v5-global--link--Color--hover: #7dd3fc;
+  --pf-v5-global--active-color--100: #38bdf8;
+}
+
+.login-pf body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(2 132 199 / 0.08), transparent 60%),
+    #f4f7fb;
+}
+
+.pf-v5-theme-dark.login-pf body,
+.pf-v5-theme-dark .login-pf body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgb(56 189 248 / 0.08), transparent 60%),
+    #050914;
+}
+
+.pf-v5-theme-dark .pf-v5-c-login__main {
+  background-color: #0f172a;
+}
+
+/* Primary buttons: dark text on the light sky blue in dark mode */
+.pf-v5-theme-dark .pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--Color: #050914;
+  --pf-v5-c-button--m-primary--hover--Color: #050914;
+  --pf-v5-c-button--m-primary--BackgroundColor: #38bdf8;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #7dd3fc;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: #0273b1;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #025a8c;
+}

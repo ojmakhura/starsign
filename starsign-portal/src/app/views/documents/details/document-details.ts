@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -12,12 +12,13 @@ import { DocumentApiStore } from '@store/document/document-api.store';
 import { injectLocalStore } from '@store/local-store';
 import { LoaderState } from '@store/loader-state';
 import { StoreRequest } from '@store/store-request';
+import { DocumentViewer } from './document-viewer';
 import { toast } from 'ngx-sonner';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-document-details',
-  imports: [Can, DatePipe, DecimalPipe, RouterLink, StatusChip],
+  imports: [Can, DatePipe, DocumentViewer, RouterLink, StatusChip],
   templateUrl: './document-details.html',
 })
 export class DocumentDetails {

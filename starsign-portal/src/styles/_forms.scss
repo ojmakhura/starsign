@@ -25,7 +25,7 @@
     min-height: 38px;
     padding: 0.5rem 0.75rem;
     background: var(--color-obsidian);
-    border: 1px solid rgb(255 255 255 / 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
     border-radius: var(--radius-control);
     color: var(--color-ink);
     font: 400 var(--text-body-md) / var(--text-body-md--line-height) var(--font-sans);
@@ -34,7 +34,7 @@
       box-shadow 0.15s;
 
     &::placeholder {
-      color: rgb(148 163 184 / 0.6);
+      color: color-mix(in srgb, var(--color-ink-muted) 75%, transparent);
     }
 
     &:focus {
@@ -68,11 +68,6 @@
     background-size: 5px 5px;
     background-repeat: no-repeat;
     padding-right: 2rem;
-  }
-
-  input[type='date'].field-control,
-  input[type='datetime-local'].field-control {
-    color-scheme: dark;
   }
 
   .field-errors {
@@ -112,8 +107,8 @@
         content: '';
         width: 9px;
         height: 5px;
-        border-left: 2px solid var(--color-abyss);
-        border-bottom: 2px solid var(--color-abyss);
+        border-left: 2px solid var(--color-on-cyan);
+        border-bottom: 2px solid var(--color-on-cyan);
         transform: rotate(-45deg) translate(1px, -1px);
         opacity: 0;
       }
@@ -145,7 +140,7 @@
         height: 6px;
         border: 0;
         border-radius: 9999px;
-        background: var(--color-abyss);
+        background: var(--color-on-cyan);
         transform: none;
       }
     }
@@ -168,7 +163,7 @@
       cursor: pointer;
 
       &:has(input:checked) {
-        background: rgb(0 229 255 / 0.12);
+        background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
         color: var(--color-cyan);
       }
 

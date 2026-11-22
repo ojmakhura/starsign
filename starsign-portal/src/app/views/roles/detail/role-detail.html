@@ -110,11 +110,11 @@
           </div>
           <div>
             <dt class="eyebrow">Created</dt>
-            <dd class="m-0 mono">{{ (r.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (r.createdAt | date: 'dd-MM-yyyy') || '—' }}</dd>
           </div>
           <div>
             <dt class="eyebrow">Modified</dt>
-            <dd class="m-0 mono">{{ (r.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+            <dd class="m-0 mono">{{ (r.modifiedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
           </div>
         </dl>
       </aside>

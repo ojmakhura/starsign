@@ -135,7 +135,7 @@ public class SigningTemplateServiceImpl
         entity.setStatus(TemplateStatus.DRAFT);
         entity.setTemplateVersion(1);
         apply(entity, template, true);
-        SigningTemplate saved = signingTemplateRepository.saveAndFlush(entity);
+        SigningTemplate saved = persist(entity);
         audit(saved, "Template '" + saved.getName() + "' created");
         return dto(saved);
     }
@@ -202,7 +202,7 @@ public class SigningTemplateServiceImpl
         {
             checkUsable(entity);
         }
-        SigningTemplate saved = signingTemplateRepository.saveAndFlush(entity);
+        SigningTemplate saved = persist(entity);
         audit(saved, "Template '" + saved.getName() + "' changed (version " + saved.getTemplateVersion() + ")");
         return dto(saved);
     }
@@ -535,9 +535,9 @@ public class SigningTemplateServiceImpl
 
         // Roles that are not in the list go, with the fields placed for them
         template.getFields().removeIf(field -> !kept.contains(field.getSignatoryRole().getId().toString()));
-        signingTemplateRepository.saveAndFlush(template);
+        persist(template);
         template.getSignatories().removeIf(role -> !kept.contains(role.getId().toString()));
-        signingTemplateRepository.saveAndFlush(template);
+        persist(template);
 
         Map<Integer, Integer> orders = new HashMap<Integer, Integer>();
         for (SigningTemplateSignatoryDTO dto : roles)
@@ -638,7 +638,7 @@ public class SigningTemplateServiceImpl
         failIfAny(errors);
 
         template.getFields().removeIf(field -> field.getId() != null && !kept.contains(field.getId().toString()));
-        signingTemplateRepository.saveAndFlush(template);
+        persist(template);
         for (int i = 0; i < fields.size(); i++)
         {
             SigningTemplateFieldDTO dto = fields.get(i);
@@ -769,6 +769,21 @@ public class SigningTemplateServiceImpl
         event.setEntityId(template.getId().toString());
         event.setDetails(details);
         auditTrailService.record(event);
+    }
+
+    /**
+     * Writes the template and the roles and fields added to it. A new template is persisted; a managed one is only
+     * flushed, so its new children are persisted in place. Merging it instead would cascade the merge to the new
+     * children as copies, leaving fields that point at roles (and ids) that were never written.
+     */
+    private SigningTemplate persist(SigningTemplate template)
+    {
+        if (template.getId() == null)
+        {
+            return signingTemplateRepository.saveAndFlush(template);
+        }
+        signingTemplateRepository.flush();
+        return template;
     }
 
     private void stamp(Auditable entity, boolean creating)

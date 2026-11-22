@@ -78,7 +78,7 @@ type InboxSort = 'deadline' | 'requested';
                 {{ item.documentTitle }} · from {{ item.requestedBy || 'unknown sender' }}
               </p>
               <p class="m-0 mt-1 mono text-ink-muted">
-                REQUESTED {{ item.requestedAt | date: 'dd MMM yyyy, HH:mm' }} ·
+                REQUESTED {{ item.requestedAt | date: 'dd-MM-yyyy HH:mm' }} ·
                 {{ item.fieldCount ?? 0 }} FIELDS
               </p>
             </div>
@@ -86,7 +86,7 @@ type InboxSort = 'deadline' | 'requested';
               <span
                 class="chip"
                 [class]="isDueSoon(item.deadline) ? 'chip--voided' : 'chip--pending'"
-                >Due {{ item.deadline | date: 'dd MMM, HH:mm' }}</span
+                >Due {{ item.deadline | date: 'dd-MM-yyyy HH:mm' }}</span
               >
             }
             <a

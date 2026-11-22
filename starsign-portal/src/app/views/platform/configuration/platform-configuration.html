@@ -21,7 +21,7 @@
         <p class="m-0 text-body-sm text-ink-muted">
           Applies to every organisation; organisation signing policies can only be stricter.
           @if (policy()?.modifiedAt) {
-            Last changed {{ policy()!.modifiedAt | date: 'dd MMM yyyy, HH:mm' }}.
+            Last changed {{ policy()!.modifiedAt | date: 'dd-MM-yyyy HH:mm' }}.
           }
         </p>
       </div>
@@ -251,7 +251,7 @@
               <td><span class="chip chip--neutral">{{ setting.valueType }}</span></td>
               <td>{{ setting.category }}</td>
               <td class="mono text-ink-muted">
-                {{ ((setting.modifiedAt ?? setting.createdAt) | date: 'dd MMM yyyy') || '—' }}
+                {{ ((setting.modifiedAt ?? setting.createdAt) | date: 'dd-MM-yyyy') || '—' }}
               </td>
               <td>
                 @if (canEdit()) {

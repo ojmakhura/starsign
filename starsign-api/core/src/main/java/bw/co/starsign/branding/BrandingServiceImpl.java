@@ -73,13 +73,13 @@ public class BrandingServiceImpl
 
     /** The built-in StarSign colours (portal styles/tailwind.css). */
     private static final Map<String, String> DEFAULT_SEEDS = Map.of(
-            "primary", "#00e5ff",
+            "primary", "#0284c7",
             "secondary", "#1e2a4a",
-            "tertiary", "#e5b94c",
-            "neutral", "#10131a",
+            "tertiary", "#fcd34d",
+            "neutral", "#0f172a",
             "error", "#ff5c6c",
             "success", "#2e7d32",
-            "warning", "#e5a000",
+            "warning", "#f59e0b",
             "info", "#0288d1");
 
     private static final Map<BrandingAsset, Set<String>> ALLOWED_TYPES = Map.of(

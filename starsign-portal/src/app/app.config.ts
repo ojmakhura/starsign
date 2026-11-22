@@ -1,3 +1,4 @@
+import { DATE_PIPE_DEFAULT_OPTIONS } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
@@ -76,6 +77,8 @@ export const initialiseApp = async () => {
   const appConfig: ApplicationConfig = {
     providers: [
       provideBrowserGlobalErrorListeners(),
+      // Dates show as dd-MM-yyyy wherever a template uses | date without its own format
+      { provide: DATE_PIPE_DEFAULT_OPTIONS, useValue: { dateFormat: 'dd-MM-yyyy' } },
       provideAppInitializer(() => inject(EnvLoaderService).env.set(env)),
       provideKeycloakAndInterceptor(env),
       provideRouter(
@@ -86,7 +89,11 @@ export const initialiseApp = async () => {
       ),
       provideHttpClient(
         withFetch(),
-        withInterceptors([apiPrefixInterceptor, includeBearerTokenInterceptor, errorHandlerInterceptor]),
+        withInterceptors([
+          apiPrefixInterceptor,
+          includeBearerTokenInterceptor,
+          errorHandlerInterceptor,
+        ]),
       ),
     ],
   };

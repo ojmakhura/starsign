@@ -19,7 +19,7 @@
       text-align: left;
       padding: 0.75rem 1rem;
       color: var(--color-ink-muted);
-      background: rgb(255 255 255 / 0.02);
+      background: color-mix(in srgb, var(--color-ink) 2%, transparent);
       border-bottom: 1px solid var(--color-hairline);
       white-space: nowrap;
     }
@@ -34,7 +34,7 @@
       transition: background-color 0.15s;
 
       &:hover {
-        background: rgb(0 229 255 / 0.03);
+        background: color-mix(in srgb, var(--color-cyan) 3%, transparent);
       }
 
       &:last-child td {
@@ -73,13 +73,13 @@
   .progress {
     height: 4px;
     border-radius: 9999px;
-    background: rgb(255 255 255 / 0.08);
+    background: color-mix(in srgb, var(--color-ink) 8%, transparent);
     overflow: hidden;
 
     &__bar {
       height: 100%;
       background: var(--color-cyan);
-      box-shadow: 0 0 8px rgb(0 229 255 / 0.6);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--color-cyan) 60%, transparent);
       transition: width 0.3s;
     }
 
@@ -106,7 +106,7 @@
       top: 6px;
       bottom: 6px;
       width: 1px;
-      background: linear-gradient(var(--color-cyan), rgb(0 229 255 / 0.15));
+      background: linear-gradient(var(--color-cyan), color-mix(in srgb, var(--color-cyan) 15%, transparent));
     }
 
     &__item {
@@ -125,7 +125,7 @@
 
       &--done {
         background: var(--color-cyan);
-        box-shadow: 0 0 10px rgb(0 229 255 / 0.5);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--color-cyan) 50%, transparent);
       }
 
       &--sealed {

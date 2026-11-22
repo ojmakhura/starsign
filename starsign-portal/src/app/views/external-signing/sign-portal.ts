@@ -42,6 +42,8 @@ import { SignaturePad } from '@shared/signature-pad/signature-pad';
 import { StatusChip } from '@shared/status-chip/status-chip';
 import { apiErrorMessage } from '@store/app-state';
 import { toast } from 'ngx-sonner';
+import { BrandLogo } from '@shared/brand-logo/brand-logo';
+import { ThemeToggle } from '@shared/theme-toggle/theme-toggle';
 import { firstValueFrom } from 'rxjs';
 
 interface FieldRow {
@@ -150,6 +152,8 @@ async function sha256Hex(blob: Blob): Promise<string> {
 @Component({
   selector: 'app-sign-portal',
   imports: [
+    BrandLogo,
+    ThemeToggle,
     DatePipe,
     FieldErrors,
     FormField,

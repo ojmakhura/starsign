@@ -38,7 +38,7 @@ interface SettingsTab {
       color: var(--color-ink);
     }
     .settings-tabs a.is-active {
-      background: rgb(0 229 255 / 0.12);
+      background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
       color: var(--color-cyan);
     }
     .settings-tabs a:focus-visible {

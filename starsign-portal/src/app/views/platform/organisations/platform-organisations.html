@@ -84,7 +84,7 @@
                 <span class="chip" [class]="'chip--' + tone(org.status)">{{ humanise(org.status) }}</span>
               </td>
               <td class="mono">{{ org.userCount ?? '—' }}</td>
-              <td class="mono text-ink-muted">{{ (org.createdAt | date: 'dd MMM yyyy') || '—' }}</td>
+              <td class="mono text-ink-muted">{{ (org.createdAt | date: 'dd-MM-yyyy') || '—' }}</td>
             </tr>
           } @empty {
             <tr>

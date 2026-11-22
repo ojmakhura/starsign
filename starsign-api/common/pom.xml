@@ -5,7 +5,7 @@
     <parent>
         <groupId>bw.co.starsign</groupId>
         <artifactId>starsign</artifactId>
-        <version>0.0.1</version>
+        <version>1.1.0</version>
     </parent>
     <artifactId>starsign-common</artifactId>
     <packaging>jar</packaging>

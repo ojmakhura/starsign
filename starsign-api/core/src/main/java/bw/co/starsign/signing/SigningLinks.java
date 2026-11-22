@@ -41,6 +41,29 @@ public class SigningLinks
         return StringUtils.removeEnd(signingPortalUrl, "/") + "/" + token;
     }
 
+    /**
+     * Where browsers reach the API (app.public-api-url). Blank means behind the portal at {@code <portalUrl>/api},
+     * which is how the portal's nginx (and the development proxy) serve it.
+     */
+    private String publicApiUrl;
+
+    public String getPublicApiUrl()
+    {
+        return publicApiUrl;
+    }
+
+    public void setPublicApiUrl(String publicApiUrl)
+    {
+        this.publicApiUrl = publicApiUrl;
+    }
+
+    /** Direct download of the completed document with a download-only token (see CompletedCopyLinks). */
+    public String completedCopyLink(String token)
+    {
+        String api = StringUtils.isNotBlank(publicApiUrl) ? publicApiUrl : StringUtils.removeEnd(portalUrl, "/") + "/api";
+        return StringUtils.removeEnd(api, "/") + "/signing/invitations/" + token + "/completed";
+    }
+
     /** Internal signatories sign in the portal with their own account. */
     public String internalSigningLink(String workflowId, String signatoryId)
     {

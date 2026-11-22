@@ -170,8 +170,8 @@
                   @for (s of sessions(); track s.sessionId) {
                     <tr>
                       <td class="mono">{{ s.ipAddress || '—' }}</td>
-                      <td class="mono text-ink-muted">{{ (s.started | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
-                      <td class="mono text-ink-muted">{{ (s.lastAccess | date: 'dd MMM yyyy, HH:mm') || '—' }}</td>
+                      <td class="mono text-ink-muted">{{ (s.started | date: 'dd-MM-yyyy HH:mm') || '—' }}</td>
+                      <td class="mono text-ink-muted">{{ (s.lastAccess | date: 'dd-MM-yyyy HH:mm') || '—' }}</td>
                       <td>{{ (s.clients ?? []).join(', ') || '—' }}</td>
                     </tr>
                   } @empty {
@@ -204,11 +204,11 @@
             </div>
             <div>
               <dt class="eyebrow">Last sign-in</dt>
-              <dd class="m-0 mono">{{ (u.lastLoginAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+              <dd class="m-0 mono">{{ (u.lastLoginAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
             </div>
             <div>
               <dt class="eyebrow">Member since</dt>
-              <dd class="m-0 mono">{{ (u.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+              <dd class="m-0 mono">{{ (u.createdAt | date: 'dd-MM-yyyy') || '—' }}</dd>
             </div>
           </dl>
         </section>

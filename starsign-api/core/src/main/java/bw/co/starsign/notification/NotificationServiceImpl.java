@@ -811,8 +811,23 @@ public class NotificationServiceImpl
             payload.put("senderName", settings.getSenderDisplayName().trim());
         }
         String subject = StringUtils.defaultIfBlank(notification.getSubject(), humanise(notification.getEventType()));
-        String html = StringUtils.defaultIfBlank(body, NotificationTemplates.escapeHtml(subject));
-        String text = StringUtils.defaultIfBlank(NotificationTemplates.toText(html), subject);
+        String content = StringUtils.defaultIfBlank(body, NotificationTemplates.escapeHtml(subject));
+        String contentText = StringUtils.defaultIfBlank(NotificationTemplates.toText(content), subject);
+        // The stored body is the message alone; the logo header and footer go around it as it is sent,
+        // with the organisation's current branding. A template that is a whole HTML document is sent as it is.
+        String html;
+        String text;
+        if (EmailLayout.isDocument(content))
+        {
+            html = content;
+            text = contentText;
+        }
+        else
+        {
+            EmailLayout.Brand brand = emailBrand(notification.getOrganisation());
+            html = EmailLayout.wrap(content, subject, brand);
+            text = contentText + "\n\n--\n" + EmailLayout.textFooter(brand);
+        }
         return GatewayCall.with(hint, () -> emailGateway.send(from, notification.getRecipientAddress(), subject, html,
                 text, headers));
     }
@@ -1137,11 +1152,11 @@ public class NotificationServiceImpl
         {
             putIfPresent(model, "supportEmail", branding.getSupportEmail());
             putIfPresent(model, "supportUrl", branding.getSupportUrl());
-            putIfPresent(model, "emailLogoUrl", branding.getEmailLogoUrl());
             putIfPresent(model, "emailFooter", branding.getEmailFooter());
         }
         model.put("portalUrl", portalUrl);
         model.put("signingPortalUrl", signingPortalUrl);
+        putIfPresent(model, "emailLogoUrl", emailLogoUrl(branding));
 
         if (request.getTemplateModel() != null)
         {
@@ -1158,7 +1173,93 @@ public class NotificationServiceImpl
         {
             model.put("link", link(asString(model.get("linkPath"))));
         }
+        // Dates reach the templates (built-in and organisation copies) as dd-MM-yyyy, whatever form the caller used
+        model.replaceAll((key, value) -> displayDate(value));
         return model;
+    }
+
+    /** What the e-mail layout shows around a message for this organisation (platform branding without one). */
+    private EmailLayout.Brand emailBrand(Organisation organisation)
+    {
+        BrandingDTO branding = branding(organisation);
+        String logoUrl = emailLogoUrl(branding);
+        boolean defaultLogo = logoUrl != null && logoUrl.equals(portalUrl + EmailLayout.DEFAULT_LOGO_PATH);
+        return new EmailLayout.Brand(
+                branding == null || StringUtils.isBlank(branding.getAppName()) ? "StarSign" : branding.getAppName(),
+                organisation == null ? null
+                        : StringUtils.defaultIfBlank(organisation.getTradingName(), organisation.getName()),
+                logoUrl,
+                defaultLogo,
+                branding == null ? null : branding.getEmailFooter(),
+                branding == null ? null : branding.getSupportEmail(),
+                branding == null ? null : branding.getSupportUrl());
+    }
+
+    /**
+     * An absolute URL for the e-mail header logo ({{emailLogoUrl}}): the organisation's or platform's upload
+     * (an API path, reached through the portal's /api proxy), else the StarSign logo the portal serves
+     * (public/brand/email-logo.png). Null when the portal URL is not configured.
+     */
+    private String emailLogoUrl(BrandingDTO branding)
+    {
+        if (StringUtils.isBlank(portalUrl))
+        {
+            return null;
+        }
+        String uploaded = branding == null ? null : branding.getEmailLogoUrl();
+        if (StringUtils.isBlank(uploaded))
+        {
+            return portalUrl + EmailLayout.DEFAULT_LOGO_PATH;
+        }
+        return uploaded.matches("(?i)^(https?:)?//.*") ? uploaded : portalUrl + "/api" + uploaded;
+    }
+
+    private static final java.time.format.DateTimeFormatter DISPLAY_DATE =
+            java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    private static final java.time.format.DateTimeFormatter DISPLAY_DATE_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+    private static final java.util.regex.Pattern ISO_DATE = java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final java.util.regex.Pattern ISO_DATE_TIME =
+            java.util.regex.Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?");
+
+    /**
+     * A date or timestamp as shown to people: dd-MM-yyyy, with HH:mm for timestamps. Accepts java.time values and
+     * their ISO strings (whole value only, so titles that merely contain a date are left alone); anything else is
+     * returned unchanged.
+     */
+    static Object displayDate(Object value)
+    {
+        if (value instanceof LocalDateTime time)
+        {
+            return time.format(DISPLAY_DATE_TIME);
+        }
+        if (value instanceof java.time.LocalDate day)
+        {
+            return day.format(DISPLAY_DATE);
+        }
+        if (value instanceof java.time.OffsetDateTime time)
+        {
+            return time.format(DISPLAY_DATE_TIME);
+        }
+        if (value instanceof String text)
+        {
+            try
+            {
+                if (ISO_DATE_TIME.matcher(text).matches())
+                {
+                    return LocalDateTime.parse(text).format(DISPLAY_DATE_TIME);
+                }
+                if (ISO_DATE.matcher(text).matches())
+                {
+                    return java.time.LocalDate.parse(text).format(DISPLAY_DATE);
+                }
+            }
+            catch (java.time.format.DateTimeParseException e)
+            {
+                return value;
+            }
+        }
+        return value;
     }
 
     /** Signatory pages live on the signing portal, everything else on the main portal. */

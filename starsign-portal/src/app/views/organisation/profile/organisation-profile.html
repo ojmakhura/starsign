@@ -152,11 +152,11 @@
             }
           </dd>
           <dt class="text-ink-muted">Activated</dt>
-          <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd MMM yyyy') || '—' }}</dd>
+          <dd class="m-0 mono">{{ (org.activatedAt | date: 'dd-MM-yyyy') || '—' }}</dd>
           <dt class="text-ink-muted">Registered</dt>
-          <dd class="m-0 mono">{{ (org.createdAt | date: 'dd MMM yyyy') || '—' }}</dd>
+          <dd class="m-0 mono">{{ (org.createdAt | date: 'dd-MM-yyyy') || '—' }}</dd>
           <dt class="text-ink-muted">Last changed</dt>
-          <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd MMM yyyy, HH:mm') || '—' }}</dd>
+          <dd class="m-0 mono">{{ (org.modifiedAt | date: 'dd-MM-yyyy HH:mm') || '—' }}</dd>
         </dl>
       </div>
 

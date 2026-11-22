@@ -653,7 +653,7 @@ public class StorageServiceImpl
             {
                 throw new StorageServiceException(retentionUntil == null
                         ? "The file is an original or final signed document that is kept indefinitely and cannot be deleted"
-                        : "The file is an original or final signed document that must be kept until " + retentionUntil);
+                        : "The file is an original or final signed document that must be kept until " + (retentionUntil == null ? "-" : retentionUntil.format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy"))));
             }
         }
     }

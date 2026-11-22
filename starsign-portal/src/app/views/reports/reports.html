@@ -147,7 +147,7 @@
             <tbody>
               @for (row of volume(); track row.period) {
                 <tr class="mono">
-                  <th scope="row">{{ row.period }}</th>
+                  <th scope="row">{{ periodLabel(row.period) }}</th>
                   <td>{{ row.created ?? 0 }}</td>
                   <td>{{ row.sent ?? 0 }}</td>
                   <td>{{ row.signed ?? 0 }}</td>
@@ -225,7 +225,7 @@
             <tbody>
               @for (row of performanceRows(); track row.period) {
                 <tr class="mono">
-                  <th scope="row">{{ row.period }}</th>
+                  <th scope="row">{{ periodLabel(row.period) }}</th>
                   <td>{{ row.sent ?? 0 }}</td>
                   <td>{{ row.signed ?? 0 }}</td>
                   <td>{{ row.pending ?? 0 }}</td>
@@ -322,7 +322,7 @@
                   <td class="mono">{{ row.workflowsInitiated ?? 0 }}</td>
                   <td class="mono">{{ row.workflowsCompleted ?? 0 }}</td>
                   <td class="mono text-ink-muted">
-                    {{ (row.lastActivityAt | date: 'dd MMM yyyy, HH:mm') || '—' }}
+                    {{ (row.lastActivityAt | date: 'dd-MM-yyyy HH:mm') || '—' }}
                   </td>
                 </tr>
               } @empty {

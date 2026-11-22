@@ -55,6 +55,7 @@ import { firstValueFrom } from 'rxjs';
         <section class="stage p-6" aria-live="polite">
           <div class="flex flex-wrap items-center gap-4">
             @if (passed()) {
+              <img src="/brand/seal.svg" alt="Valid digital seal" class="h-24 w-24 flex-none" />
               <span class="seal"
                 ><i class="bi bi-patch-check-fill" aria-hidden="true"></i
                 ><span class="mono">VERIFIED · TAMPER-EVIDENT SEAL INTACT</span></span
@@ -63,7 +64,7 @@ import { firstValueFrom } from 'rxjs';
               <span class="chip chip--voided">{{ r.overallResult || 'NOT VERIFIED' }}</span>
             }
             <span class="mono ml-auto text-ink-muted">{{
-              r.verifiedAt | date: 'yyyy-MM-dd HH:mm:ss'
+              r.verifiedAt | date: 'dd-MM-yyyy HH:mm:ss'
             }}</span>
           </div>
           <dl class="mt-6 grid gap-4 md:grid-cols-2">

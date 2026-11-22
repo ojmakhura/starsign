@@ -3,6 +3,9 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { hasPermission } from '@auth/page-permissions';
 import { isPublicPath, isPublicRoute } from '@auth/public-pages';
 import { Loader } from '@shared/loader/loader';
+import { BrandLogo } from '@shared/brand-logo/brand-logo';
+import { ThemeToggle } from '@shared/theme-toggle/theme-toggle';
+import { ThemeService } from '@core/theme/theme.service';
 import { EnvLoaderService } from '@services/env-loader.service';
 import { SessionStore } from '@store/session.store';
 import { InternalSigningApiStore } from '@store/signing/internal-signing-api.store';
@@ -14,13 +17,14 @@ import { NAVIGATION } from './navigation';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Loader, NgxSonnerToaster],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Loader, NgxSonnerToaster, BrandLogo, ThemeToggle],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
 export class Shell {
   protected readonly keycloak = inject(Keycloak);
   protected readonly session = inject(SessionStore);
+  protected readonly theme = inject(ThemeService);
   protected readonly signing = inject(InternalSigningApiStore);
   private readonly envLoader = inject(EnvLoaderService);
   private readonly router = inject(Router);

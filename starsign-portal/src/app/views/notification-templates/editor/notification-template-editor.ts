@@ -27,6 +27,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   CHANNEL_META,
   CHANNELS,
+  emailLayout,
   EVENT_META,
   EVENT_TYPES,
   NOVU_PAYLOAD,
@@ -64,7 +65,7 @@ const LOCALE = /^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/;
   styles: `
     .preview-frame {
       inline-size: 100%;
-      block-size: 360px;
+      block-size: 520px;
       border: 0;
       border-radius: var(--radius-control);
       background: #fff;
@@ -228,17 +229,15 @@ export class NotificationTemplateEditor implements OnInit {
     () => this.serverPreview() ?? renderTemplate(this.model().bodyTemplate, SAMPLE_MODEL, this.isEmail()),
   );
   protected readonly renderedText = computed(() => this.renderedBody());
-  /** Email bodies are HTML: shown in a sandboxed frame (no scripts, no same origin). */
+  /**
+   * Email bodies are HTML: shown in a sandboxed frame (no scripts, no same origin), inside the default
+   * e-mail layout (logo header and footer) the API sends them in, unless the body is a whole document.
+   */
   protected readonly renderedHtml = computed<SafeHtml>(() => {
     const body = this.renderedBody();
     const isHtml = /<[a-z][^>]*>/i.test(body);
-    const doc =
-      '<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px/1.5 system-ui,sans-serif;color:#1f2937;margin:16px;' +
-      (isHtml ? '' : 'white-space:pre-line;') +
-      '}</style></head><body>' +
-      body +
-      '</body></html>';
-    return this.sanitizer.bypassSecurityTrustHtml(doc);
+    const content = isHtml ? body : `<div style="white-space:pre-line">${body}</div>`;
+    return this.sanitizer.bypassSecurityTrustHtml(emailLayout(content, this.renderedSubject() ?? '', SAMPLE_MODEL));
   });
 
   constructor() {
