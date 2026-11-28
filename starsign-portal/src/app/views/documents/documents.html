@@ -7,8 +7,8 @@
       </nav>
       <h1 class="page-title">Document vault</h1>
       <p class="page-subtitle">
-        {{ store.dataList().length }} documents · {{ inFlightCount() }} in signing ·
-        {{ sealedCount() }} sealed
+        {{ results.totalElements() }} {{ results.totalElements() === 1 ? 'document' : 'documents' }}
+        match the search
       </p>
     </div>
     <div class="page-actions">
@@ -16,9 +16,10 @@
         type="button"
         class="btn btn--secondary"
         (click)="exportCsv()"
-        [disabled]="!store.dataList().length"
+        [disabled]="!results.items().length"
+        title="Exports the rows of the page shown"
       >
-        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+        <i class="bi bi-download" aria-hidden="true"></i> Export page
       </button>
       <a *appCan="'documents:edit'" class="btn btn--primary" routerLink="upload"
         ><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Upload PDF</a
@@ -28,7 +29,7 @@
 
   <form
     class="card flex flex-col gap-4"
-    (submit)="$event.preventDefault()"
+    (submit)="search($event)"
     aria-label="Search documents"
   >
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
@@ -89,12 +90,16 @@
       >
         Reset
       </button>
+      <button type="submit" class="btn btn--primary" [disabled]="results.loading()">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        {{ results.loading() ? 'Searching…' : 'Search' }}
+      </button>
     </div>
   </form>
 
-  @if (store.error()) {
+  @if (results.error()) {
     <div class="alert alert--danger" role="alert">
-      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ store.messages()[0] }}
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{{ results.error() }}
     </div>
   }
 
@@ -112,7 +117,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (doc of store.dataList(); track doc.id) {
+          @for (doc of results.items(); track doc.id) {
             <tr>
               <td>
                 <div class="flex items-center gap-3">
@@ -154,7 +159,7 @@
                 <div class="empty-state">
                   <i class="bi bi-file-earmark-lock2" aria-hidden="true"></i>
                   <span>{{
-                    store.loading() ? 'Searching the vault…' : 'No documents match these criteria.'
+                    results.loading() ? 'Searching the vault…' : 'No documents match these criteria.'
                   }}</span>
                 </div>
               </td>
@@ -163,5 +168,15 @@
         </tbody>
       </table>
     </div>
+    <app-pager
+      [pageNumber]="results.pageNumber()"
+      [pageSize]="results.pageSize()"
+      [totalElements]="results.totalElements()"
+      [totalPages]="results.totalPages()"
+      [shown]="results.items().length"
+      [disabled]="results.loading()"
+      (pageChange)="results.goTo($event)"
+      (sizeChange)="results.setPageSize($event)"
+    />
   </section>
 </div>

@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.workflow;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.template.TemplateInstantiationDTO;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -38,6 +39,13 @@ public interface SigningWorkflowService
      * @return List<SigningWorkflowListDTO>
      */
     public List<SigningWorkflowListDTO> search(@Valid SigningWorkflowSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<SigningWorkflowListDTO>
+     */
+    public Page<SigningWorkflowListDTO> pagedSearch(@Valid SigningWorkflowSearchCriteria criteria) ;
 
     /**
      * Rejected when locked.

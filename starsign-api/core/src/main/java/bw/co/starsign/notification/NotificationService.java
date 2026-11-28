@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -67,6 +68,13 @@ bw.co.starsign.notification.NotificationService.recordDeliveryReceipt(receipt)
      * @return List<NotificationDTO>
      */
     public List<NotificationDTO> search(@Valid NotificationSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<NotificationDTO>
+     */
+    public Page<NotificationDTO> pagedSearch(@Valid NotificationSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for

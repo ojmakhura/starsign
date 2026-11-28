@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.document;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.core.io.Resource;
@@ -42,6 +43,13 @@ public interface DocumentService
      * @return List<DocumentListDTO>
      */
     public List<DocumentListDTO> search(@Valid DocumentSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<DocumentListDTO>
+     */
+    public Page<DocumentListDTO> pagedSearch(@Valid DocumentSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for bw.co.starsign.document.DocumentService.updateDetails

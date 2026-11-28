@@ -1,14 +1,16 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { debounce, form, FormField, schema } from '@angular/forms/signals';
+import { form, FormField, schema } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { Can } from '@auth/can.directive';
-import { DocumentSearchCriteria, DocumentStatus } from '@models/document';
+import { DocumentListDTO, DocumentSearchCriteria, DocumentStatus } from '@models/document';
+import { DocumentApi } from '@services/document/document-api';
 import { FieldErrors } from '@shared/field-errors/field-errors';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { saveFile, toCsv } from '@shared/save-file';
 import { StatusChip } from '@shared/status-chip/status-chip';
 import { statusLabel } from '@shared/status-chip/status-meta';
-import { DocumentApiStore } from '@store/document/document-api.store';
 import { LoaderState } from '@store/loader-state';
 import { dateRange, endOfDay, startOfDay } from './search-dates';
 
@@ -29,40 +31,25 @@ const EMPTY_FILTER: DocumentFilter = {
 };
 
 const filterSchema = schema<DocumentFilter>((path) => {
-  debounce(path.text, 350);
   dateRange(path.createdFrom, path.createdTo);
 });
 
 @Component({
   selector: 'app-documents',
-  imports: [Can, DatePipe, FieldErrors, FormField, RouterLink, StatusChip],
+  imports: [Can, DatePipe, FieldErrors, FormField, Pager, RouterLink, StatusChip],
   templateUrl: './documents.html',
 })
 export class Documents {
-  protected readonly store = inject(DocumentApiStore);
+  private readonly documentApi = inject(DocumentApi);
+  protected readonly results = new PagedSearch<DocumentSearchCriteria, DocumentListDTO>(
+    (criteria) => this.documentApi.pagedSearch(criteria),
+    'Unable to search the document vault.',
+  );
 
   protected readonly filter = signal<DocumentFilter>({ ...EMPTY_FILTER });
   protected readonly filterForm = form(this.filter, filterSchema);
   protected readonly statuses = Object.values(DocumentStatus);
   protected readonly statusLabel = statusLabel;
-
-  /**
-   * The search criteria, derived from the filter form. While the form is invalid
-   * (e.g. a reversed date range) it is null and the store keeps the last results.
-   */
-  private readonly criteria = computed<DocumentSearchCriteria | null>(() => {
-    if (this.filterForm().invalid()) {
-      return null;
-    }
-    const f = this.filter();
-    return {
-      text: f.text.trim() || null,
-      status: f.status || null,
-      createdFrom: startOfDay(f.createdFrom),
-      createdTo: endOfDay(f.createdTo),
-      includeArchived: f.includeArchived,
-    };
-  });
 
   protected readonly activeFilters = computed(() => {
     const f = this.filter();
@@ -75,24 +62,25 @@ export class Documents {
     ].filter(Boolean) as { key: keyof DocumentFilter; label: string }[];
   });
 
-  protected readonly sealedCount = computed(
-    () => this.store.dataList().filter((d) => d.status === DocumentStatus.COMPLETED).length,
-  );
-  protected readonly inFlightCount = computed(
-    () =>
-      this.store
-        .dataList()
-        .filter(
-          (d) =>
-            d.status === DocumentStatus.PENDING_SIGNATURES ||
-            d.status === DocumentStatus.PARTIALLY_SIGNED,
-        ).length,
-  );
-
   constructor() {
-    // rxMethod subscribes to the signal: every valid change to the filter re-runs the search.
-    this.store.search(this.criteria);
-    inject(LoaderState).track(() => this.store.loading(), 'Searching documents…');
+    inject(LoaderState).track(() => this.results.loading(), 'Searching documents…');
+    void this.search();
+  }
+
+  /** Runs the search with the filter's criteria, from the first page. */
+  protected search(event?: Event): void {
+    event?.preventDefault();
+    if (this.filterForm().invalid()) {
+      return;
+    }
+    const f = this.filter();
+    void this.results.search({
+      text: f.text.trim() || null,
+      statuses: f.status ? [f.status] : null,
+      createdFrom: startOfDay(f.createdFrom),
+      createdTo: endOfDay(f.createdTo),
+      includeArchived: f.includeArchived,
+    });
   }
 
   protected progress(signed?: number | null, total?: number | null): number {
@@ -103,15 +91,17 @@ export class Documents {
 
   protected clearFilter(key: keyof DocumentFilter): void {
     this.filter.update((f) => ({ ...f, [key]: EMPTY_FILTER[key] }));
+    this.search();
   }
 
   protected resetFilters(): void {
     this.filterForm().reset({ ...EMPTY_FILTER });
+    this.search();
   }
 
   protected exportCsv(): void {
-    const rows = this.store
-      .dataList()
+    const rows = this.results
+      .items()
       .map((d) => [
         d.referenceNumber,
         d.title,

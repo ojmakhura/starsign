@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.workflow;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditEvidenceExportDTO;
 import bw.co.starsign.notification.SigningReminderDTO;
@@ -237,6 +238,13 @@ public class WorkflowControllerImpl implements WorkflowController {
     @Operation(summary = "Search", description = "Search")
     public ResponseEntity<List<SigningWorkflowListDTO>> search(@Valid SigningWorkflowSearchCriteria criteria) throws Exception {
         return ResponseEntity.ok(signingWorkflowService.search(criteria == null ? new SigningWorkflowSearchCriteria() : criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<SigningWorkflowListDTO>> pagedSearch(@Valid SigningWorkflowSearchCriteria criteria) throws Exception {
+        return ResponseEntity.ok(signingWorkflowService.pagedSearch(criteria == null ? new SigningWorkflowSearchCriteria() : criteria));
     }
 
 

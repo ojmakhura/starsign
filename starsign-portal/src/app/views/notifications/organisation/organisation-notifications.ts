@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { SortDirection } from '@models/common';
@@ -12,9 +12,9 @@ import {
 } from '@models/notification';
 import { NotificationApi } from '@services/notification/notification-api';
 import { FieldErrors } from '@shared/field-errors/field-errors';
-import { apiErrorMessage } from '@store/app-state';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { SessionStore } from '@store/session.store';
-import { firstValueFrom } from 'rxjs';
 import { dateRange } from '../../documents/search-dates';
 import { NotificationTabs } from '../notification-tabs';
 
@@ -36,12 +36,10 @@ const EMPTY: NotificationFilter = {
   to: '',
 };
 
-const PAGE_SIZE = 25;
-
 /** Every notification the organisation sent: delivery status, attempts and errors. */
 @Component({
   selector: 'app-organisation-notifications',
-  imports: [DatePipe, FieldErrors, FormField, NotificationTabs, RouterLink],
+  imports: [DatePipe, FieldErrors, FormField, NotificationTabs, Pager, RouterLink],
   templateUrl: './organisation-notifications.html',
 })
 export class OrganisationNotifications {
@@ -55,13 +53,10 @@ export class OrganisationNotifications {
   protected readonly filter = signal<NotificationFilter>({ ...EMPTY });
   protected readonly filterForm = form(this.filter, (path) => dateRange(path.from, path.to));
 
-  protected readonly notifications = signal<NotificationDTO[]>([]);
-  protected readonly page = signal(0);
-  protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
-  private readonly applied = signal<NotificationSearchCriteria>({});
-
-  protected readonly hasNext = computed(() => this.notifications().length === PAGE_SIZE);
+  protected readonly results = new PagedSearch<NotificationSearchCriteria, NotificationDTO>(
+    (criteria) => this.notificationApi.pagedSearch(criteria),
+    'Unable to search the notifications.',
+  );
 
   constructor() {
     void this.search();
@@ -94,7 +89,7 @@ export class OrganisationNotifications {
       return;
     }
     const f = this.filter();
-    this.applied.set({
+    await this.results.search({
       organisationId: this.session.organisationId(),
       eventType: f.eventType || null,
       channel: f.channel || null,
@@ -103,30 +98,13 @@ export class OrganisationNotifications {
       // The API takes local date-times without a zone.
       from: f.from ? `${f.from}T00:00:00` : null,
       to: f.to ? `${f.to}T23:59:59` : null,
-      pageSize: PAGE_SIZE,
       sortField: 'createdAt',
       sortDirection: SortDirection.DESC,
     });
-    await this.load(0);
   }
 
   protected reset(): void {
     this.filter.set({ ...EMPTY });
     void this.search();
-  }
-
-  protected async load(page: number): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-    try {
-      this.notifications.set(
-        await firstValueFrom(this.notificationApi.search({ ...this.applied(), pageNumber: page })),
-      );
-      this.page.set(page);
-    } catch (error) {
-      this.error.set(apiErrorMessage(error, 'Unable to search the notifications.'));
-    } finally {
-      this.loading.set(false);
-    }
   }
 }

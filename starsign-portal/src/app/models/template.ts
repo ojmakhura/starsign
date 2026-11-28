@@ -39,6 +39,32 @@ export interface SigningTemplateFieldDTO {
   tabOrder?: number | null;
 }
 
+/** A signing template in a list: its summary and the number of its roles, stages and fields, without the roles and fields themselves. */
+export interface SigningTemplateListDTO {
+  /** The template's id. */
+  id?: string | null;
+  /** The template's name. */
+  name?: string | null;
+  /** What the template is for. */
+  description?: string | null;
+  /** Draft, active or archived. */
+  status?: TemplateStatus | null;
+  /** How the roles are routed: in sequence, in parallel or in stages. */
+  executionMode?: ExecutionMode | null;
+  /** The version, raised on every change. */
+  templateVersion?: number | null;
+  /** The number of signatory roles. */
+  roleCount?: number | null;
+  /** The number of signing stages the roles fall into. */
+  stageCount?: number | null;
+  /** The number of fields placed on the template. */
+  fieldCount?: number | null;
+  /** When the template was created. */
+  createdAt?: string | null;
+  /** When the template was last changed. */
+  modifiedAt?: string | null;
+}
+
 export interface SigningTemplateSearchCriteria extends BaseSearchCriteria {
   name?: string | null;
   status?: TemplateStatus | null;

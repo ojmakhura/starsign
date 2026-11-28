@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logs go to the console (collected by Docker) and to OpenTelemetry. The OTEL appender hands each event to the
+  OpenTelemetry SDK that InstallOpenTelemetryAppender connects it to; the SDK exports it over OTLP to
+  ${OTLP_URL}/v1/logs when OTLP_ENABLED=true, with the trace and span ids of the request that logged it.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <!-- Thread name and id -->
+        <captureExperimentalAttributes>true</captureExperimentalAttributes>
+        <!-- Logging class, method and line -->
+        <captureCodeAttributes>true</captureCodeAttributes>
+        <!-- Every MDC entry, as a log attribute -->
+        <captureMdcAttributes>*</captureMdcAttributes>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OTEL"/>
+    </root>
+</configuration>

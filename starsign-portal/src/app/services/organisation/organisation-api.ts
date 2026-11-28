@@ -16,6 +16,7 @@ import {
   OrganisationSigningPolicyDTO,
   OrganisationStatusChangeDTO,
 } from '@models/organisation';
+import { Page } from '@models/page';
 import { Observable, map } from 'rxjs';
 import { toParams } from '../http-params';
 
@@ -104,6 +105,10 @@ export class OrganisationApi {
     return this.http
       .post<OrganisationListDTO[]>(`${this.path}/search`, criteria)
       .pipe(map((list) => list ?? []));
+  }
+
+  pagedSearch(criteria: OrganisationSearchCriteria): Observable<Page<OrganisationListDTO>> {
+    return this.http.post<Page<OrganisationListDTO>>(`${this.path}/search/paged`, criteria);
   }
 
   updateNotificationSettings(

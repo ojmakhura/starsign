@@ -4,6 +4,10 @@
 //
 package bw.co.starsign.organisation;
 
+import bw.co.starsign.common.ListItemQueries;
+import bw.co.starsign.common.ListQuery;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Sort;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -15,7 +19,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Collection;
 
-public interface OrganisationRepository extends JpaRepository<Organisation, UUID>, JpaSpecificationExecutor<Organisation> {
+public interface OrganisationRepository extends JpaRepository<Organisation, UUID>, JpaSpecificationExecutor<Organisation>, ListItemQueries {
 
     Optional<Organisation> findByTenantId(String tenantId);
 
@@ -25,9 +29,28 @@ public interface OrganisationRepository extends JpaRepository<Organisation, UUID
 
     boolean existsByTenantId(String tenantId);
 
-    /** Users per organisation (removed users left out), as [organisationId, count] rows. */
-    @Query("select u.organisation.id, count(u) from OrganisationUser u"
-            + " where u.organisation.id in :organisationIds and u.deletedAt is null group by u.organisation.id")
-    List<Object[]> countUsers(@Param("organisationIds") Collection<UUID> organisationIds);
+    /**
+     * The list items of the organisations, built in one query: a constructor expression the specification
+     * filters. The user count leaves out removed users.
+     */
+    String LIST_ITEMS = "select new bw.co.starsign.organisation.OrganisationListDTO(cast(o.id as String), o.tenantId,"
+            + " o.name, o.registrationNumber, o.status, o.createdAt,"
+            + " (select count(u) from OrganisationUser u where u.organisation = o and u.deletedAt is null))"
+            + " from Organisation o";
+
+    ListQuery<Organisation, OrganisationListDTO> LIST_QUERY = ListQuery.of(Organisation.class,
+            OrganisationListDTO.class, LIST_ITEMS);
+
+    /** The list items of the organisations the specification matches, in the order of the sort. */
+    default List<OrganisationListDTO> findListItems(Specification<Organisation> specification, Sort sort)
+    {
+        return findListItems(LIST_QUERY, specification, Pageable.unpaged(sort));
+    }
+
+    /** One page of the list items of the organisations the specification matches, with their number. */
+    default Page<OrganisationListDTO> findListItemPage(Specification<Organisation> specification, Pageable page)
+    {
+        return findListItemPage(LIST_QUERY, specification, page);
+    }
 
 }

@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.document;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -253,6 +254,36 @@ public abstract class DocumentServiceBase
      * @throws Exception
      */
     protected abstract List<DocumentListDTO> handleSearch(@Valid DocumentSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<DocumentListDTO> pagedSearch(final @Valid DocumentSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.document.DocumentService.pagedSearch(@Valid DocumentSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("DocumentService.pagedSearch(@Valid DocumentSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid DocumentSearchCriteria)}
+     * @param criteria DocumentSearchCriteria the search criteria, page number and size
+     * @return Page<DocumentListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<DocumentListDTO> handlePagedSearch(@Valid DocumentSearchCriteria criteria)
         throws Exception;
 
     /**

@@ -1,14 +1,16 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { debounce, form, FormField } from '@angular/forms/signals';
+import { Component, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { Can } from '@auth/can.directive';
-import { SigningWorkflowSearchCriteria, WorkflowStatus } from '@models/workflow';
+import { SigningWorkflowListDTO, SigningWorkflowSearchCriteria, WorkflowStatus } from '@models/workflow';
+import { WorkflowApi } from '@services/workflow/workflow-api';
 import { FieldErrors } from '@shared/field-errors/field-errors';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { StatusChip } from '@shared/status-chip/status-chip';
 import { statusLabel } from '@shared/status-chip/status-meta';
 import { LoaderState } from '@store/loader-state';
-import { WorkflowApiStore } from '@store/workflow/workflow-api.store';
 import { dateRange, endOfDay, startOfDay } from '../documents/search-dates';
 
 interface WorkflowFilter {
@@ -29,18 +31,20 @@ const EMPTY: WorkflowFilter = {
 
 @Component({
   selector: 'app-workflows',
-  imports: [Can, DatePipe, FieldErrors, FormField, RouterLink, StatusChip],
+  imports: [Can, DatePipe, FieldErrors, FormField, Pager, RouterLink, StatusChip],
   templateUrl: './workflows.html',
 })
 export class Workflows {
-  protected readonly store = inject(WorkflowApiStore);
+  private readonly workflowApi = inject(WorkflowApi);
+  protected readonly results = new PagedSearch<SigningWorkflowSearchCriteria, SigningWorkflowListDTO>(
+    (criteria) => this.workflowApi.pagedSearch(criteria),
+    'Unable to search workflows.',
+  );
   protected readonly statuses = Object.values(WorkflowStatus);
   protected readonly statusLabel = statusLabel;
 
   protected readonly filter = signal<WorkflowFilter>({ ...EMPTY });
   protected readonly filterForm = form(this.filter, (path) => {
-    debounce(path.text, 350);
-    debounce(path.signatoryEmail, 500);
     dateRange(path.createdFrom, path.createdTo);
   });
 
@@ -52,41 +56,36 @@ export class Workflows {
     { label: 'Completed', status: WorkflowStatus.COMPLETED },
   ];
 
-  private readonly criteria = computed<SigningWorkflowSearchCriteria | null>(() => {
+  constructor() {
+    inject(LoaderState).track(() => this.results.loading(), 'Searching workflows…');
+    void this.search();
+  }
+
+  /** Runs the search with the filter's criteria, from the first page. */
+  protected search(event?: Event): void {
+    event?.preventDefault();
     if (this.filterForm().invalid()) {
-      return null;
+      return;
     }
     const f = this.filter();
-    return {
+    void this.results.search({
       text: f.text.trim() || null,
-      status: f.status || null,
+      statuses: f.status ? [f.status] : null,
       signatoryEmail: f.signatoryEmail.trim() || null,
       createdFrom: startOfDay(f.createdFrom),
       createdTo: endOfDay(f.createdTo),
-    };
-  });
-
-  protected readonly counts = computed(() => {
-    const list = this.store.dataList();
-    return {
-      total: list.length,
-      active: list.filter((w) => w.status === WorkflowStatus.IN_PROGRESS).length,
-      expiringSoon: list.filter(
-        (w) =>
-          w.status === WorkflowStatus.IN_PROGRESS &&
-          w.expiresAt &&
-          new Date(w.expiresAt).getTime() - Date.now() < 3 * 86_400_000,
-      ).length,
-    };
-  });
-
-  constructor() {
-    this.store.search(this.criteria);
-    inject(LoaderState).track(() => this.store.loading(), 'Searching workflows…');
+    });
   }
 
+  protected reset(): void {
+    this.filterForm().reset({ ...EMPTY });
+    this.search();
+  }
+
+  /** A status tab filters at once. */
   protected selectTab(status: WorkflowStatus | ''): void {
     this.filterForm.status().value.set(status);
+    this.search();
   }
 
   protected progress(signed?: number | null, total?: number | null): number {

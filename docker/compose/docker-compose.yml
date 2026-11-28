@@ -311,6 +311,13 @@ services:
       SIGNING_KEYSTORE_PATH: /home/starsign/signing/starsign-dev.p12
       SIGNING_KEYSTORE_PASSWORD: ${SIGNING_KEYSTORE_PASSWORD:-changeit}
       SIGNING_GENERATE_DEV_KEYSTORE: ${SIGNING_GENERATE_DEV_KEYSTORE:-true}
+      # OpenTelemetry: logs, traces and metrics over OTLP/HTTP to the collector at OTLP_URL
+      OTLP_ENABLED: ${OTLP_ENABLED:-false}
+      OTLP_URL: ${OTLP_URL:-http://host.docker.internal:4318}
+      TRACING_PROBABILITY: ${TRACING_PROBABILITY:-1.0}
+    extra_hosts:
+      # A collector on the host: host.docker.internal on Linux too
+      - "host.docker.internal:host-gateway"
     volumes:
       - webservice-data:/home/starsign
     ports:

@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -60,6 +61,15 @@ public class NotificationControllerImpl implements NotificationController {
 
         // The service limits the search to the caller's organisation (and own notifications for -own)
         return ResponseEntity.ok(notificationService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<NotificationDTO>> pagedSearch(@Valid NotificationSearchCriteria criteria) throws Exception {
+
+        // The service limits the search to the caller's organisation (and own notifications for -own)
+        return ResponseEntity.ok(notificationService.pagedSearch(criteria));
     }
     
     /**

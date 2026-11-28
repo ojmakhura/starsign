@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { AuditEventDTO, AuditEvidenceExportDTO } from '@models/audit';
 import { SigningReminderDTO } from '@models/notification';
+import { Page } from '@models/page';
 import {
   CreateWorkflowDTO,
   ReorderRequestDTO,
@@ -152,6 +153,13 @@ export class WorkflowApi {
     return this.http.post<AuditEvidenceExportDTO>(`${this.path}/${workflowId}/evidence`, {});
   }
 
+  sendReminder(id: string, signatoryId: string): Observable<SigningReminderDTO> {
+    return this.http.post<SigningReminderDTO>(
+      `${this.path}/${id}/signatories/${signatoryId}/remind`,
+      {},
+    );
+  }
+
   /** An empty list may come back with no body; it is normalised to []. */
   saveFields(id: string, fields?: SigningFieldDTO[] | null): Observable<SigningFieldDTO[]> {
     return this.http
@@ -166,11 +174,8 @@ export class WorkflowApi {
       .pipe(map((list) => list ?? []));
   }
 
-  sendReminder(id: string, signatoryId: string): Observable<SigningReminderDTO> {
-    return this.http.post<SigningReminderDTO>(
-      `${this.path}/${id}/signatories/${signatoryId}/remind`,
-      {},
-    );
+  pagedSearch(criteria: SigningWorkflowSearchCriteria): Observable<Page<SigningWorkflowListDTO>> {
+    return this.http.post<Page<SigningWorkflowListDTO>>(`${this.path}/search/paged`, criteria);
   }
 
   update(id: string, workflow: SigningWorkflowDTO): Observable<SigningWorkflowDTO> {

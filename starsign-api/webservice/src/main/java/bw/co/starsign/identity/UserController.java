@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -91,6 +92,12 @@ public interface UserController {
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_users:list')")
     public @Nullable ResponseEntity<List<OrganisationUserListDTO>> search(@RequestBody(required = true) @Valid OrganisationUserSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_users:list')")
+    public ResponseEntity<Page<OrganisationUserListDTO>> pagedSearch(@RequestBody(required = true) @Valid OrganisationUserSearchCriteria criteria) throws Exception;
 
     @DeleteMapping(
         value = "/{id}/sessions"

@@ -65,19 +65,6 @@ public class WorkflowViews
         return dto;
     }
 
-    public SigningWorkflowListDTO listItem(SigningWorkflow entity)
-    {
-        SigningWorkflowListDTO dto = signingWorkflowMapper.toSigningWorkflowListDTO(entity);
-        dto.setDocumentTitle(entity.getDocument().getTitle());
-        dto.setOwnerName(name(entity.getOwner()));
-        dto.setSignatoryCount(entity.getSignatories().size());
-        dto.setSignedCount((int) entity.getSignatories().stream()
-                .filter(s -> s.getStatus() == SignatoryStatus.SIGNED)
-                .count());
-        dto.setStageCount(entity.getStages().size());
-        return dto;
-    }
-
     public SigningStageDTO stage(SigningStage entity)
     {
         SigningStageDTO dto = signingStageMapper.toSigningStageDTO(entity);

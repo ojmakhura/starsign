@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.audit;
 
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -65,6 +66,14 @@ public class AuditControllerImpl implements AuditController {
     public ResponseEntity<List<AuditEventDTO>> search(@Valid AuditEventSearchCriteria criteria) throws Exception {
 
         return ResponseEntity.ok(auditTrailService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<AuditEventDTO>> pagedSearch(@Valid AuditEventSearchCriteria criteria) throws Exception {
+
+        return ResponseEntity.ok(auditTrailService.pagedSearch(criteria));
     }
 
 

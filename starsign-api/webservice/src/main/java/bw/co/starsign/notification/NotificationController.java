@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -46,4 +47,10 @@ public interface NotificationController {
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_notifications:list')")
     public @Nullable ResponseEntity<List<NotificationDTO>> search(@RequestBody(required = true) @Valid NotificationSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_notifications:list')")
+    public ResponseEntity<Page<NotificationDTO>> pagedSearch(@RequestBody(required = true) @Valid NotificationSearchCriteria criteria) throws Exception;
 }

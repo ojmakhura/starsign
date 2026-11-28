@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.document;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditTrailService;
 import bw.co.starsign.context.CallerContext;
@@ -189,6 +190,15 @@ public class DocumentControllerImpl implements DocumentController {
 
         requireOrganisationUser();
         return ResponseEntity.ok(documentService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<DocumentListDTO>> pagedSearch(@Valid DocumentSearchCriteria criteria) throws Exception {
+
+        requireOrganisationUser();
+        return ResponseEntity.ok(documentService.pagedSearch(criteria));
     }
 
 

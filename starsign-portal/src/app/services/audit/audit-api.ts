@@ -7,6 +7,7 @@ import {
   AuditEventSearchCriteria,
   AuditLogIntegrityRecordDTO,
 } from '@models/audit';
+import { Page } from '@models/page';
 import { Observable, map } from 'rxjs';
 import { toParams } from '../http-params';
 
@@ -29,6 +30,10 @@ export class AuditApi {
     return this.http
       .post<AuditEventDTO[]>(`${this.path}/search`, criteria)
       .pipe(map((list) => list ?? []));
+  }
+
+  pagedSearch(criteria: AuditEventSearchCriteria): Observable<Page<AuditEventDTO>> {
+    return this.http.post<Page<AuditEventDTO>>(`${this.path}/search/paged`, criteria);
   }
 
   verifyChainUrl(chainKey: string): string {

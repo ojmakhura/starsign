@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -217,6 +218,36 @@ OrganisationUserService.findByKeycloakUserId(keycloakUserId)
      * @throws Exception
      */
     protected abstract List<OrganisationUserListDTO> handleSearch(@Valid OrganisationUserSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<OrganisationUserListDTO> pagedSearch(final @Valid OrganisationUserSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.OrganisationUserService.pagedSearch(@Valid OrganisationUserSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("OrganisationUserService.pagedSearch(@Valid OrganisationUserSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid OrganisationUserSearchCriteria)}
+     * @param criteria OrganisationUserSearchCriteria the search criteria, page number and size
+     * @return Page<OrganisationUserListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<OrganisationUserListDTO> handlePagedSearch(@Valid OrganisationUserSearchCriteria criteria)
         throws Exception;
 
     /**

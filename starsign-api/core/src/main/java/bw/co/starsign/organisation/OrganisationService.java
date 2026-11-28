@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -62,6 +63,13 @@ bw.co.starsign.organisation.OrganisationService.findByTenantId(tenantId)
      * @return List<OrganisationListDTO>
      */
     public List<OrganisationListDTO> search(@Valid OrganisationSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<OrganisationListDTO>
+     */
+    public Page<OrganisationListDTO> pagedSearch(@Valid OrganisationSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for bw.co.starsign.organisation.OrganisationService.updateProfile

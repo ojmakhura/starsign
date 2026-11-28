@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -50,6 +51,7 @@ public class OutboxServiceImpl
 
     private final ObjectProvider<OutboxEventHandler> handlers;
     private final TransactionTemplate transaction;
+    private final ApplicationEventPublisher events;
 
     public OutboxServiceImpl(
         OutboxEventRepository outboxEventRepository,
@@ -57,7 +59,8 @@ public class OutboxServiceImpl
         ProcessedMessageRepository processedMessageRepository,
         ProcessedMessageMapper processedMessageMapper,
         ObjectProvider<OutboxEventHandler> handlers,
-        PlatformTransactionManager transactionManager) {
+        PlatformTransactionManager transactionManager,
+        ApplicationEventPublisher events) {
 
         super(
             outboxEventRepository,
@@ -65,6 +68,7 @@ public class OutboxServiceImpl
             processedMessageRepository,
             processedMessageMapper);
         this.handlers = handlers;
+        this.events = events;
         this.transaction = new TransactionTemplate(transactionManager);
         this.transaction.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
     }
@@ -127,18 +131,10 @@ public class OutboxServiceImpl
         entity.setCorrelationId(StringUtils.trimToNull(event.getCorrelationId()));
         entity.setCreatedAt(now);
         entity.setCreatedBy(SYSTEM);
-        return outboxEventMapper.toOutboxEventDTO(outboxEventRepository.save(entity));
-    }
-
-    /**
-     * Each event is claimed, handled and settled in transactions of its own, so one failing event
-     * neither blocks nor rolls back the others: the relay itself runs outside any transaction.
-     */
-    @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public int publishPending(int batchSize)
-    {
-        return super.publishPending(batchSize);
+        OutboxEvent saved = outboxEventRepository.save(entity);
+        // The relay picks this up once the caller's transaction commits (nothing happens on rollback)
+        events.publishEvent(new OutboxEventEnqueued(String.valueOf(saved.getId())));
+        return outboxEventMapper.toOutboxEventDTO(saved);
     }
 
     /**

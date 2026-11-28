@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.1</version>
+        <version>4.2.0</version>
         <relativePath />
     </parent>
     <groupId>bw.co.starsign</groupId>
@@ -30,7 +30,7 @@
             <!-- Mockito for mocking objects in tests -->
             <dependency>
                 <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
+                <artifactId>mockito-core</artifactId> 
                 <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -105,6 +105,14 @@
                 <artifactId>novu-java</artifactId>
                 <version>${novu.version}</version>
             </dependency>
+            <!-- OpenTelemetry instrumentation (the Logback appender that sends the logs over OTLP) -->
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <modules>
@@ -129,6 +137,9 @@
         <pdfbox.version>3.0.8</pdfbox.version>
         <bouncycastle.version>1.84</bouncycastle.version>
         <novu.version>3.19.0</novu.version>
+        <!-- Pairs with the OpenTelemetry SDK managed by Spring Boot (opentelemetry.version 1.68.0 in Boot 4.2.0);
+             move both together -->
+        <opentelemetry-instrumentation.version>2.34.0-alpha</opentelemetry-instrumentation.version>
     </properties>
     <build>
         <plugins>

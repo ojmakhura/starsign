@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
+import bw.co.starsign.common.Pages;
 import bw.co.starsign.StarsignSpecifications;
 import bw.co.starsign.audit.ActorType;
 import bw.co.starsign.audit.AuditEventDTO;
@@ -323,7 +325,26 @@ public class OrganisationServiceImpl
         throws Exception
     {
         requirePlatformAdministrator("search organisations");
+        return organisationRepository.findListItems(searchSpecification(criteria), SEARCH_SORT);
+    }
 
+    /**
+     * @see bw.co.starsign.organisation.OrganisationService#pagedSearch(OrganisationSearchCriteria)
+     */
+    @Override
+    protected Page<OrganisationListDTO> handlePagedSearch(@Valid OrganisationSearchCriteria criteria)
+        throws Exception
+    {
+        requirePlatformAdministrator("search organisations");
+        return organisationRepository.findListItemPage(searchSpecification(criteria),
+                Pages.request(criteria, 25, 200, SEARCH_SORT));
+    }
+
+    /** Organisations are listed by name. */
+    private static final Sort SEARCH_SORT = Sort.by(Sort.Direction.ASC, "name").and(Sort.by("id"));
+
+    private static Specification<Organisation> searchSpecification(OrganisationSearchCriteria criteria)
+    {
         Specification<Organisation> spec = StarsignSpecifications.findByAttributeNull("deletedAt");
         if (StringUtils.isNotBlank(criteria.getName()))
         {
@@ -350,24 +371,7 @@ public class OrganisationServiceImpl
             spec = spec.and(StarsignSpecifications.findByAttributeLessThan(
                     criteria.getCreatedTo().plusDays(1).atStartOfDay(), "createdAt"));
         }
-
-        List<Organisation> organisations = organisationRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "name"));
-        Map<UUID, Long> userCounts = new HashMap<UUID, Long>();
-        if (!organisations.isEmpty())
-        {
-            for (Object[] row : organisationRepository.countUsers(organisations.stream().map(Organisation::getId).toList()))
-            {
-                userCounts.put((UUID) row[0], (Long) row[1]);
-            }
-        }
-        List<OrganisationListDTO> result = new ArrayList<OrganisationListDTO>();
-        for (Organisation organisation : organisations)
-        {
-            OrganisationListDTO item = organisationMapper.toOrganisationListDTO(organisation);
-            item.setUserCount(userCounts.getOrDefault(organisation.getId(), 0L));
-            result.add(item);
-        }
-        return result;
+        return spec;
     }
 
     /**

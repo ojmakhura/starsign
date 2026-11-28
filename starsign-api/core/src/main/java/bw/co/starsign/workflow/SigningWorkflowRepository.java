@@ -4,6 +4,9 @@
 //
 package bw.co.starsign.workflow;
 
+import bw.co.starsign.common.ListItemQueries;
+import bw.co.starsign.common.ListQuery;
+import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -18,7 +21,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface SigningWorkflowRepository extends JpaRepository<SigningWorkflow, UUID>, JpaSpecificationExecutor<SigningWorkflow> {
+public interface SigningWorkflowRepository extends JpaRepository<SigningWorkflow, UUID>, JpaSpecificationExecutor<SigningWorkflow>, ListItemQueries {
 
     /**
      * The workflow with its row locked until the transaction ends, so concurrent signatures of one workflow
@@ -39,4 +42,34 @@ public interface SigningWorkflowRepository extends JpaRepository<SigningWorkflow
     boolean existsByOrganisationIdAndReferenceNumber(UUID organisationId, String referenceNumber);
 
     Optional<SigningWorkflow> findFirstByOrganisationIdAndInitiationIdempotencyKey(UUID organisationId, String key);
+
+    /** The display name of the owner {@code o}: first and last name, otherwise the e-mail address. */
+    String OWNER_NAME = "coalesce(nullif(trim(concat(coalesce(trim(o.firstName), ''), ' ', coalesce(trim(o.lastName), ''))), ''),"
+            + " o.emailAddress)";
+
+    /** The list items of the workflows, built in one query: a constructor expression the specification filters. */
+    String LIST_ITEMS = "select new bw.co.starsign.workflow.SigningWorkflowListDTO(cast(w.id as String),"
+            + " w.referenceNumber, w.title, d.title, w.status, w.executionMode, " + OWNER_NAME + ", w.initiatedAt,"
+            + " w.expiresAt, w.completedAt,"
+            + " cast((select count(s) from Signatory s where s.workflow = w) as Integer),"
+            + " cast((select count(s) from Signatory s where s.workflow = w"
+            + " and s.status = bw.co.starsign.workflow.SignatoryStatus.SIGNED) as Integer),"
+            + " w.currentStageNumber,"
+            + " cast((select count(g) from SigningStage g where g.workflow = w) as Integer))"
+            + " from SigningWorkflow w join w.document d join w.owner o";
+
+    ListQuery<SigningWorkflow, SigningWorkflowListDTO> LIST_QUERY = ListQuery.of(SigningWorkflow.class,
+            SigningWorkflowListDTO.class, LIST_ITEMS);
+
+    /** The list items of one page of the workflows the specification matches. */
+    default List<SigningWorkflowListDTO> findListItems(Specification<SigningWorkflow> specification, Pageable page)
+    {
+        return findListItems(LIST_QUERY, specification, page);
+    }
+
+    /** One page of the list items of the workflows the specification matches, with their number. */
+    default Page<SigningWorkflowListDTO> findListItemPage(Specification<SigningWorkflow> specification, Pageable page)
+    {
+        return findListItemPage(LIST_QUERY, specification, page);
+    }
 }

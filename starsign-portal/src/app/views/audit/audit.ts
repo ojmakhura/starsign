@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { form, FormField, min, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { Can } from '@auth/can.directive';
@@ -13,6 +13,8 @@ import {
 import { SortDirection } from '@models/common';
 import { AuditApi } from '@services/audit/audit-api';
 import { FieldErrors } from '@shared/field-errors/field-errors';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { saveFile } from '@shared/save-file';
 import { apiErrorMessage } from '@store/app-state';
 import { SessionStore } from '@store/session.store';
@@ -46,14 +48,13 @@ const EMPTY: AuditFilter = {
   to: '',
 };
 
-const PAGE_SIZE = 25;
 /** The chain of platform-level events (organisation users have their tenant's chain). */
 const PLATFORM_CHAIN = 'platform';
 
 /** The tamper-evident audit trail: search, inspect, export, verify and seal the hash chain. */
 @Component({
   selector: 'app-audit',
-  imports: [Can, DatePipe, FieldErrors, FormField, RouterLink],
+  imports: [Can, DatePipe, FieldErrors, FormField, Pager, RouterLink],
   templateUrl: './audit.html',
 })
 export class Audit {
@@ -62,19 +63,16 @@ export class Audit {
 
   protected readonly eventTypes = Object.values(AuditEventType);
   protected readonly outcomes = Object.values(AuditOutcome);
-  protected readonly pageSize = PAGE_SIZE;
 
   protected readonly filter = signal<AuditFilter>({ ...EMPTY });
   protected readonly filterForm = form(this.filter, (path) => dateRange(path.from, path.to));
 
-  protected readonly events = signal<AuditEventDTO[]>([]);
-  protected readonly page = signal(0);
-  protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  protected readonly results = new PagedSearch<AuditEventSearchCriteria, AuditEventDTO>(
+    (criteria) => this.auditApi.pagedSearch(criteria),
+    'Unable to search the audit trail.',
+  );
   protected readonly exporting = signal(false);
   protected readonly selected = signal<AuditEventDTO | null>(null);
-  /** Criteria of the last search, used for paging and export. */
-  private readonly applied = signal<AuditEventSearchCriteria>({});
 
   // Chain integrity ------------------------------------------------------------
   protected readonly chain = signal<ChainModel>({
@@ -98,8 +96,6 @@ export class Audit {
   protected readonly verification = signal<AuditChainVerificationDTO | null>(null);
   protected readonly chainBusy = signal<'verify' | 'seal' | null>(null);
 
-  protected readonly hasNext = computed(() => this.events().length === PAGE_SIZE);
-
   constructor() {
     void this.search();
   }
@@ -114,7 +110,7 @@ export class Audit {
       return;
     }
     const f = this.filter();
-    this.applied.set({
+    await this.results.search({
       eventTypes: f.eventType ? [f.eventType] : null,
       outcome: f.outcome || null,
       actorId: f.actorId.trim() || null,
@@ -123,11 +119,9 @@ export class Audit {
       // The API takes local date-times without a zone.
       from: f.from ? `${f.from}T00:00:00` : null,
       to: f.to ? `${f.to}T23:59:59` : null,
-      pageSize: PAGE_SIZE,
       sortField: 'occurredAt',
       sortDirection: SortDirection.DESC,
     });
-    await this.load(0);
   }
 
   protected reset(): void {
@@ -135,26 +129,10 @@ export class Audit {
     void this.search();
   }
 
-  protected async load(page: number): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-    try {
-      const events = await firstValueFrom(
-        this.auditApi.search({ ...this.applied(), pageNumber: page }),
-      );
-      this.events.set(events);
-      this.page.set(page);
-    } catch (error) {
-      this.error.set(apiErrorMessage(error, 'Unable to search the audit trail.'));
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
   protected async exportCsv(): Promise<void> {
     this.exporting.set(true);
     try {
-      const { pageNumber, pageSize, ...criteria } = this.applied();
+      const { pageNumber, pageSize, ...criteria } = this.results.applied() ?? {};
       const blob = await firstValueFrom(this.auditApi.exportCsv(criteria));
       const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
       saveFile(blob, `audit-events-${stamp}.csv`);

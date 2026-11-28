@@ -4,21 +4,80 @@
 //
 package bw.co.starsign.identity;
 
+import bw.co.starsign.common.ListItemQueries;
+import bw.co.starsign.common.ListQuery;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface OrganisationUserRepository extends JpaRepository<OrganisationUser, UUID>, JpaSpecificationExecutor<OrganisationUser> {
+public interface OrganisationUserRepository extends JpaRepository<OrganisationUser, UUID>, JpaSpecificationExecutor<OrganisationUser>, ListItemQueries {
 
     Optional<OrganisationUser> findByKeycloakUserId(String keycloakUserId);
 
     /** The organisation's live (not deleted) users with this e-mail address in the given status, ignoring case. */
     List<OrganisationUser> findByOrganisation_IdAndEmailAddressIgnoreCaseAndStatusAndDeletedAtIsNull(UUID organisationId,
             String emailAddress, UserStatus status);
+
+    /**
+     * The list items of the users, without their roles, built in one query: a constructor expression the
+     * specification filters. A constructor expression cannot hold the role list.
+     */
+    String LIST_ITEMS = "select new bw.co.starsign.identity.OrganisationUserListDTO(cast(u.id as String),"
+            + " u.emailAddress, u.firstName, u.lastName, u.jobTitle, u.status, null, u.lastLoginAt)"
+            + " from OrganisationUser u";
+
+    /** The list query of the users, completed with their role codes. */
+    default ListQuery<OrganisationUser, OrganisationUserListDTO> listQuery()
+    {
+        return ListQuery.of(OrganisationUser.class, OrganisationUserListDTO.class, LIST_ITEMS)
+                .completedBy(this::withRoles);
+    }
+
+    /**
+     * The list items of the users the specification matches, with their role codes, in two queries: the users,
+     * then the roles of all of them.
+     *
+     * @param page the sort and the page; {@link Pageable#unpaged(Sort)} for all the users
+     */
+    default List<OrganisationUserListDTO> findListItems(Specification<OrganisationUser> specification, Pageable page)
+    {
+        return findListItems(listQuery(), specification, page);
+    }
+
+    /** One page of the list items of the users the specification matches, with their role codes and number. */
+    default Page<OrganisationUserListDTO> findListItemPage(Specification<OrganisationUser> specification,
+            Pageable page)
+    {
+        return findListItemPage(listQuery(), specification, page);
+    }
+
+    /** The users with their role codes, read in one query for all of them. */
+    default List<OrganisationUserListDTO> withRoles(List<OrganisationUserListDTO> users)
+    {
+        Map<String, List<String>> roles = findRoleCodes(users.stream()
+                .map(user -> UUID.fromString(user.getId()))
+                .toList())
+                .stream()
+                .collect(Collectors.groupingBy(role -> role.userId().toString(),
+                        Collectors.mapping(UserRoleCode::code, Collectors.toList())));
+        users.forEach(user -> user.setRoles(roles.getOrDefault(user.getId(), List.of())));
+        return users;
+    }
+
+    /** The role codes of the users, sorted by code. */
+    @Query("select new bw.co.starsign.identity.UserRoleCode(ur.user.id, r.code) from UserRole ur join ur.role r"
+            + " where ur.user.id in :ids order by r.code")
+    List<UserRoleCode> findRoleCodes(@Param("ids") Collection<UUID> ids);
 
 }

@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.ActorType;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditEventType;
@@ -370,6 +372,37 @@ public class NotificationServiceImpl
     protected List<NotificationDTO> handleSearch(@Valid NotificationSearchCriteria criteria)
         throws Exception
     {
+        Specification<Notification> matching = searchSpecification(criteria);
+        if (matching == null)
+        {
+            return new ArrayList<NotificationDTO>();
+        }
+        return toDtos(notificationRepository.findAll(matching, searchRequest(criteria)).getContent());
+    }
+
+    /**
+     * @see bw.co.starsign.notification.NotificationService#pagedSearch(NotificationSearchCriteria)
+     */
+    @Override
+    protected Page<NotificationDTO> handlePagedSearch(@Valid NotificationSearchCriteria criteria)
+        throws Exception
+    {
+        PageRequest request = searchRequest(criteria);
+        Specification<Notification> matching = searchSpecification(criteria);
+        if (matching == null)
+        {
+            return Page.empty(request);
+        }
+        Page<Notification> found = notificationRepository.findAll(matching, request);
+        return new PageImpl<NotificationDTO>(toDtos(found.getContent()), request, found.getTotalElements());
+    }
+
+    /**
+     * The search's specification, limited to the caller's organisation and, for owner-scoped callers, their own
+     * notifications; null when an owner-scoped caller has no user account, so has no notifications.
+     */
+    private Specification<Notification> searchSpecification(NotificationSearchCriteria criteria)
+    {
         UUID organisationId = null;
         if (caller.tenantId().isPresent())
         {
@@ -392,7 +425,7 @@ public class NotificationServiceImpl
             Optional<OrganisationUser> me = organisationUserRepository.findByKeycloakUserId(caller.userId());
             if (me.isEmpty())
             {
-                return new ArrayList<NotificationDTO>();
+                return null;
             }
             recipientUserId = me.get().getId();
         }
@@ -436,7 +469,11 @@ public class NotificationServiceImpl
             }
             return cb.and(where.toArray(new Predicate[0]));
         };
+        return matching;
+    }
 
+    private static PageRequest searchRequest(NotificationSearchCriteria criteria)
+    {
         String sortField = StringUtils.isNotBlank(criteria.getSortField()) && SORTABLE.contains(criteria.getSortField().trim())
                 ? criteria.getSortField().trim()
                 : "createdAt";
@@ -444,8 +481,7 @@ public class NotificationServiceImpl
                 : Sort.Direction.DESC;
         int page = criteria.getPageNumber() == null || criteria.getPageNumber() < 0 ? 0 : criteria.getPageNumber();
         int size = criteria.getPageSize() == null || criteria.getPageSize() <= 0 ? 50 : Math.min(criteria.getPageSize(), 500);
-        return toDtos(notificationRepository.findAll(matching,
-                PageRequest.of(page, size, Sort.by(direction, sortField))).getContent());
+        return PageRequest.of(page, size, Sort.by(direction, sortField).and(Sort.by("id")));
     }
 
     /**

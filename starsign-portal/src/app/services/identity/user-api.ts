@@ -10,6 +10,7 @@ import {
   RoleAssignmentDTO,
   UserProfileUpdateDTO,
 } from '@models/identity';
+import { Page } from '@models/page';
 import { Observable, map } from 'rxjs';
 import { toParams } from '../http-params';
 
@@ -80,6 +81,10 @@ export class UserApi {
     return this.http
       .post<OrganisationUserListDTO[]>(`${this.path}/search`, criteria)
       .pipe(map((list) => list ?? []));
+  }
+
+  pagedSearch(criteria: OrganisationUserSearchCriteria): Observable<Page<OrganisationUserListDTO>> {
+    return this.http.post<Page<OrganisationUserListDTO>>(`${this.path}/search/paged`, criteria);
   }
 
   unlock(id: string): Observable<OrganisationUserDTO> {

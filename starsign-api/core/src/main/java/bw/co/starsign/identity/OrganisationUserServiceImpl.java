@@ -23,8 +23,8 @@ import bw.co.starsign.workflow.Signatory;
 import bw.co.starsign.workflow.SignatoryRepository;
 import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.WorkflowStatus;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -40,7 +40,10 @@ import java.util.TreeSet;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
+import bw.co.starsign.common.Pages;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -59,6 +62,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrganisationUserServiceImpl
     extends OrganisationUserServiceBase
 {
+    /** The page size of a paged search that gives none, and the largest one allowed. */
+    private static final int DEFAULT_PAGE_SIZE = 25;
+    private static final int MAX_PAGE_SIZE = 200;
+
     /**
      * Every permission scope the API knows (keycloak/ROLE_MATRIX.md, webservice AuthzResources): the caller's
      * permissions are the ones of these that their token grants.
@@ -200,9 +207,36 @@ public class OrganisationUserServiceImpl
     protected List<OrganisationUserListDTO> handleSearch(@Valid OrganisationUserSearchCriteria criteria)
         throws Exception
     {
+        Specification<OrganisationUser> specification = searchSpecification(criteria);
+        Sort sort = sort(criteria.getSortField(), criteria.getSortDirection());
+        Pageable page = Pageable.unpaged(sort);
+        if (criteria.getPageSize() != null && criteria.getPageSize() > 0)
+        {
+            int number = criteria.getPageNumber() == null ? 0 : Math.max(0, criteria.getPageNumber());
+            page = PageRequest.of(number, criteria.getPageSize(), sort);
+        }
+        return organisationUserRepository.findListItems(specification, page);
+    }
+
+    /**
+     * @see bw.co.starsign.identity.OrganisationUserService#pagedSearch(OrganisationUserSearchCriteria)
+     */
+    @Override
+    protected Page<OrganisationUserListDTO> handlePagedSearch(@Valid OrganisationUserSearchCriteria criteria)
+        throws Exception
+    {
+        Specification<OrganisationUser> specification = searchSpecification(criteria);
+        Sort sort = sort(criteria.getSortField(), criteria.getSortDirection());
+        return organisationUserRepository.findListItemPage(specification,
+            Pages.request(criteria, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, sort));
+    }
+
+    /** The search's specification: users not removed, of the caller's organisation unless platform-wide. */
+    private Specification<OrganisationUser> searchSpecification(OrganisationUserSearchCriteria criteria)
+    {
         String organisationId = scopedOrganisation(criteria.getOrganisationId());
 
-        Specification<OrganisationUser> specification = (root, query, builder) -> {
+        return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(builder.isNull(root.get("deletedAt")));
             if (organisationId != null)
@@ -224,26 +258,15 @@ public class OrganisationUserServiceImpl
             }
             if (StringUtils.isNotBlank(criteria.getRoleCode()))
             {
-                Join<OrganisationUser, UserRole> roles = root.join("roles", JoinType.INNER);
-                predicates.add(builder.equal(roles.get("role").get("code"), criteria.getRoleCode().trim()));
-                query.distinct(true);
+                // A subquery rather than a join, so a user is listed once without a distinct select
+                Subquery<UUID> holders = query.subquery(UUID.class);
+                Root<UserRole> role = holders.from(UserRole.class);
+                holders.select(role.get("user").get("id"))
+                    .where(builder.equal(role.get("role").get("code"), criteria.getRoleCode().trim()));
+                predicates.add(root.get("id").in(holders));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
-
-        Sort sort = sort(criteria.getSortField(), criteria.getSortDirection());
-        List<OrganisationUser> users;
-        if (criteria.getPageSize() != null && criteria.getPageSize() > 0)
-        {
-            int page = criteria.getPageNumber() == null ? 0 : Math.max(0, criteria.getPageNumber());
-            users = organisationUserRepository.findAll(specification, PageRequest.of(page, criteria.getPageSize(), sort))
-                .getContent();
-        }
-        else
-        {
-            users = organisationUserRepository.findAll(specification, sort);
-        }
-        return users.stream().map(this::toListDTO).toList();
     }
 
     /**
@@ -263,9 +286,7 @@ public class OrganisationUserServiceImpl
         Specification<OrganisationUser> specification = (root, query, builder) -> builder.and(
             builder.equal(root.get("organisation").get("id"), organisation),
             builder.isNull(root.get("deletedAt")));
-        return organisationUserRepository.findAll(specification, sort(null, null)).stream()
-            .map(this::toListDTO)
-            .toList();
+        return organisationUserRepository.findListItems(specification, Pageable.unpaged(sort(null, null)));
     }
 
     /**
@@ -804,13 +825,6 @@ public class OrganisationUserServiceImpl
         return dto;
     }
 
-    private OrganisationUserListDTO toListDTO(OrganisationUser user)
-    {
-        OrganisationUserListDTO dto = organisationUserMapper.toOrganisationUserListDTO(user);
-        dto.setRoles(roleCodes(user.getRoles()));
-        return dto;
-    }
-
     private static List<String> roleCodes(Collection<UserRole> roles)
     {
         return roles.stream().map(userRole -> userRole.getRole().getCode()).sorted().toList();
@@ -823,9 +837,9 @@ public class OrganisationUserServiceImpl
             "createdAt", "jobTitle");
         if (StringUtils.isNotBlank(field) && sortable.contains(field.trim()))
         {
-            return Sort.by(order, field.trim());
+            return Sort.by(order, field.trim()).and(Sort.by("id"));
         }
-        return Sort.by(order, "lastName", "firstName");
+        return Sort.by(order, "lastName", "firstName", "id");
     }
 
     private void audit(AuditEventType type, OrganisationUser user, String details)

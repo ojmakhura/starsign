@@ -2,6 +2,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { NotificationDTO, NotificationSearchCriteria } from '@models/notification';
+import { Page } from '@models/page';
 import { Observable, map } from 'rxjs';
 import { toParams } from '../http-params';
 
@@ -31,5 +32,9 @@ export class NotificationApi {
     return this.http
       .post<NotificationDTO[]>(`${this.path}/search`, criteria)
       .pipe(map((list) => list ?? []));
+  }
+
+  pagedSearch(criteria: NotificationSearchCriteria): Observable<Page<NotificationDTO>> {
+    return this.http.post<Page<NotificationDTO>>(`${this.path}/search/paged`, criteria);
   }
 }

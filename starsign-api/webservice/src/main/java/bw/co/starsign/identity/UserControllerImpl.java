@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -161,6 +162,14 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<List<OrganisationUserListDTO>> search(@Valid OrganisationUserSearchCriteria criteria) throws Exception {
 
         return ResponseEntity.ok(organisationUserService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<OrganisationUserListDTO>> pagedSearch(@Valid OrganisationUserSearchCriteria criteria) throws Exception {
+
+        return ResponseEntity.ok(organisationUserService.pagedSearch(criteria));
     }
 
     @Override

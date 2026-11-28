@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.context.CallerContext;
 import bw.co.starsign.identity.OrganisationUserListDTO;
 import bw.co.starsign.identity.OrganisationUserService;
@@ -121,6 +122,14 @@ public class OrganisationControllerImpl implements OrganisationController {
     public ResponseEntity<List<OrganisationListDTO>> search(@Valid OrganisationSearchCriteria criteria) throws Exception {
 
         return ResponseEntity.ok(organisationService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<OrganisationListDTO>> pagedSearch(@Valid OrganisationSearchCriteria criteria) throws Exception {
+
+        return ResponseEntity.ok(organisationService.pagedSearch(criteria));
     }
 
     @Override

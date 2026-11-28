@@ -4,15 +4,46 @@
 //
 package bw.co.starsign.template;
 
+import bw.co.starsign.common.ListItemQueries;
+import bw.co.starsign.common.ListQuery;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Query;
 
-public interface SigningTemplateRepository extends JpaRepository<SigningTemplate, UUID>, JpaSpecificationExecutor<SigningTemplate> {
+public interface SigningTemplateRepository extends JpaRepository<SigningTemplate, UUID>, JpaSpecificationExecutor<SigningTemplate>, ListItemQueries {
 
     Optional<SigningTemplate> findByOrganisationIdAndNameIgnoreCase(UUID organisationId, String name);
+
+    /**
+     * The list items of the templates, built in one query: a constructor expression the specification filters.
+     * The roles and fields are counted, not loaded; the stages are the distinct stage numbers of the roles.
+     */
+    String LIST_ITEMS = "select new bw.co.starsign.template.SigningTemplateListDTO(cast(t.id as String), t.name,"
+            + " t.description, t.status, t.executionMode, t.templateVersion,"
+            + " cast((select count(r) from SigningTemplateSignatory r where r.template = t) as Integer),"
+            + " cast((select count(distinct r.stageNumber) from SigningTemplateSignatory r where r.template = t) as Integer),"
+            + " cast((select count(f) from SigningTemplateField f where f.template = t) as Integer),"
+            + " t.createdAt, t.modifiedAt)"
+            + " from SigningTemplate t";
+
+    ListQuery<SigningTemplate, SigningTemplateListDTO> LIST_QUERY = ListQuery.of(SigningTemplate.class,
+            SigningTemplateListDTO.class, LIST_ITEMS);
+
+    /** The list items of one page of the templates the specification matches. */
+    default List<SigningTemplateListDTO> findListItems(Specification<SigningTemplate> specification, Pageable page)
+    {
+        return findListItems(LIST_QUERY, specification, page);
+    }
+
+    /** One page of the list items of the templates the specification matches, with their number. */
+    default Page<SigningTemplateListDTO> findListItemPage(Specification<SigningTemplate> specification, Pageable page)
+    {
+        return findListItemPage(LIST_QUERY, specification, page);
+    }
 }

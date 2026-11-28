@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -340,6 +341,36 @@ NotificationService.recordDeliveryReceipt(receipt)
      * @throws Exception
      */
     protected abstract List<NotificationDTO> handleSearch(@Valid NotificationSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<NotificationDTO> pagedSearch(final @Valid NotificationSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.notification.NotificationService.pagedSearch(@Valid NotificationSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("NotificationService.pagedSearch(@Valid NotificationSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid NotificationSearchCriteria)}
+     * @param criteria NotificationSearchCriteria the search criteria, page number and size
+     * @return Page<NotificationDTO>
+     * @throws Exception
+     */
+    protected abstract Page<NotificationDTO> handlePagedSearch(@Valid NotificationSearchCriteria criteria)
         throws Exception;
 
     /**
