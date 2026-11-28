@@ -287,24 +287,48 @@ NotificationService.recordDeliveryReceipt(receipt)
      * {@inheritDoc}
      */
     @Override
-    public NotificationInboxDTO inbox()
+    public Integer unreadCount()
     {
         try
         {
-            return this.handleInbox();
+            return this.handleUnreadCount();
         }
         catch (Throwable th)
         {
-            throw failure("NotificationService.inbox()", th);
+            throw failure("NotificationService.unreadCount()", th);
         }
     }
 
     /**
-     * Performs the core logic for {@link #inbox()}
-     * @return NotificationInboxDTO
+     * Performs the core logic for {@link #unreadCount()}
+     * @return Integer
      * @throws Exception
      */
-    protected abstract NotificationInboxDTO handleInbox()
+    protected abstract Integer handleUnreadCount()
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Integer markAllRead()
+    {
+        try
+        {
+            return this.handleMarkAllRead();
+        }
+        catch (Throwable th)
+        {
+            throw failure("NotificationService.markAllRead()", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #markAllRead()}
+     * @return Integer
+     * @throws Exception
+     */
+    protected abstract Integer handleMarkAllRead()
         throws Exception;
 
     /**

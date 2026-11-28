@@ -34,6 +34,7 @@ import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.SigningWorkflow;
 import bw.co.starsign.workflow.SigningWorkflowRepository;
 import bw.co.starsign.workflow.WorkflowStatus;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -111,6 +112,7 @@ public class NotificationServiceImpl
     private final NotificationProviderConfigRepository notificationProviderConfigRepository;
     private final NotificationTemplates templates;
     private final NovuNotifier novuNotifier;
+    private final NovuInbox novuInbox;
     private final KeycloakAdminService keycloakAdminService;
     private final CallerContext caller;
     private final String portalUrl;
@@ -135,6 +137,7 @@ public class NotificationServiceImpl
         NotificationProviderConfigRepository notificationProviderConfigRepository,
         NotificationTemplates templates,
         NovuNotifier novuNotifier,
+        NovuInbox novuInbox,
         @Lazy CallerContext caller,
         @Lazy KeycloakAdminService keycloakAdminService,
         @Value("${app.portal-url:}") String portalUrl,
@@ -159,6 +162,7 @@ public class NotificationServiceImpl
         this.notificationProviderConfigRepository = notificationProviderConfigRepository;
         this.templates = templates;
         this.novuNotifier = novuNotifier;
+        this.novuInbox = novuInbox;
         this.caller = caller;
         this.keycloakAdminService = keycloakAdminService;
         this.portalUrl = StringUtils.removeEnd(StringUtils.trimToEmpty(portalUrl), "/");
@@ -350,6 +354,11 @@ public class NotificationServiceImpl
     protected List<NotificationDTO> handleFindMine(Boolean unreadOnly)
         throws Exception
     {
+        if (novuInbox.isEnabled())
+        {
+            // The user's Novu inbox, read as them: ids are Novu message ids (markRead accepts both kinds)
+            return novuInbox.list(caller.userId(), Boolean.TRUE.equals(unreadOnly), MAX_MINE);
+        }
         Optional<OrganisationUser> me = organisationUserRepository.findByKeycloakUserId(caller.userId());
         if (me.isEmpty())
         {
@@ -372,30 +381,54 @@ public class NotificationServiceImpl
     }
 
     /**
-     * The subscriber is the caller's Keycloak id, the id in-app notifications are triggered for (sendInApp).
-     *
-     * @see bw.co.starsign.notification.NotificationService#inbox()
+     * @see bw.co.starsign.notification.NotificationService#unreadCount()
      */
     @Override
-    protected NotificationInboxDTO handleInbox()
+    protected Integer handleUnreadCount()
         throws Exception
     {
-        NotificationInboxDTO inbox = new NotificationInboxDTO();
-        inbox.setEnabled(Boolean.FALSE);
-        String subscriberId = StringUtils.trimToNull(caller.userId());
-        if (!novuNotifier.isInboxEnabled() || subscriberId == null)
+        if (novuInbox.isEnabled())
         {
-            return inbox;
+            return novuInbox.unreadCount(caller.userId());
         }
-        NovuProperties properties = novuNotifier.properties();
-        inbox.setEnabled(Boolean.TRUE);
-        inbox.setApplicationIdentifier(properties.getApplicationIdentifier().trim());
-        inbox.setSubscriberId(subscriberId);
-        inbox.setSubscriberHash(novuNotifier.subscriberHash(subscriberId));
-        inbox.setBackendUrl(StringUtils.trimToNull(
-                StringUtils.firstNonBlank(properties.getPublicApiUrl(), properties.getBaseUrl())));
-        inbox.setSocketUrl(StringUtils.trimToNull(properties.getPublicSocketUrl()));
-        return inbox;
+        return (int) notificationRepository.count(myUnread());
+    }
+
+    /**
+     * Novu's inbox first (what the user sees), then StarSign's copies, so the organisation view agrees.
+     *
+     * @see bw.co.starsign.notification.NotificationService#markAllRead()
+     */
+    @Override
+    protected Integer handleMarkAllRead()
+        throws Exception
+    {
+        int unread = 0;
+        if (novuInbox.isEnabled())
+        {
+            unread = novuInbox.unreadCount(caller.userId());
+            novuInbox.readAll(caller.userId());
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<Notification> copies = notificationRepository.findAll(myUnread());
+        for (Notification notification : copies)
+        {
+            notification.setReadAt(now);
+            notification.setModifiedAt(now);
+            notification.setModifiedBy(caller.userId());
+        }
+        notificationRepository.saveAll(copies);
+        return novuInbox.isEnabled() ? unread : copies.size();
+    }
+
+    /** The caller's unread in-app notifications in StarSign. */
+    private Specification<Notification> myUnread()
+    {
+        String keycloakUserId = caller.userId();
+        return (root, query, cb) -> cb.and(
+                cb.equal(root.get("recipientUser").get("keycloakUserId"), keycloakUserId),
+                cb.equal(root.get("channel"), NotificationChannel.IN_APP),
+                cb.isNull(root.get("readAt")));
     }
 
     /**
@@ -405,7 +438,31 @@ public class NotificationServiceImpl
     protected NotificationDTO handleMarkRead(String id)
         throws Exception
     {
-        Notification notification = load(id);
+        if (NovuInbox.isMessageId(id) && novuInbox.isEnabled())
+        {
+            // A message of the caller's own Novu inbox (Novu only finds it in their session), then StarSign's copy
+            JsonNode message = novuInbox.read(caller.userId(), id);
+            String copyId = NovuInbox.notificationId(message);
+            if (copyId != null)
+            {
+                try
+                {
+                    markCopyRead(load(copyId));
+                }
+                catch (NotificationServiceException e)
+                {
+                    // Not (or no longer) in StarSign, or somebody else's: the inbox is what counts
+                    logger.debug("No StarSign copy of Novu message {} to mark read: {}", id, e.getMessage());
+                }
+            }
+            return novuInbox.toDto(message);
+        }
+        return toDto(markCopyRead(load(id)));
+    }
+
+    /** Marks the caller's own StarSign notification read. */
+    private Notification markCopyRead(Notification notification)
+    {
         OrganisationUser recipient = notification.getRecipientUser();
         // Somebody else's notification is reported as missing, not as forbidden
         if (recipient == null || !caller.userId().equals(recipient.getKeycloakUserId()))
@@ -420,7 +477,7 @@ public class NotificationServiceImpl
             notification.setModifiedBy(caller.userId());
             notification = notificationRepository.save(notification);
         }
-        return toDto(notification);
+        return notification;
     }
 
     /**

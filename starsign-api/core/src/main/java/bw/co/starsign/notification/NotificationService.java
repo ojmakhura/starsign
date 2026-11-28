@@ -56,11 +56,17 @@ bw.co.starsign.notification.NotificationService.recordDeliveryReceipt(receipt)
     public List<NotificationDTO> findMine(Boolean unreadOnly) ;
 
     /**
-     * The signed-in user's Novu inbox: application identifier, subscriber id and its HMAC, or enabled=false
-     * when in-app notifications are not delivered through Novu.
-     * @return NotificationInboxDTO
+     * The number of the signed-in user's unread in-app notifications (their Novu inbox when in-app
+     * notifications go through Novu).
+     * @return Integer
      */
-    public NotificationInboxDTO inbox() ;
+    public Integer unreadCount() ;
+
+    /**
+     * Marks all of the signed-in user's in-app notifications read, in Novu and in StarSign.
+     * @return Integer the number that were unread
+     */
+    public Integer markAllRead() ;
 
     /**
      * TODO: Model Documentation for bw.co.starsign.notification.NotificationService.markRead

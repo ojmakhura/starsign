@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   InboxItem,
@@ -9,7 +9,7 @@ import { apiErrorMessage } from '@store/app-state';
 import { toast } from 'ngx-sonner';
 import { NotificationTabs } from './notification-tabs';
 
-/** The signed-in user's own (in-app) notifications: their Novu inbox, or StarSign's copy without Novu. */
+/** The signed-in user's own (in-app) notifications, from their Novu inbox through StarSign (or StarSign's copies). */
 @Component({
   selector: 'app-notifications',
   imports: [DatePipe, NotificationTabs, RouterLink],
@@ -24,14 +24,10 @@ export class Notifications {
   protected readonly error = signal<string | null>(null);
   protected readonly busyId = signal<string | null>(null);
 
-  protected readonly unreadCount = computed(() =>
-    this.inbox.novuEnabled()
-      ? this.inbox.unreadCount()
-      : this.notifications().filter((n) => !n.read).length,
-  );
+  protected readonly unreadCount = this.inbox.unreadCount;
 
   constructor() {
-    // Initial load, then again whenever Novu pushes a new message
+    // Initial load, then again whenever a new notification arrives on the stream
     effect(() => {
       this.inbox.received();
       untracked(() => void this.load());
@@ -77,7 +73,7 @@ export class Notifications {
   protected async markAllRead(): Promise<void> {
     this.busyId.set('*');
     try {
-      await this.inbox.markAllRead(this.notifications());
+      await this.inbox.markAllRead();
       this.notifications.update((list) =>
         this.unreadOnly() ? [] : list.map((n) => ({ ...n, read: true })),
       );

@@ -44,7 +44,7 @@ export class App {
           this.session.loadCurrentUser();
         }
         this.signing.getPendingForCurrentUser();
-        void this.notificationInbox.connect();
+        this.notificationInbox.connect();
       }
       this.keycloak.loadUserProfile().then((profile) =>
         this.session.setProfile({

@@ -39,10 +39,18 @@ public class NotificationControllerImpl implements NotificationController {
 
 
     @Override
-    @Operation(summary = "Inbox", description = "The signed-in user's Novu inbox connection")
-    public ResponseEntity<NotificationInboxDTO> inbox() throws Exception {
+    @Operation(summary = "Unread count", description = "The number of the signed-in user's unread in-app notifications")
+    public ResponseEntity<Integer> unreadCount() throws Exception {
 
-        return ResponseEntity.ok(notificationService.inbox());
+        return ResponseEntity.ok(notificationService.unreadCount());
+    }
+
+
+    @Override
+    @Operation(summary = "Mark all read", description = "Marks all of the signed-in user's in-app notifications read")
+    public ResponseEntity<Integer> markAllRead() throws Exception {
+
+        return ResponseEntity.ok(notificationService.markAllRead());
     }
 
 

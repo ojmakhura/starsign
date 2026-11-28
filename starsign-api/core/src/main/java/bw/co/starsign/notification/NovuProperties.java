@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * The {@code app.novu.*} settings: Novu delivers every email and SMS notification, and the
- * in-app ones when an application identifier is set (the portal's inbox reads them from Novu).
+ * in-app ones when an application identifier is set (the portal reads them from Novu through StarSign).
  */
 @ConfigurationProperties(prefix = "app.novu")
 public class NovuProperties
@@ -20,16 +20,16 @@ public class NovuProperties
     private String workflowPrefix = "starsign-";
 
     /**
-     * The Novu environment's application identifier (dashboard: API Keys). The portal's inbox connects
-     * with it; in-app notifications go through Novu only when it is set.
+     * The Novu environment's application identifier (dashboard: API Keys). StarSign opens the users' inbox
+     * sessions with it; in-app notifications go through Novu only when it is set.
      */
     private String applicationIdentifier;
 
-    /** The Novu API address the browser uses (the portal's inbox); defaults to base-url. */
-    private String publicApiUrl;
-
-    /** The Novu WebSocket address the browser uses for live updates; Novu's default when blank. */
-    private String publicSocketUrl;
+    /**
+     * Novu's socket.io address (the ws service), which StarSign connects to as each user with the portal open
+     * and relays to the portal. Without it the portal's unread count is polled instead.
+     */
+    private String socketUrl;
 
     /**
      * Whether text messages are sent. Off until Novu has an SMS integration: SMS notifications are recorded as
@@ -87,24 +87,14 @@ public class NovuProperties
         this.applicationIdentifier = applicationIdentifier;
     }
 
-    public String getPublicApiUrl()
+    public String getSocketUrl()
     {
-        return publicApiUrl;
+        return socketUrl;
     }
 
-    public void setPublicApiUrl(String publicApiUrl)
+    public void setSocketUrl(String socketUrl)
     {
-        this.publicApiUrl = publicApiUrl;
-    }
-
-    public String getPublicSocketUrl()
-    {
-        return publicSocketUrl;
-    }
-
-    public void setPublicSocketUrl(String publicSocketUrl)
-    {
-        this.publicSocketUrl = publicSocketUrl;
+        this.socketUrl = socketUrl;
     }
 
     public boolean isSmsEnabled()

@@ -31,10 +31,16 @@ public interface NotificationController {
     public @Nullable ResponseEntity<List<NotificationDTO>> findMine(@RequestParam(name = "unreadOnly", required = false) @Nullable Boolean unreadOnly) throws Exception;
 
     @GetMapping(
-        value = "/inbox"
+        value = "/me/unread-count"
     )
     @PreAuthorize(value = "isAuthenticated()")
-    public ResponseEntity<NotificationInboxDTO> inbox() throws Exception;
+    public ResponseEntity<Integer> unreadCount() throws Exception;
+
+    @PostMapping(
+        value = "/me/read-all"
+    )
+    @PreAuthorize(value = "isAuthenticated()")
+    public ResponseEntity<Integer> markAllRead() throws Exception;
 
     @PostMapping(
         value = "/{id}/read"

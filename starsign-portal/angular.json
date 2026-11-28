@@ -23,9 +23,6 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "allowedCommonJsDependencies": [
-              "event-target-polyfill"
-            ],
             "inlineStyleLanguage": "scss",
             "assets": [
               {

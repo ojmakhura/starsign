@@ -20,7 +20,6 @@
     "@angular/router": "^22.2.6",
     "@ngrx/operators": "^22.0.1",
     "@ngrx/signals": "^22.0.1",
-    "@novu/js": "3.19.2",
     "bootstrap-icons": "^1.13.2",
     "keycloak-angular": "^22.0.0",
     "keycloak-js": "^26.2.5",

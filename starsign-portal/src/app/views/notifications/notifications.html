@@ -53,9 +53,6 @@
             } @else {
               <span class="cell-title">{{ n.subject }}</span>
             }
-            @if (n.body) {
-              <span class="cell-note">{{ n.body }}</span>
-            }
             <span class="cell-note">
               <span class="sr-only">{{ n.read ? 'Read' : 'Unread' }} · </span>
               {{ label(n.eventType) }} · {{ n.createdAt | date: 'dd-MM-yyyy HH:mm' }}

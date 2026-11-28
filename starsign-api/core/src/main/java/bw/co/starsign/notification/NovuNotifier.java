@@ -50,8 +50,8 @@ public class NovuNotifier
     }
 
     /**
-     * In-app notifications go to the portal users' Novu inboxes: Novu is enabled and the portal can connect
-     * to it (the application identifier is known).
+     * In-app notifications go to the portal users' Novu inboxes: Novu is enabled and StarSign can open their
+     * inbox sessions (the application identifier and secret key are known).
      */
     public boolean isInboxEnabled()
     {
@@ -75,8 +75,8 @@ public class NovuNotifier
 
     /**
      * Novu's HMAC for a subscriber: HMAC-SHA256 of the subscriber id keyed with the secret key, in hex. With
-     * HMAC turned on for the in-app integration, the inbox only opens with it, so a user cannot read another
-     * user's inbox by changing the subscriber id.
+     * HMAC turned on for the in-app integration, an inbox session only opens with it. StarSign computes it for
+     * the inbox sessions it opens itself (NovuInbox); it never leaves the server.
      */
     public String subscriberHash(String subscriberId)
     {

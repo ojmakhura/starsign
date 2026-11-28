@@ -108,8 +108,8 @@ def in_app_step():
         "controlValues": {
             "subject": "{{payload.subject}}",
             "body": "{{payload.body}}",
-            # Portal-relative path: the portal routes to it itself
-            "redirect": {"url": "{{payload.linkPath}}", "target": "_self"},
+            # No "redirect": Novu rejects an empty one (most notifications have no link) and the
+            # whole step fails. The portal navigates to data.linkPath itself.
             "data": {
                 "notificationId": "{{payload.notificationId}}",
                 "eventType": "{{payload.eventType}}",
