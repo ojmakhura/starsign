@@ -7,6 +7,7 @@ package bw.co.starsign.organisation;
 
 import org.springframework.data.domain.Page;
 import bw.co.starsign.context.CallerContext;
+import bw.co.starsign.identity.KeycloakUserDetails;
 import bw.co.starsign.identity.OrganisationUserListDTO;
 import bw.co.starsign.identity.OrganisationUserService;
 import bw.co.starsign.identity.UserInvitationDTO;
@@ -32,17 +33,20 @@ public class OrganisationControllerImpl implements OrganisationController {
     protected final OrganisationUserService organisationUserService;
     protected final UserInvitationService userInvitationService;
     private final CallerContext caller;
+    private final KeycloakUserDetails keycloakUserDetails;
 
     public OrganisationControllerImpl(
         OrganisationService organisationService,
         OrganisationUserService organisationUserService,
         UserInvitationService userInvitationService,
-        CallerContext caller) {
+        CallerContext caller,
+        KeycloakUserDetails keycloakUserDetails) {
 
         this.organisationService = organisationService;
         this.organisationUserService = organisationUserService;
         this.userInvitationService = userInvitationService;
         this.caller = caller;
+        this.keycloakUserDetails = keycloakUserDetails;
     }
 
     @Override
@@ -73,7 +77,8 @@ public class OrganisationControllerImpl implements OrganisationController {
     public ResponseEntity<List<OrganisationUserListDTO>> findUsers(String organisationId) throws Exception {
 
         checkOrganisation(organisationId);
-        return ResponseEntity.ok(organisationUserService.findByOrganisation(organisationId));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.findByOrganisation(organisationId),
+            organisationId));
     }
 
     @Override

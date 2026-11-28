@@ -23,18 +23,13 @@ import bw.co.starsign.workflow.Signatory;
 import bw.co.starsign.workflow.SignatoryRepository;
 import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.WorkflowStatus;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -51,9 +46,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Organisation users: the local profile of a Keycloak account that belongs to one organisation. Keycloak stays the
- * source of truth for credentials, sessions and realm roles; changes here are mirrored to Keycloak after the local
- * change so a Keycloak failure rolls the local change back.
+ * Organisation users: the local anchor of a Keycloak account that belongs to one organisation. Keycloak owns the
+ * account: credentials, MFA, sessions, lockout, realm roles and the profile attributes (phone number, job title,
+ * locale). The database keeps what StarSign needs to reference and report on the user (name, email address, status,
+ * last sign-in). The DTOs returned here carry only those; the web layer adds the Keycloak details
+ * (KeycloakUserDetails). Keycloak is called after the local change, so a Keycloak failure rolls the local change
+ * back.
  *
  * @see bw.co.starsign.identity.OrganisationUserService
  */
@@ -100,8 +98,6 @@ public class OrganisationUserServiceImpl
         @Lazy AuditTrailService auditTrailService,
         OrganisationUserRepository organisationUserRepository,
         OrganisationUserMapper organisationUserMapper,
-        UserRoleRepository userRoleRepository,
-        UserRoleMapper userRoleMapper,
         RoleRepository roleRepository,
         RoleMapper roleMapper,
         CallerContext caller,
@@ -115,8 +111,6 @@ public class OrganisationUserServiceImpl
             auditTrailService,
             organisationUserRepository,
             organisationUserMapper,
-            userRoleRepository,
-            userRoleMapper,
             roleRepository,
             roleMapper);
 
@@ -235,6 +229,8 @@ public class OrganisationUserServiceImpl
     private Specification<OrganisationUser> searchSpecification(OrganisationUserSearchCriteria criteria)
     {
         String organisationId = scopedOrganisation(criteria.getOrganisationId());
+        Set<String> roleHolders = StringUtils.isBlank(criteria.getRoleCode()) ? null
+            : roleHolders(criteria.getRoleCode().trim(), organisationId);
 
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -256,17 +252,31 @@ public class OrganisationUserServiceImpl
                     builder.like(builder.lower(root.get("emailAddress")), pattern),
                     builder.like(builder.lower(root.get("username")), pattern)));
             }
-            if (StringUtils.isNotBlank(criteria.getRoleCode()))
+            if (roleHolders != null)
             {
-                // A subquery rather than a join, so a user is listed once without a distinct select
-                Subquery<UUID> holders = query.subquery(UUID.class);
-                Root<UserRole> role = holders.from(UserRole.class);
-                holders.select(role.get("user").get("id"))
-                    .where(builder.equal(role.get("role").get("code"), criteria.getRoleCode().trim()));
-                predicates.add(root.get("id").in(holders));
+                predicates.add(roleHolders.isEmpty() ? builder.disjunction() : root.get("keycloakUserId").in(roleHolders));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
+    }
+
+    /**
+     * The Keycloak users who hold the role with this code (directly, as StarSign assigns roles). Keycloak owns the
+     * assignments; the search then keeps those of the organisation.
+     */
+    private Set<String> roleHolders(String roleCode, String organisationId)
+    {
+        List<String> realmRoles = roleRepository.findAll().stream()
+            .filter(role -> roleCode.equals(role.getCode()))
+            .filter(role -> role.getOrganisation() == null || organisationId == null
+                || role.getOrganisation().getId().toString().equals(organisationId))
+            .map(Role::getKeycloakRoleName)
+            .filter(StringUtils::isNotBlank)
+            .distinct()
+            .toList();
+        Set<String> holders = new LinkedHashSet<>();
+        realmRoles.forEach(name -> holders.addAll(keycloakAdminService.findRealmRoleMemberIds(name)));
+        return holders;
     }
 
     /**
@@ -320,32 +330,17 @@ public class OrganisationUserServiceImpl
         {
             user.setLastName(profile.getLastName().trim());
         }
-        if (profile.getJobTitle() != null)
-        {
-            user.setJobTitle(StringUtils.trimToNull(profile.getJobTitle()));
-        }
-        if (profile.getPhoneNumber() != null)
-        {
-            user.setPhoneNumber(StringUtils.trimToNull(profile.getPhoneNumber()));
-        }
-        if (profile.getLocale() != null)
-        {
-            user.setLocale(StringUtils.trimToNull(profile.getLocale()));
-        }
         touch(user);
         user = organisationUserRepository.save(user);
 
-        // Keycloak shows the same name on its pages and in the tokens
+        // Keycloak owns the profile: the name (also shown on its pages and in the tokens; kept here as a copy) and
+        // the phone number, job title and locale attributes
         KeycloakUserDTO account = new KeycloakUserDTO();
         account.setUserId(user.getKeycloakUserId());
         account.setFirstName(user.getFirstName());
         account.setLastName(user.getLastName());
-        if (profile.getPhoneNumber() != null)
-        {
-            Map<String, Object> attributes = new HashMap<>();
-            attributes.put("phoneNumber", user.getPhoneNumber() == null ? List.of() : List.of(user.getPhoneNumber()));
-            account.setAttributes(attributes);
-        }
+        account.setAttributes(KeycloakAttributes.changes(profile.getPhoneNumber(), profile.getJobTitle(),
+            profile.getLocale()));
         keycloakAdminService.updateUser(account);
 
         return toDTO(user);
@@ -366,8 +361,6 @@ public class OrganisationUserServiceImpl
 
         user.setStatus(UserStatus.ACTIVE);
         user.setDeactivatedAt(null);
-        user.setLockedUntil(null);
-        user.setFailedLoginCount(0);
         touch(user);
         user = organisationUserRepository.save(user);
 
@@ -408,6 +401,8 @@ public class OrganisationUserServiceImpl
     }
 
     /**
+     * Ends a lockout by Keycloak's brute-force detection (failed sign-ins); Keycloak keeps the failure count.
+     *
      * @see bw.co.starsign.identity.OrganisationUserService#unlock(String)
      */
     @Override
@@ -422,21 +417,20 @@ public class OrganisationUserServiceImpl
 
         if (user.getStatus() == UserStatus.LOCKED)
         {
+            // Profiles locked before Keycloak took lockouts over
             user.setStatus(UserStatus.ACTIVE);
         }
-        user.setLockedUntil(null);
-        user.setFailedLoginCount(0);
         touch(user);
         user = organisationUserRepository.save(user);
 
         audit(AuditEventType.USER_ACTIVATED, user, "Unlocked");
-        keycloakAdminService.setEnabled(user.getKeycloakUserId(), true);
+        keycloakAdminService.clearLoginFailures(user.getKeycloakUserId());
         return toDTO(user);
     }
 
     /**
-     * Replaces the user's roles. Keycloak gets the matching realm roles; roles the user was given outside StarSign
-     * are left alone.
+     * Replaces the user's StarSign roles, which Keycloak holds as realm roles: realm roles that are no StarSign role
+     * of the organisation (given outside StarSign) are left alone.
      *
      * @see bw.co.starsign.identity.OrganisationUserService#assignRoles(String, RoleAssignmentDTO)
      */
@@ -448,7 +442,8 @@ public class OrganisationUserServiceImpl
         List<Role> wanted = userRoles.resolve(assignment.getRoleCodes(), user.getOrganisation(),
             OrganisationUserServiceException::new);
 
-        List<Role> previous = user.getRoles().stream().map(UserRole::getRole).toList();
+        KeycloakUserDTO account = keycloakAdminService.findUserById(user.getKeycloakUserId());
+        List<Role> previous = userRoles.held(account.getRealmRoles(), user.getOrganisation());
         Set<UUID> wantedIds = new LinkedHashSet<>(wanted.stream().map(Role::getId).toList());
         Set<UUID> previousIds = new LinkedHashSet<>(previous.stream().map(Role::getId).toList());
 
@@ -457,15 +452,6 @@ public class OrganisationUserServiceImpl
             return toDTO(user);
         }
 
-        user.getRoles().removeIf(userRole -> !wantedIds.contains(userRole.getRole().getId()));
-        LocalDateTime now = LocalDateTime.now();
-        for (Role role : wanted)
-        {
-            if (!previousIds.contains(role.getId()))
-            {
-                user.addRoles(UserRole.Factory.newInstance(now, caller.userId(), now, caller.userId(), user, role));
-            }
-        }
         touch(user);
         user = organisationUserRepository.save(user);
 
@@ -484,7 +470,7 @@ public class OrganisationUserServiceImpl
     }
 
     /**
-     * The permissions granted by the user's StarSign roles (role permission catalogue).
+     * The permissions granted by the StarSign roles the user holds in Keycloak (role permission catalogue).
      *
      * @see bw.co.starsign.identity.OrganisationUserService#getPermissions(String)
      */
@@ -494,10 +480,11 @@ public class OrganisationUserServiceImpl
         throws Exception
     {
         OrganisationUser user = loadInTenant(id);
+        KeycloakUserDTO account = keycloakAdminService.findUserById(user.getKeycloakUserId());
         Set<String> permissions = new TreeSet<>();
-        for (UserRole userRole : user.getRoles())
+        for (Role role : userRoles.held(account.getRealmRoles(), user.getOrganisation()))
         {
-            userRole.getRole().getPermissions().forEach(permission -> permissions.add(permission.getCode()));
+            role.getPermissions().forEach(permission -> permissions.add(permission.getCode()));
         }
         return new ArrayList<>(permissions);
     }
@@ -550,10 +537,6 @@ public class OrganisationUserServiceImpl
         throws Exception
     {
         OrganisationUser user = loadInTenant(id);
-        user.setMfaEnabled(true);
-        touch(user);
-        organisationUserRepository.save(user);
-
         KeycloakUserDTO account = keycloakAdminService.findUserById(user.getKeycloakUserId());
         List<String> actions = new ArrayList<>(account.getRequiredActions() == null ? List.of() : account.getRequiredActions());
         if (!actions.contains(CONFIGURE_TOTP))
@@ -590,7 +573,6 @@ public class OrganisationUserServiceImpl
 
         user.setLastLoginAt(LocalDateTime.now());
         user.setLastLoginIp(StringUtils.truncate(ipAddress, 64));
-        user.setFailedLoginCount(0);
         if (user.getStatus() == UserStatus.INVITED || user.getStatus() == UserStatus.PENDING_VERIFICATION)
         {
             user.setStatus(UserStatus.ACTIVE);
@@ -601,7 +583,7 @@ public class OrganisationUserServiceImpl
         event.setActorType(ActorType.ORGANISATION_USER);
         event.setActorId(user.getKeycloakUserId());
         event.setActorDisplayName(displayName(user));
-        event.setAuthenticationMethod(user.isMfaEnabled() ? AuthenticationMethod.KEYCLOAK_MFA : AuthenticationMethod.KEYCLOAK_PASSWORD);
+        event.setAuthenticationMethod(authenticationMethod(user));
         event.setIpAddress(ipAddress);
         event.setUserAgent(userAgent);
         auditTrailService.record(event);
@@ -641,9 +623,9 @@ public class OrganisationUserServiceImpl
     }
 
     /**
-     * Creates the local profile of a member of an organisation on their first call. Only callers whose token
+     * Creates the local anchor of a member of an organisation on their first call. Only callers whose token
      * carries an organisation and who hold an organisation role qualify: accounts that were invited but never
-     * accepted have no role yet.
+     * accepted have no role yet. Their roles stay in Keycloak.
      */
     private OrganisationUser provision(String userId)
     {
@@ -691,48 +673,41 @@ public class OrganisationUserServiceImpl
         user.setFirstName(StringUtils.defaultString(account.getFirstName()));
         user.setLastName(StringUtils.defaultString(account.getLastName()));
         user.setStatus(UserStatus.ACTIVE);
-        user.setEmailVerified(Boolean.TRUE.equals(account.getEmailVerified()));
         user.setOrganisation(organisation);
-        user.setLocale(organisation.getLocale());
         user.setLastLoginAt(now);
         user.setCreatedAt(now);
         user.setCreatedBy(userId);
-
-        // The StarSign roles that match the realm roles Keycloak gave the account
-        Set<String> realmRoles = new LinkedHashSet<>(account.getRealmRoles() == null ? List.of() : account.getRealmRoles());
-        roleRepository.findAll().stream()
-            .filter(role -> realmRoles.contains(role.getKeycloakRoleName()))
-            .filter(role -> role.getOrganisation() == null || role.getOrganisation().getId().equals(organisation.getId()))
-            .filter(role -> !UserRoles.PLATFORM_ROLES.contains(role.getKeycloakRoleName()))
-            .forEach(role -> user.addRoles(UserRole.Factory.newInstance(now, userId, now, userId, user, role)));
 
         logger.info("Provisioned the profile of user {} in organisation {}", userId, organisationId);
         return organisationUserRepository.save(user);
     }
 
-    /** The caller's account details from Keycloak, for callers without a profile (platform administrators). */
-    private OrganisationUserDTO accountOnly(String userId)
+    /**
+     * A caller without a profile (platform administrators): only the Keycloak user id, the web layer fills in the
+     * account details from Keycloak and the token.
+     */
+    private static OrganisationUserDTO accountOnly(String userId)
     {
         OrganisationUserDTO dto = new OrganisationUserDTO();
         dto.setKeycloakUserId(userId);
         dto.setStatus(UserStatus.ACTIVE);
         dto.setRoles(new ArrayList<>());
+        return dto;
+    }
+
+    /** How the user signs in, for the audit trail: with a second factor when they have one set up in Keycloak. */
+    private AuthenticationMethod authenticationMethod(OrganisationUser user)
+    {
         try
         {
-            KeycloakUserDTO account = keycloakAdminService.findUserById(userId);
-            dto.setUsername(account.getUsername());
-            dto.setEmailAddress(account.getEmail());
-            dto.setFirstName(account.getFirstName());
-            dto.setLastName(account.getLastName());
-            dto.setEmailVerified(account.getEmailVerified());
-            dto.setRoles(account.getRealmRoles() == null ? new ArrayList<>() : new ArrayList<>(account.getRealmRoles()));
+            return keycloakAdminService.isMfaConfigured(user.getKeycloakUserId())
+                ? AuthenticationMethod.KEYCLOAK_MFA : AuthenticationMethod.KEYCLOAK_PASSWORD;
         }
         catch (RuntimeException e)
         {
-            // The portal must still load: names then come from the token (see UserControllerImpl)
-            logger.warn("Could not read Keycloak account {} for the current user: {}", userId, e.getMessage());
+            logger.warn("Could not read the credentials of user {}: {}", user.getKeycloakUserId(), e.getMessage());
+            return AuthenticationMethod.KEYCLOAK_PASSWORD;
         }
-        return dto;
     }
 
     /** The permission scopes the caller's token grants, in the API's own format (e.g. "documents:view"). */
@@ -821,20 +796,14 @@ public class OrganisationUserServiceImpl
         OrganisationUserDTO dto = organisationUserMapper.toOrganisationUserDTO(user);
         dto.setOrganisationId(user.getOrganisation().getId().toString());
         dto.setOrganisationName(user.getOrganisation().getName());
-        dto.setRoles(roleCodes(user.getRoles()));
         return dto;
-    }
-
-    private static List<String> roleCodes(Collection<UserRole> roles)
-    {
-        return roles.stream().map(userRole -> userRole.getRole().getCode()).sorted().toList();
     }
 
     private static Sort sort(String field, SortDirection direction)
     {
         Sort.Direction order = direction == SortDirection.DESC ? Sort.Direction.DESC : Sort.Direction.ASC;
         Set<String> sortable = Set.of("firstName", "lastName", "emailAddress", "username", "status", "lastLoginAt",
-            "createdAt", "jobTitle");
+            "createdAt");
         if (StringUtils.isNotBlank(field) && sortable.contains(field.trim()))
         {
             return Sort.by(order, field.trim()).and(Sort.by("id"));

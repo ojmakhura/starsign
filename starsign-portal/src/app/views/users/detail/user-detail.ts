@@ -199,8 +199,8 @@ export class UserDetail {
     if (!confirm(`Require ${this.fullName()} to set up an authenticator app at their next sign-in?`)) {
       return;
     }
+    // mfaEnabled says whether a second factor is set up in Keycloak: it changes once the user has done so
     await this.run('mfa', () => this.accountActions.requireMfa(this.id()), 'Two-factor authentication required');
-    this.user.update((user) => (user ? { ...user, mfaEnabled: true } : user));
   }
 
   protected async terminateSessions(): Promise<void> {

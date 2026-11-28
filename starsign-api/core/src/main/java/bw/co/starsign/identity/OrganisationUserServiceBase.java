@@ -41,8 +41,6 @@ public abstract class OrganisationUserServiceBase
     protected final AuditTrailService auditTrailService;
     protected final OrganisationUserRepository organisationUserRepository;
     protected final OrganisationUserMapper organisationUserMapper;
-    protected final UserRoleRepository userRoleRepository;
-    protected final UserRoleMapper userRoleMapper;
     protected final RoleRepository roleRepository;
     protected final RoleMapper roleMapper;
 
@@ -50,15 +48,13 @@ public abstract class OrganisationUserServiceBase
         @Lazy KeycloakAdminService keycloakAdminService,
         @Lazy AuditTrailService auditTrailService,
         OrganisationUserRepository organisationUserRepository,
-        OrganisationUserMapper organisationUserMapper,         UserRoleRepository userRoleRepository,
-        UserRoleMapper userRoleMapper,         RoleRepository roleRepository,
+        OrganisationUserMapper organisationUserMapper,
+        RoleRepository roleRepository,
         RoleMapper roleMapper    ) {
         this.keycloakAdminService = keycloakAdminService;
         this.auditTrailService = auditTrailService;
         this.organisationUserRepository = organisationUserRepository;
         this.organisationUserMapper = organisationUserMapper;
-        this.userRoleRepository = userRoleRepository;
-        this.userRoleMapper = userRoleMapper;
         this.roleRepository = roleRepository;
         this.roleMapper = roleMapper;
     }
@@ -87,14 +83,6 @@ public abstract class OrganisationUserServiceBase
      */
     public OrganisationUserRepository getOrganisationUserRepository() {
         return organisationUserRepository;
-    }
-
-    /**
-     * Gets the reference to <code>userRole</code>'s repository.
-     * @return userRoleRepository
-     */
-    public UserRoleRepository getUserRoleRepository() {
-        return userRoleRepository;
     }
 
     /**

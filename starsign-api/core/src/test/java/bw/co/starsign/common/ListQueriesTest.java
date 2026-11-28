@@ -1,7 +1,9 @@
 package bw.co.starsign.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import bw.co.starsign.document.Document;
 import bw.co.starsign.document.DocumentListDTO;
@@ -10,7 +12,6 @@ import bw.co.starsign.document.DocumentStatus;
 import bw.co.starsign.identity.OrganisationUser;
 import bw.co.starsign.identity.OrganisationUserListDTO;
 import bw.co.starsign.identity.OrganisationUserRepository;
-import bw.co.starsign.identity.UserRole;
 import bw.co.starsign.organisation.Organisation;
 import bw.co.starsign.organisation.OrganisationStatus;
 import bw.co.starsign.organisation.OrganisationListDTO;
@@ -26,8 +27,6 @@ import bw.co.starsign.workflow.SigningWorkflowRepository;
 import bw.co.starsign.workflow.WorkflowStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,8 +54,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The list queries filter, sort, page and build their DTOs in one statement (the users' roles in one more),
- * however many rows are listed, and without loading any entity.
+ * The list queries filter, sort, page and build their DTOs in one statement, however many rows are listed, and
+ * without loading any entity. (Users' roles and job titles come from Keycloak, in the web layer.)
  */
 @SpringBootTest(classes = ListQueriesTest.Config.class, webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
@@ -101,8 +100,6 @@ class ListQueriesTest
     private UUID ada;
     private UUID nameless;
     private UUID removed;
-    private UUID admin;
-    private UUID signer;
 
     @BeforeEach
     void setUp()
@@ -113,15 +110,12 @@ class ListQueriesTest
         organisation = insert("ORGANISATION", Map.of("NAME", "Acme", "TENANT_ID", "acme", "STATUS", "ACTIVE",
                 "CREATED_AT", NOW));
         ada = insert("ORGANISATION_USER", Map.of("ORGANISATION_FK", organisation, "FIRST_NAME", " Ada ",
-                "LAST_NAME", "Lovelace", "EMAIL_ADDRESS", "ada@acme.test", "STATUS", "ACTIVE"));
+                "LAST_NAME", "Lovelace", "EMAIL_ADDRESS", "ada@acme.test", "STATUS", "ACTIVE",
+                "KEYCLOAK_USER_ID", "kc-ada"));
         nameless = insert("ORGANISATION_USER", Map.of("ORGANISATION_FK", organisation, "FIRST_NAME", " ", "LAST_NAME", "",
                 "EMAIL_ADDRESS", "nameless@acme.test", "STATUS", "ACTIVE"));
         removed = insert("ORGANISATION_USER", Map.of("ORGANISATION_FK", organisation, "FIRST_NAME", "Gone",
                 "EMAIL_ADDRESS", "gone@acme.test", "STATUS", "ACTIVE", "DELETED_AT", NOW));
-        admin = insert("ROLE", Map.of("CODE", "ORG_ADMIN"));
-        signer = insert("ROLE", Map.of("CODE", "DOCUMENT_SIGNER"));
-        insert("USER_ROLE", Map.of("USER_FK", ada, "ROLE_FK", admin));
-        insert("USER_ROLE", Map.of("USER_FK", ada, "ROLE_FK", signer));
     }
 
     @Test
@@ -231,7 +225,7 @@ class ListQueriesTest
     }
 
     @Test
-    void userListItemsCarryTheirRoleCodes()
+    void userListItemsCarryTheirKeycloakUserIds()
     {
         Specification<OrganisationUser> live = (root, query, builder) -> builder.isNull(root.get("deletedAt"));
 
@@ -239,25 +233,23 @@ class ListQueriesTest
         List<OrganisationUserListDTO> items = userRepository.findListItems(live,
                 Pageable.unpaged(Sort.by(Sort.Direction.DESC, "emailAddress")));
 
-        assertEquals(2, statistics.getPrepareStatementCount());
+        assertEquals(1, statistics.getPrepareStatementCount());
         assertEquals(0, statistics.getEntityLoadCount());
         assertEquals(0, statistics.getCollectionLoadCount());
         assertEquals(List.of(nameless.toString(), ada.toString()), items.stream().map(OrganisationUserListDTO::getId).toList());
-        assertEquals(List.of("DOCUMENT_SIGNER", "ORG_ADMIN"), items.get(1).getRoles());
-        assertEquals(List.of(), items.get(0).getRoles());
+        assertEquals("kc-ada", items.get(1).getKeycloakUserId());
         assertEquals("ada@acme.test", items.get(1).getEmailAddress());
+        // Keycloak owns these: the web layer fills them in
+        assertTrue(items.get(1).getRoles() == null || items.get(1).getRoles().isEmpty());
+        assertNull(items.get(1).getJobTitle());
     }
 
     @Test
-    void userListItemsFilterByRoleThroughASubquery()
+    void userListItemsFilterByKeycloakUserIds()
     {
-        // The specification the user search builds for a role code
-        Specification<OrganisationUser> admins = (root, query, builder) -> {
-            Subquery<UUID> holders = query.subquery(UUID.class);
-            Root<UserRole> role = holders.from(UserRole.class);
-            holders.select(role.get("user").get("id")).where(builder.equal(role.get("role").get("code"), "ORG_ADMIN"));
-            return root.get("id").in(holders);
-        };
+        // The specification the user search builds for the holders of a role, whom Keycloak names
+        Specification<OrganisationUser> admins = (root, query, builder) -> root.get("keycloakUserId")
+                .in(List.of("kc-ada", "kc-elsewhere"));
 
         statistics.clear();
         List<OrganisationUserListDTO> items = userRepository.findListItems(admins,
@@ -266,10 +258,8 @@ class ListQueriesTest
                 (root, query, builder) -> builder.equal(root.get("emailAddress"), "nobody@acme.test"),
                 Pageable.unpaged(Sort.by("id")));
 
-        // The roles query is left out when no user matches
-        assertEquals(3, statistics.getPrepareStatementCount());
+        assertEquals(2, statistics.getPrepareStatementCount());
         assertEquals(List.of(ada.toString()), items.stream().map(OrganisationUserListDTO::getId).toList());
-        assertEquals(List.of("DOCUMENT_SIGNER", "ORG_ADMIN"), items.get(0).getRoles());
         assertEquals(List.of(), none);
     }
 
@@ -328,21 +318,20 @@ class ListQueriesTest
     }
 
     @Test
-    void userPagesAreCompletedWithTheirRolesOnce()
+    void userPagesCarryTheirTotals()
     {
         Specification<OrganisationUser> live = (root, query, builder) -> builder.isNull(root.get("deletedAt"));
 
-        // Select, roles and count: the completion runs once for the page, not once per user
+        // Select and count
         statistics.clear();
         Page<OrganisationUserListDTO> page = userRepository.findListItemPage(live,
                 PageRequest.of(0, 1, Sort.by("emailAddress", "id")));
 
-        assertEquals(3, statistics.getPrepareStatementCount());
+        assertEquals(2, statistics.getPrepareStatementCount());
         assertEquals(2, page.getTotalElements());
         assertEquals(List.of(ada.toString()), page.map(OrganisationUserListDTO::getId).getContent());
-        assertEquals(List.of("DOCUMENT_SIGNER", "ORG_ADMIN"), page.getContent().get(0).getRoles());
 
-        // An empty page skips both the completion and the count
+        // An empty page skips the count
         statistics.clear();
         Page<OrganisationUserListDTO> empty = userRepository.findListItemPage(
                 (root, query, builder) -> builder.equal(root.get("emailAddress"), "nobody@acme.test"),

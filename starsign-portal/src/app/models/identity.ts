@@ -68,6 +68,7 @@ export interface OrganisationUserListDTO {
   status?: UserStatus | null;
   roles?: string[] | null;
   lastLoginAt?: string | null;
+  keycloakUserId?: string | null;
 }
 
 export interface OrganisationUserSearchCriteria extends BaseSearchCriteria {

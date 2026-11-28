@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.StringUtils;
 import org.keycloak.OAuth2Constants;
@@ -32,6 +33,7 @@ import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.ClientMappingsRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.MappingsRepresentation;
 import org.keycloak.representations.idm.OrganizationDomainRepresentation;
 import org.keycloak.representations.idm.OrganizationRepresentation;
@@ -61,6 +63,12 @@ public class KeycloakAdminServiceImpl
 
     /** Realm roles every realm user gets from Keycloak itself; they are not application roles. */
     private static final List<String> BUILT_IN_REALM_ROLES = List.of("offline_access", "uma_authorization");
+
+    /** Credential types that are a second factor (Keycloak's OTP and WebAuthn credential types). */
+    private static final Set<String> SECOND_FACTORS = Set.of("otp", "webauthn", "webauthn-passwordless");
+
+    /** How many members of a role are read per call. */
+    private static final int MEMBER_PAGE_SIZE = 500;
 
     private final KeycloakAdminProperties properties;
 
@@ -450,6 +458,79 @@ public class KeycloakAdminServiceImpl
         {
             logger.debug("User {} is not a member of Keycloak organisation {}", userId, keycloakOrganisationId);
         }
+    }
+
+    /**
+     * An authenticator app (OTP) or a security key (WebAuthn) counts as a second factor.
+     *
+     * @see bw.co.starsign.identity.KeycloakAdminService#isMfaConfigured(String)
+     */
+    @Override
+    protected boolean handleIsMfaConfigured(String userId)
+        throws Exception
+    {
+        List<CredentialRepresentation> credentials = call("The user", () -> userResource(userId).credentials());
+        return credentials != null && credentials.stream()
+            .map(CredentialRepresentation::getType)
+            .anyMatch(SECOND_FACTORS::contains);
+    }
+
+    /**
+     * Keycloak reports a user its brute-force detection has locked out as {@code disabled} (the account's own
+     * enabled flag is untouched).
+     *
+     * @see bw.co.starsign.identity.KeycloakAdminService#isLockedOut(String)
+     */
+    @Override
+    protected boolean handleIsLockedOut(String userId)
+        throws Exception
+    {
+        Map<String, Object> status = call("The user",
+            () -> realm().attackDetection().bruteForceUserStatus(userId.trim()));
+        return status != null && Boolean.TRUE.equals(status.get("disabled"));
+    }
+
+    /**
+     * @see bw.co.starsign.identity.KeycloakAdminService#clearLoginFailures(String)
+     */
+    @Override
+    protected void handleClearLoginFailures(String userId)
+        throws Exception
+    {
+        call("The user", () -> {
+            realm().attackDetection().clearBruteForceForUser(userId.trim());
+            return null;
+        });
+    }
+
+    /**
+     * Read in pages, so roles with many members are read in full.
+     *
+     * @see bw.co.starsign.identity.KeycloakAdminService#findRealmRoleMemberIds(String)
+     */
+    @Override
+    protected List<String> handleFindRealmRoleMemberIds(String roleName)
+        throws Exception
+    {
+        List<String> ids = new ArrayList<>();
+        try
+        {
+            int first = 0;
+            List<UserRepresentation> page;
+            do
+            {
+                int offset = first;
+                page = realm().roles().get(roleName.trim()).getUserMembers(offset, MEMBER_PAGE_SIZE);
+                page.forEach(user -> ids.add(user.getId()));
+                first += MEMBER_PAGE_SIZE;
+            }
+            while (page.size() == MEMBER_PAGE_SIZE);
+        }
+        catch (NotFoundException e)
+        {
+            return List.of();
+        }
+        return ids;
     }
 
     @PreDestroy

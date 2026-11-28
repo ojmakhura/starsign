@@ -7,4 +7,5 @@
 
     <!-- MASTER -->
     <include file="db/changes/001-outbox-due-index.xml"/>
+    <include file="db/changes/002-keycloak-owned-users.xml"/>
 </databaseChangeLog>

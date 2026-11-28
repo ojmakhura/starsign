@@ -96,6 +96,26 @@ public class UserRoles
         return roles;
     }
 
+    /**
+     * The StarSign roles of {@code organisation} (built-in and its own) that the realm roles Keycloak gives a member
+     * stand for. Keycloak owns the assignment; this only names it. Platform roles are left out: a member never
+     * holds them in the organisation.
+     */
+    public List<Role> held(Collection<String> realmRoles, Organisation organisation)
+    {
+        if (realmRoles == null || realmRoles.isEmpty())
+        {
+            return List.of();
+        }
+        Set<String> names = new LinkedHashSet<>(realmRoles);
+        return roleRepository.findAll(StarsignSpecifications.<Role, String>findByAttributeIn(names, "keycloakRoleName"))
+            .stream()
+            .filter(role -> role.getOrganisation() == null || role.getOrganisation().getId().equals(organisation.getId()))
+            .filter(role -> !PLATFORM_ROLES.contains(role.getKeycloakRoleName()))
+            .sorted(java.util.Comparator.comparing(Role::getCode))
+            .toList();
+    }
+
     /** The Keycloak realm roles that go with {@code roles}, including the base role. */
     public static List<String> keycloakRoles(Collection<Role> roles)
     {

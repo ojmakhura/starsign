@@ -72,6 +72,12 @@ public class OrganisationUserListDTO
     protected LocalDateTime lastLoginAt;
 
     /**
+     * The Keycloak user id, so the web layer can add the details Keycloak owns (job title, roles).
+     */
+    @Nullable
+    protected String keycloakUserId;
+
+    /**
      * Constructor taking only required properties
      */
     public OrganisationUserListDTO()
@@ -102,6 +108,12 @@ public class OrganisationUserListDTO
         this.lastLoginAt = lastLoginAtIn;
     }
 
+    public OrganisationUserListDTO(final String idIn, final String emailAddressIn, final String firstNameIn, final String lastNameIn, final String jobTitleIn, final UserStatus statusIn, final List<String> rolesIn, final LocalDateTime lastLoginAtIn, final String keycloakUserIdIn)
+    {
+        this(idIn, emailAddressIn, firstNameIn, lastNameIn, jobTitleIn, statusIn, rolesIn, lastLoginAtIn);
+        this.keycloakUserId = keycloakUserIdIn;
+    }
+
     /**
      * Copies constructor from other OrganisationUserListDTO
      *
@@ -118,6 +130,7 @@ public class OrganisationUserListDTO
         this.status = otherBean.getStatus();
         this.roles = otherBean.getRoles();
         this.lastLoginAt = otherBean.getLastLoginAt();
+        this.keycloakUserId = otherBean.getKeycloakUserId();
     }
 
     /**
@@ -136,6 +149,7 @@ public class OrganisationUserListDTO
             this.setStatus(otherBean.getStatus());
             this.setRoles(otherBean.getRoles());
             this.setLastLoginAt(otherBean.getLastLoginAt());
+            this.setKeycloakUserId(otherBean.getKeycloakUserId());
         }
     }
 
@@ -274,6 +288,23 @@ public class OrganisationUserListDTO
     public void setRoles(final List<String> value)
     {
         this.roles = value;
+    }
+
+    /**
+     * The Keycloak user id, so the web layer can add the details Keycloak owns (job title, roles).
+     * @return keycloakUserId String
+     */
+    public String getKeycloakUserId()
+    {
+        return this.keycloakUserId;
+    }
+
+    /**
+     * @param value the Keycloak user id
+     */
+    public void setKeycloakUserId(String value)
+    {
+        this.keycloakUserId = value;
     }
 
     /**

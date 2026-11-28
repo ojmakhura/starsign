@@ -19,6 +19,8 @@ import bw.co.starsign.branding.BrandingDTO;
 import bw.co.starsign.branding.BrandingService;
 import bw.co.starsign.common.SortDirection;
 import bw.co.starsign.context.CallerContext;
+import bw.co.starsign.identity.KeycloakAdminService;
+import bw.co.starsign.identity.KeycloakAttributes;
 import bw.co.starsign.identity.OrganisationUser;
 import bw.co.starsign.identity.OrganisationUserRepository;
 import bw.co.starsign.messaging.OutboxEventDTO;
@@ -107,6 +109,7 @@ public class NotificationServiceImpl
     private final NotificationProviderConfigRepository notificationProviderConfigRepository;
     private final NotificationTemplates templates;
     private final NovuNotifier novuNotifier;
+    private final KeycloakAdminService keycloakAdminService;
     private final CallerContext caller;
     private final String portalUrl;
     private final String signingPortalUrl;
@@ -131,6 +134,7 @@ public class NotificationServiceImpl
         NotificationTemplates templates,
         NovuNotifier novuNotifier,
         @Lazy CallerContext caller,
+        @Lazy KeycloakAdminService keycloakAdminService,
         @Value("${app.portal-url:}") String portalUrl,
         @Value("${app.signing-portal-url:}") String signingPortalUrl,
         @Value("${app.notifications.manual-reminder-cooldown-minutes:60}") long manualReminderCooldownMinutes) {
@@ -154,6 +158,7 @@ public class NotificationServiceImpl
         this.templates = templates;
         this.novuNotifier = novuNotifier;
         this.caller = caller;
+        this.keycloakAdminService = keycloakAdminService;
         this.portalUrl = StringUtils.removeEnd(StringUtils.trimToEmpty(portalUrl), "/");
         this.signingPortalUrl = StringUtils.removeEnd(StringUtils.trimToEmpty(signingPortalUrl), "/");
         this.manualReminderCooldown = Duration.ofMinutes(Math.max(0, manualReminderCooldownMinutes));
@@ -767,7 +772,7 @@ public class NotificationServiceImpl
         String address = StringUtils.trimToNull(request.getRecipientAddress());
         if (address == null && recipientUser != null)
         {
-            address = channel == NotificationChannel.SMS ? StringUtils.trimToNull(recipientUser.getPhoneNumber())
+            address = channel == NotificationChannel.SMS ? keycloakAttribute(recipientUser, KeycloakAttributes.PHONE_NUMBER)
                     : channel == NotificationChannel.EMAIL ? StringUtils.trimToNull(recipientUser.getEmailAddress())
                     : recipientUser.getKeycloakUserId();
         }
@@ -785,7 +790,7 @@ public class NotificationServiceImpl
                                 + StringUtils.defaultString(recipientUser.getLastName())));
         String locale = StringUtils.firstNonBlank(request.getLocale(),
                 signatory == null ? null : signatory.getLocale(),
-                recipientUser == null ? null : recipientUser.getLocale(),
+                recipientUser == null ? null : keycloakAttribute(recipientUser, KeycloakAttributes.LOCALE),
                 organisation == null ? null : organisation.getLocale(), "en");
 
         Map<String, Object> model = model(request, organisation, workflow, recipientName);
@@ -1514,4 +1519,21 @@ public class NotificationServiceImpl
         }
     }
 
+    /**
+     * A profile attribute of an organisation user, which Keycloak owns (phone number, locale); null when the user
+     * has none or Keycloak cannot be read, so the caller falls back to other sources.
+     */
+    private String keycloakAttribute(OrganisationUser user, String attribute)
+    {
+        try
+        {
+            return KeycloakAttributes.first(keycloakAdminService.findUserById(user.getKeycloakUserId()), attribute);
+        }
+        catch (RuntimeException e)
+        {
+            logger.warn("Could not read the {} of user {} from Keycloak: {}", attribute, user.getKeycloakUserId(),
+                    e.getMessage());
+            return null;
+        }
+    }
 }

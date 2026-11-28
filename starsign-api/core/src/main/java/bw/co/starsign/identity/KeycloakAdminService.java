@@ -147,4 +147,31 @@ bw.co.starsign.identity.KeycloakAdminService.removeOrganisationMember(userId)
      */
     public void removeOrganisationMember(String keycloakOrganisationId, String userId) ;
 
+    /**
+     * Whether the user has a second factor set up (an authenticator app or a security key).
+     * @param userId the Keycloak user id
+     * @return true when the user signs in with a second factor
+     */
+    public boolean isMfaConfigured(String userId) ;
+
+    /**
+     * Whether Keycloak's brute-force detection currently locks the user out after failed sign-ins.
+     * @param userId the Keycloak user id
+     * @return true while the user is locked out
+     */
+    public boolean isLockedOut(String userId) ;
+
+    /**
+     * Clears the user's failed sign-ins in Keycloak's brute-force detection, ending a lockout.
+     * @param userId the Keycloak user id
+     */
+    public void clearLoginFailures(String userId) ;
+
+    /**
+     * The ids of the users who hold the realm role directly (not through a composite role).
+     * @param roleName the realm role
+     * @return the Keycloak user ids; empty when the role does not exist
+     */
+    public List<String> findRealmRoleMemberIds(String roleName) ;
+
 }
