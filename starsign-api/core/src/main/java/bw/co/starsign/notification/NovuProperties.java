@@ -31,6 +31,12 @@ public class NovuProperties
     /** The Novu WebSocket address the browser uses for live updates; Novu's default when blank. */
     private String publicSocketUrl;
 
+    /**
+     * Whether text messages are sent. Off until Novu has an SMS integration: SMS notifications are recorded as
+     * SUPPRESSED, and invitations, reminders and verification codes go by email instead.
+     */
+    private boolean smsEnabled;
+
     public boolean isEnabled()
     {
         return enabled;
@@ -99,5 +105,15 @@ public class NovuProperties
     public void setPublicSocketUrl(String publicSocketUrl)
     {
         this.publicSocketUrl = publicSocketUrl;
+    }
+
+    public boolean isSmsEnabled()
+    {
+        return smsEnabled;
+    }
+
+    public void setSmsEnabled(boolean smsEnabled)
+    {
+        this.smsEnabled = smsEnabled;
     }
 }

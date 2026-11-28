@@ -15,6 +15,7 @@ import bw.co.starsign.notification.NotificationChannel;
 import bw.co.starsign.notification.NotificationEventType;
 import bw.co.starsign.notification.NotificationRequestDTO;
 import bw.co.starsign.notification.NotificationService;
+import bw.co.starsign.notification.NovuNotifier;
 import bw.co.starsign.organisation.OrganisationSigningPolicy;
 import bw.co.starsign.workflow.Signatory;
 import bw.co.starsign.workflow.SignatoryMapper;
@@ -49,6 +50,7 @@ public class SigningInvitationServiceImpl
     private final SigningSessions signingSessions;
     private final SigningEventRecorder signingEventRecorder;
     private final SigningLinks signingLinks;
+    private final NovuNotifier novuNotifier;
 
     public SigningInvitationServiceImpl(
         @Lazy NotificationService notificationService,
@@ -62,7 +64,8 @@ public class SigningInvitationServiceImpl
         SignatoryMapper signatoryMapper,
         SigningSessions signingSessions,
         SigningEventRecorder signingEventRecorder,
-        SigningLinks signingLinks) {
+        SigningLinks signingLinks,
+        NovuNotifier novuNotifier) {
 
         super(
             notificationService,
@@ -77,6 +80,7 @@ public class SigningInvitationServiceImpl
         this.signingSessions = signingSessions;
         this.signingEventRecorder = signingEventRecorder;
         this.signingLinks = signingLinks;
+        this.novuNotifier = novuNotifier;
     }
 
     /**
@@ -108,8 +112,10 @@ public class SigningInvitationServiceImpl
 
         LocalDateTime now = LocalDateTime.now();
         String token = SigningTokens.newToken();
-        NotificationChannel channel = !signatory.isNotifyByEmail() && signatory.isNotifyBySms()
-                && StringUtils.isNotBlank(signatory.getPhoneNumber())
+        // Without SMS, a signatory who only takes text messages is invited by email
+        boolean sms = novuNotifier.isSmsEnabled() && signatory.isNotifyBySms()
+                && StringUtils.isNotBlank(signatory.getPhoneNumber());
+        NotificationChannel channel = !signatory.isNotifyByEmail() && sms
                 ? NotificationChannel.SMS
                 : NotificationChannel.EMAIL;
 
@@ -140,7 +146,7 @@ public class SigningInvitationServiceImpl
         {
             notify(invitation, NotificationChannel.EMAIL, signatory.getEmailAddress(), link);
         }
-        if (signatory.isNotifyBySms() && StringUtils.isNotBlank(signatory.getPhoneNumber()))
+        if (sms)
         {
             notify(invitation, NotificationChannel.SMS, signatory.getPhoneNumber(), link);
         }

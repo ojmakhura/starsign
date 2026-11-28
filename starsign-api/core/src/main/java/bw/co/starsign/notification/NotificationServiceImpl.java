@@ -86,6 +86,8 @@ public class NotificationServiceImpl
     private static final int MAX_REMINDERS = 20;
     private static final String SYSTEM = "system";
     private static final String PROVIDER = "novu";
+
+    private static final String SMS_OFF = "SMS delivery is turned off (app.novu.sms-enabled=false)";
     private static final String DEFAULT_SENDER = "no-reply@starsign.co.bw";
     private static final String DEFAULT_SMS_SENDER = "StarSign";
 
@@ -214,6 +216,16 @@ public class NotificationServiceImpl
             {
                 failedAttempt(notification, e, now);
             }
+            return toDto(notificationRepository.save(notification));
+        }
+
+        if (notification.getChannel() == NotificationChannel.SMS && !novuNotifier.isSmsEnabled())
+        {
+            // Queued before SMS was turned off
+            notification.setStatus(NotificationStatus.SUPPRESSED);
+            notification.setLastError(SMS_OFF);
+            notification.setNextAttemptAt(null);
+            redactSecrets(notification);
             return toDto(notificationRepository.save(notification));
         }
 
@@ -818,7 +830,8 @@ public class NotificationServiceImpl
         notification.setCreatedAt(now);
         notification.setCreatedBy(SYSTEM);
 
-        String suppressed = suppressedBy(request.getEventType(), channel, settings(organisation));
+        String suppressed = channel == NotificationChannel.SMS && !novuNotifier.isSmsEnabled() ? SMS_OFF
+                : suppressedBy(request.getEventType(), channel, settings(organisation));
         if (suppressed != null)
         {
             notification.setStatus(NotificationStatus.SUPPRESSED);
@@ -1090,12 +1103,14 @@ public class NotificationServiceImpl
         }
 
         Notification first = null;
-        if (signatory.isNotifyByEmail() && StringUtils.isNotBlank(signatory.getEmailAddress()))
+        // Without SMS, a signatory who only takes text messages is reminded by email
+        boolean byEmail = signatory.isNotifyByEmail() || (signatory.isNotifyBySms() && !novuNotifier.isSmsEnabled());
+        if (byEmail && StringUtils.isNotBlank(signatory.getEmailAddress()))
         {
             first = create(request(NotificationEventType.SIGNING_REMINDER, NotificationChannel.EMAIL, workflow,
                     signatory, null, signatory.getEmailAddress(), model, "reminder:" + reminder.getId() + ":EMAIL"));
         }
-        if (signatory.isNotifyBySms() && StringUtils.isNotBlank(signatory.getPhoneNumber()))
+        if (signatory.isNotifyBySms() && novuNotifier.isSmsEnabled() && StringUtils.isNotBlank(signatory.getPhoneNumber()))
         {
             Notification sms = create(request(NotificationEventType.SIGNING_REMINDER, NotificationChannel.SMS, workflow,
                     signatory, null, signatory.getPhoneNumber(), model, "reminder:" + reminder.getId() + ":SMS"));

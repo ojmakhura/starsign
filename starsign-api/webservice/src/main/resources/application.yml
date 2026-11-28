@@ -195,6 +195,9 @@ app:
     # Novu API and WebSocket addresses as the browser reaches them (base-url / Novu Cloud's when blank)
     public-api-url: ${NOVU_PUBLIC_API_URL:}
     public-socket-url: ${NOVU_PUBLIC_SOCKET_URL:}
+    # Text messages need an SMS integration in Novu. Off: SMS notifications are recorded as SUPPRESSED, and
+    # invitations, reminders and verification codes go by email instead
+    sms-enabled: ${NOVU_SMS_ENABLED:false}
   # PDF stamping and PAdES signatures (bw.co.starsign.signing.PdfSigningEngineImpl)
   signing:
     keystore-path: ${SIGNING_KEYSTORE_PATH:./data/signing/starsign-dev.p12}

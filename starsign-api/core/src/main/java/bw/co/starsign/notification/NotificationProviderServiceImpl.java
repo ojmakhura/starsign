@@ -170,6 +170,11 @@ public class NotificationProviderServiceImpl
         {
             throw new NotificationProviderServiceException("'" + recipient + "' is not a valid phone number");
         }
+        if (provider.getChannel() == NotificationChannel.SMS && !novuNotifier.isSmsEnabled())
+        {
+            throw new NotificationProviderServiceException(
+                    "SMS delivery is turned off (app.novu.sms-enabled=false): nothing can be sent to test this provider");
+        }
         if (!novuNotifier.isEnabled())
         {
             logger.info("Novu is disabled: test message for provider {} to {} not sent", provider.getName(),

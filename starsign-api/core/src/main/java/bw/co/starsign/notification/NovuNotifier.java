@@ -59,6 +59,15 @@ public class NovuNotifier
                 && StringUtils.isNotBlank(properties.getSecretKey());
     }
 
+    /**
+     * Whether StarSign sends text messages ({@code app.novu.sms-enabled}). When off, nothing is sent by SMS:
+     * callers fall back to email where the recipient has an address.
+     */
+    public boolean isSmsEnabled()
+    {
+        return properties.isSmsEnabled();
+    }
+
     public NovuProperties properties()
     {
         return properties;
