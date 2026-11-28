@@ -47,6 +47,8 @@ public class CompletedCopyLinks
         invitation.setIssuedAt(now);
         invitation.setSentAt(now);
         invitation.setConsumedAt(now);
+        // Required column; SigningSessions ignores it for downloads, and as CONSUMED it is never swept for expiry
+        invitation.setExpiresAt(now);
         invitation.setAccessCount(0);
         invitation.setDeliveryChannel(NotificationChannel.EMAIL);
         invitation.setSignatory(signatory);

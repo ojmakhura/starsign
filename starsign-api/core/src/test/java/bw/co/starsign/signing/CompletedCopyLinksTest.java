@@ -1,6 +1,7 @@
 package bw.co.starsign.signing;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -59,6 +60,8 @@ class CompletedCopyLinksTest
         assertEquals(InvitationStatus.CONSUMED, invitation.getStatus());
         assertTrue(invitation.isSingleUse());
         assertEquals(signatory, invitation.getSignatory());
+        // signatory_invitation.expires_at is NOT NULL: without it finalising the workflow failed on every retry
+        assertNotNull(invitation.getExpiresAt());
     }
 
     @Test
