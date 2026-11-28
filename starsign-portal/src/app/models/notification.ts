@@ -51,6 +51,22 @@ export enum NotificationEventType {
   ORGANISATION_STATUS = 'ORGANISATION_STATUS',
 }
 
+/** What the portal needs to open the signed-in user's Novu inbox. When enabled is false, in-app notifications are not in Novu and the portal lists them from StarSign (GET /notifications/me). */
+export interface NotificationInboxDTO {
+  /** Whether in-app notifications are delivered through Novu. */
+  enabled?: boolean | null;
+  /** The Novu environment's application identifier. */
+  applicationIdentifier?: string | null;
+  /** The user's Novu subscriber id (their Keycloak user id). */
+  subscriberId?: string | null;
+  /** HMAC-SHA256 of the subscriber id, keyed with the Novu secret key. */
+  subscriberHash?: string | null;
+  /** The Novu API address the browser uses; Novu Cloud when blank. */
+  backendUrl?: string | null;
+  /** The Novu WebSocket address the browser uses; Novu Cloud when blank. */
+  socketUrl?: string | null;
+}
+
 export interface NotificationProviderConfigDTO extends AuditableDTO {
   name?: string | null;
   channel?: NotificationChannel | null;

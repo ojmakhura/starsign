@@ -39,6 +39,14 @@ public class NotificationControllerImpl implements NotificationController {
 
 
     @Override
+    @Operation(summary = "Inbox", description = "The signed-in user's Novu inbox connection")
+    public ResponseEntity<NotificationInboxDTO> inbox() throws Exception {
+
+        return ResponseEntity.ok(notificationService.inbox());
+    }
+
+
+    @Override
     @Operation(summary = "Mark read", description = "Mark read")
     public ResponseEntity<NotificationDTO> markRead(String id) throws Exception {
 

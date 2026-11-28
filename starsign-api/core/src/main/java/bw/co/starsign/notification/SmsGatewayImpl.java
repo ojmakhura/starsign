@@ -47,6 +47,8 @@ public class SmsGatewayImpl
         {
             payload.putAll(hint.payload());
         }
+        // Selects the SMS step of the event's workflow (the email and in-app steps are skipped)
+        payload.put(NovuNotifier.CHANNEL, "SMS");
         payload.put("body", message);
         if (StringUtils.isNotBlank(senderId))
         {

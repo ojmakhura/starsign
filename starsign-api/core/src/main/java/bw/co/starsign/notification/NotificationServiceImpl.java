@@ -191,7 +191,24 @@ public class NotificationServiceImpl
 
         if (notification.getChannel() == NotificationChannel.IN_APP)
         {
-            delivered(notification, now);
+            if (!novuNotifier.isInboxEnabled())
+            {
+                // Queued while the inbox was on: the portal now lists it from StarSign
+                delivered(notification, now);
+                return toDto(notificationRepository.save(notification));
+            }
+            try
+            {
+                String messageId = sendInApp(notification);
+                // Novu accepted it: the message is in the user's inbox
+                delivered(notification, now);
+                notification.setProviderName(PROVIDER);
+                notification.setProviderMessageId(messageId);
+            }
+            catch (RuntimeException e)
+            {
+                failedAttempt(notification, e, now);
+            }
             return toDto(notificationRepository.save(notification));
         }
 
@@ -335,6 +352,33 @@ public class NotificationServiceImpl
         };
         return toDtos(notificationRepository.findAll(mine,
                 PageRequest.of(0, MAX_MINE, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent());
+    }
+
+    /**
+     * The subscriber is the caller's Keycloak id, the id in-app notifications are triggered for (sendInApp).
+     *
+     * @see bw.co.starsign.notification.NotificationService#inbox()
+     */
+    @Override
+    protected NotificationInboxDTO handleInbox()
+        throws Exception
+    {
+        NotificationInboxDTO inbox = new NotificationInboxDTO();
+        inbox.setEnabled(Boolean.FALSE);
+        String subscriberId = StringUtils.trimToNull(caller.userId());
+        if (!novuNotifier.isInboxEnabled() || subscriberId == null)
+        {
+            return inbox;
+        }
+        NovuProperties properties = novuNotifier.properties();
+        inbox.setEnabled(Boolean.TRUE);
+        inbox.setApplicationIdentifier(properties.getApplicationIdentifier().trim());
+        inbox.setSubscriberId(subscriberId);
+        inbox.setSubscriberHash(novuNotifier.subscriberHash(subscriberId));
+        inbox.setBackendUrl(StringUtils.trimToNull(
+                StringUtils.firstNonBlank(properties.getPublicApiUrl(), properties.getBaseUrl())));
+        inbox.setSocketUrl(StringUtils.trimToNull(properties.getPublicSocketUrl()));
+        return inbox;
     }
 
     /**
@@ -777,8 +821,9 @@ public class NotificationServiceImpl
             redactSecrets(notification);
             return notificationRepository.save(notification);
         }
-        if (channel == NotificationChannel.IN_APP)
+        if (channel == NotificationChannel.IN_APP && !novuNotifier.isInboxEnabled())
         {
+            // No Novu inbox: the portal lists in-app notifications from StarSign, so storing it delivers it
             notification.setAttempts(1);
             delivered(notification, now);
             return notificationRepository.save(notification);
@@ -805,6 +850,38 @@ public class NotificationServiceImpl
         event.setIdempotencyKey("notification:" + notification.getId() + ":" + (notification.getAttempts() + 1));
         event.setCorrelationId(notification.getWorkflow() == null ? null : notification.getWorkflow().getId().toString());
         outboxService.enqueue(event);
+    }
+
+    /**
+     * Puts the notification in the recipient's Novu inbox (the in-app step of the event's workflow) and returns the Novu
+     * transaction id. The subscriber is the user's Keycloak id, which the portal's inbox connects as; the
+     * notification id goes along so the portal can mark the StarSign copy read too.
+     */
+    private String sendInApp(Notification notification)
+    {
+        OrganisationUser user = notification.getRecipientUser();
+        String subscriberId = user != null && StringUtils.isNotBlank(user.getKeycloakUserId())
+                ? user.getKeycloakUserId()
+                : notification.getRecipientAddress();
+        String subject = StringUtils.defaultIfBlank(notification.getSubject(), humanise(notification.getEventType()));
+        String body = StringUtils.defaultIfBlank(NotificationTemplates.toText(
+                StringUtils.defaultString(notification.getBody())), subject);
+
+        Map<String, Object> payload = new HashMap<String, Object>();
+        payload.put(NovuNotifier.CHANNEL, "IN_APP");
+        payload.put("eventType", notification.getEventType().name());
+        payload.put("notificationId", notification.getId().toString());
+        payload.put("subject", subject);
+        payload.put("body", body);
+        payload.put("linkPath", StringUtils.defaultString(notification.getLinkPath()));
+        payload.put("link", StringUtils.defaultString(link(notification.getLinkPath())));
+        if (notification.getWorkflow() != null)
+        {
+            payload.put("workflowId", notification.getWorkflow().getId().toString());
+        }
+        return novuNotifier.trigger(novuNotifier.workflowId(notification.getEventType()), subscriberId,
+                user == null ? null : user.getEmailAddress(), null, notification.getRecipientName(), payload,
+                notification.getId().toString());
     }
 
     /** Sends through the channel's gateway and returns the provider's message id. */
@@ -1436,4 +1513,5 @@ public class NotificationServiceImpl
             throw NotificationServiceException.notFound("'" + id + "' is not the id of a " + what);
         }
     }
+
 }

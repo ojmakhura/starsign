@@ -30,6 +30,12 @@ public interface NotificationController {
     @PreAuthorize(value = "isAuthenticated()")
     public @Nullable ResponseEntity<List<NotificationDTO>> findMine(@RequestParam(name = "unreadOnly", required = false) @Nullable Boolean unreadOnly) throws Exception;
 
+    @GetMapping(
+        value = "/inbox"
+    )
+    @PreAuthorize(value = "isAuthenticated()")
+    public ResponseEntity<NotificationInboxDTO> inbox() throws Exception;
+
     @PostMapping(
         value = "/{id}/read"
     )

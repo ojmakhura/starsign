@@ -36,6 +36,8 @@ services:
       CORS_ALLOWED_ORIGINS: https://${NGROK_DOMAIN},http://localhost:4700
       PORTAL_URL: https://${NGROK_DOMAIN}
       SIGNING_PORTAL_URL: https://${NGROK_DOMAIN}/sign
+      NOVU_PUBLIC_API_URL: https://${NGROK_DOMAIN}/novu/api
+      NOVU_PUBLIC_SOCKET_URL: https://${NGROK_DOMAIN}/novu/ws
 
   novu-api:
     environment:

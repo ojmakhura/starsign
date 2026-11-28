@@ -7,6 +7,7 @@ import { BrandLogo } from '@shared/brand-logo/brand-logo';
 import { ThemeToggle } from '@shared/theme-toggle/theme-toggle';
 import { ThemeService } from '@core/theme/theme.service';
 import { EnvLoaderService } from '@services/env-loader.service';
+import { NotificationInboxService } from '@services/notification/notification-inbox.service';
 import { SessionStore } from '@store/session.store';
 import { InternalSigningApiStore } from '@store/signing/internal-signing-api.store';
 import Keycloak from 'keycloak-js';
@@ -26,6 +27,7 @@ export class Shell {
   protected readonly session = inject(SessionStore);
   protected readonly theme = inject(ThemeService);
   protected readonly signing = inject(InternalSigningApiStore);
+  protected readonly notificationInbox = inject(NotificationInboxService);
   private readonly envLoader = inject(EnvLoaderService);
   private readonly router = inject(Router);
 

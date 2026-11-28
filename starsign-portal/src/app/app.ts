@@ -1,6 +1,7 @@
 import { Component, effect, inject, untracked } from '@angular/core';
 import { PortalAccessService } from '@auth/portal-access.service';
 import { isPublicPath } from '@auth/public-pages';
+import { NotificationInboxService } from '@services/notification/notification-inbox.service';
 import { SessionStore } from '@store/session.store';
 import { InternalSigningApiStore } from '@store/signing/internal-signing-api.store';
 import { KEYCLOAK_EVENT_SIGNAL, KeycloakEventType } from 'keycloak-angular';
@@ -18,6 +19,7 @@ export class App {
   private readonly session = inject(SessionStore);
   private readonly signing = inject(InternalSigningApiStore);
   private readonly portalAccess = inject(PortalAccessService);
+  private readonly notificationInbox = inject(NotificationInboxService);
 
   constructor() {
     // Keycloak lifecycle → session signals. Only the event is tracked: the handlers
@@ -42,6 +44,7 @@ export class App {
           this.session.loadCurrentUser();
         }
         this.signing.getPendingForCurrentUser();
+        void this.notificationInbox.connect();
       }
       this.keycloak.loadUserProfile().then((profile) =>
         this.session.setProfile({
@@ -55,6 +58,7 @@ export class App {
 
     if (type === KeycloakEventType.AuthLogout) {
       this.session.reset();
+      this.notificationInbox.disconnect();
     }
   }
 }

@@ -287,6 +287,30 @@ NotificationService.recordDeliveryReceipt(receipt)
      * {@inheritDoc}
      */
     @Override
+    public NotificationInboxDTO inbox()
+    {
+        try
+        {
+            return this.handleInbox();
+        }
+        catch (Throwable th)
+        {
+            throw failure("NotificationService.inbox()", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #inbox()}
+     * @return NotificationInboxDTO
+     * @throws Exception
+     */
+    protected abstract NotificationInboxDTO handleInbox()
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public NotificationDTO markRead(final String id)
     {
         if (id == null || id.trim().isEmpty())

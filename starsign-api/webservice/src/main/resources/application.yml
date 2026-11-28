@@ -189,6 +189,12 @@ app:
     base-url: ${NOVU_BASE_URL:https://api.novu.co}
     # Novu workflow id per notification event: <prefix><event-type in kebab case>, e.g. starsign-signing-invitation
     workflow-prefix: ${NOVU_WORKFLOW_PREFIX:starsign-}
+    # In-app notifications go to the portal's Novu inbox (the in-app step of each event's workflow) when this is set;
+    # blank keeps them in StarSign only. Novu dashboard: API Keys -> Application Identifier
+    application-identifier: ${NOVU_APPLICATION_IDENTIFIER:}
+    # Novu API and WebSocket addresses as the browser reaches them (base-url / Novu Cloud's when blank)
+    public-api-url: ${NOVU_PUBLIC_API_URL:}
+    public-socket-url: ${NOVU_PUBLIC_SOCKET_URL:}
   # PDF stamping and PAdES signatures (bw.co.starsign.signing.PdfSigningEngineImpl)
   signing:
     keystore-path: ${SIGNING_KEYSTORE_PATH:./data/signing/starsign-dev.p12}

@@ -6,10 +6,15 @@ import co.novu.models.components.TriggerEventRequestDto;
 import co.novu.models.components.TriggerEventRequestDtoTo2;
 import co.novu.models.components.TriggerEventResponseDto;
 import co.novu.models.operations.EventsControllerTriggerResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +29,12 @@ public class NovuNotifier
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(NovuNotifier.class);
 
+    /**
+     * Payload key naming the channel of a trigger. Each event's workflow has an email, an SMS and an in-app step,
+     * each run only when this matches its channel (setup-workflows.py), so one trigger sends one message.
+     */
+    static final String CHANNEL = "channel";
+
     private final Novu novuSdk;
     private final NovuProperties properties;
 
@@ -36,6 +47,41 @@ public class NovuNotifier
     public boolean isEnabled()
     {
         return properties.isEnabled();
+    }
+
+    /**
+     * In-app notifications go to the portal users' Novu inboxes: Novu is enabled and the portal can connect
+     * to it (the application identifier is known).
+     */
+    public boolean isInboxEnabled()
+    {
+        return properties.isEnabled() && StringUtils.isNotBlank(properties.getApplicationIdentifier())
+                && StringUtils.isNotBlank(properties.getSecretKey());
+    }
+
+    public NovuProperties properties()
+    {
+        return properties;
+    }
+
+    /**
+     * Novu's HMAC for a subscriber: HMAC-SHA256 of the subscriber id keyed with the secret key, in hex. With
+     * HMAC turned on for the in-app integration, the inbox only opens with it, so a user cannot read another
+     * user's inbox by changing the subscriber id.
+     */
+    public String subscriberHash(String subscriberId)
+    {
+        try
+        {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(StringUtils.defaultString(properties.getSecretKey())
+                    .getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(subscriberId.getBytes(StandardCharsets.UTF_8)));
+        }
+        catch (GeneralSecurityException e)
+        {
+            throw new IllegalStateException("HmacSHA256 is not available", e);
+        }
     }
 
     /** {@code app.novu.workflow-prefix} + the event type in kebab case. */

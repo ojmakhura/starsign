@@ -5,7 +5,7 @@
     <parent>
         <groupId>bw.co.starsign</groupId>
         <artifactId>starsign</artifactId>
-        <version>1.1.0</version>
+        <version>1.1.3</version>
     </parent>
     <artifactId>starsign-webservice</artifactId>
     <name>StarSign Web Services</name>

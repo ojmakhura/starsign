@@ -56,6 +56,13 @@ bw.co.starsign.notification.NotificationService.recordDeliveryReceipt(receipt)
     public List<NotificationDTO> findMine(Boolean unreadOnly) ;
 
     /**
+     * The signed-in user's Novu inbox: application identifier, subscriber id and its HMAC, or enabled=false
+     * when in-app notifications are not delivered through Novu.
+     * @return NotificationInboxDTO
+     */
+    public NotificationInboxDTO inbox() ;
+
+    /**
      * TODO: Model Documentation for bw.co.starsign.notification.NotificationService.markRead
      * @param id TODO: Model Documentation for bw.co.starsign.notification.NotificationService.markRead(id)
      * @return NotificationDTO
