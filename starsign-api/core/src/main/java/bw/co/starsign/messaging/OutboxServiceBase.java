@@ -96,9 +96,11 @@ public abstract class OutboxServiceBase
         throws Exception;
 
     /**
-     * {@inheritDoc}
+     * Each event is claimed, handled and settled in transactions of its own, so one failing event
+     * neither blocks nor rolls back the others: the relay itself runs outside any transaction.
      */
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int publishPending(final int batchSize)
     {
         try

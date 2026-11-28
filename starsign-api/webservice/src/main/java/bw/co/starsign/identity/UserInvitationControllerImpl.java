@@ -24,18 +24,21 @@ public class UserInvitationControllerImpl implements UserInvitationController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserInvitationControllerImpl.class);
     protected final UserInvitationService userInvitationService;
+    private final KeycloakUserDetails keycloakUserDetails;
 
     public UserInvitationControllerImpl(
-        UserInvitationService userInvitationService) {
+        UserInvitationService userInvitationService,
+        KeycloakUserDetails keycloakUserDetails) {
 
         this.userInvitationService = userInvitationService;
+        this.keycloakUserDetails = keycloakUserDetails;
     }
 
     @Override
     @Operation(summary = "Accept", description = "Validates token hash, expiry and email match against the authenticated Keycloak user.")
     public ResponseEntity<OrganisationUserDTO> accept(@Valid InvitationAcceptanceDTO acceptance) throws Exception {
 
-        return ResponseEntity.ok(userInvitationService.accept(acceptance));
+        return ResponseEntity.ok(keycloakUserDetails.fill(userInvitationService.accept(acceptance)));
     }
 
     @Override

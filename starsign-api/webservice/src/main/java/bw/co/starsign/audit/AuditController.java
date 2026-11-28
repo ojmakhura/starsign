@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.audit;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -41,6 +42,12 @@ public interface AuditController {
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_audit:list')")
     public @Nullable ResponseEntity<List<AuditEventDTO>> search(@RequestBody(required = true) @Valid AuditEventSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_audit:list')")
+    public ResponseEntity<Page<AuditEventDTO>> pagedSearch(@RequestBody(required = true) @Valid AuditEventSearchCriteria criteria) throws Exception;
 
     @GetMapping(
         value = "/chains/{chainKey}/verify"

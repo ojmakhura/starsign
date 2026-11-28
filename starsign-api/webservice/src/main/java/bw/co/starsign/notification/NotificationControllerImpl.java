@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -38,6 +39,22 @@ public class NotificationControllerImpl implements NotificationController {
 
 
     @Override
+    @Operation(summary = "Unread count", description = "The number of the signed-in user's unread in-app notifications")
+    public ResponseEntity<Integer> unreadCount() throws Exception {
+
+        return ResponseEntity.ok(notificationService.unreadCount());
+    }
+
+
+    @Override
+    @Operation(summary = "Mark all read", description = "Marks all of the signed-in user's in-app notifications read")
+    public ResponseEntity<Integer> markAllRead() throws Exception {
+
+        return ResponseEntity.ok(notificationService.markAllRead());
+    }
+
+
+    @Override
     @Operation(summary = "Mark read", description = "Mark read")
     public ResponseEntity<NotificationDTO> markRead(String id) throws Exception {
 
@@ -60,6 +77,15 @@ public class NotificationControllerImpl implements NotificationController {
 
         // The service limits the search to the caller's organisation (and own notifications for -own)
         return ResponseEntity.ok(notificationService.search(criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<NotificationDTO>> pagedSearch(@Valid NotificationSearchCriteria criteria) throws Exception {
+
+        // The service limits the search to the caller's organisation (and own notifications for -own)
+        return ResponseEntity.ok(notificationService.pagedSearch(criteria));
     }
     
     /**

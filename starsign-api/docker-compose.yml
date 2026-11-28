@@ -57,6 +57,10 @@ services:
       API_CLIENT_ID: ${API_CLIENT_ID:-starsign-api}
       STARSIGN_API_CLIENT_SECRET: ${STARSIGN_API_CLIENT_SECRET:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4700}
+      # OpenTelemetry: logs, traces and metrics over OTLP/HTTP to the collector at OTLP_URL
+      OTLP_ENABLED: ${OTLP_ENABLED:-false}
+      OTLP_URL: ${OTLP_URL:-http://host.docker.internal:4318}
+      TRACING_PROBABILITY: ${TRACING_PROBABILITY:-1.0}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

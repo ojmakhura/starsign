@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -318,6 +319,36 @@ OrganisationService.findByTenantId(tenantId)
      * @throws Exception
      */
     protected abstract List<OrganisationListDTO> handleSearch(@Valid OrganisationSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<OrganisationListDTO> pagedSearch(final @Valid OrganisationSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.organisation.OrganisationService.pagedSearch(@Valid OrganisationSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("OrganisationService.pagedSearch(@Valid OrganisationSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid OrganisationSearchCriteria)}
+     * @param criteria OrganisationSearchCriteria the search criteria, page number and size
+     * @return Page<OrganisationListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<OrganisationListDTO> handlePagedSearch(@Valid OrganisationSearchCriteria criteria)
         throws Exception;
 
     /**

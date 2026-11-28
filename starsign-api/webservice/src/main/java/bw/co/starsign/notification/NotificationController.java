@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +30,18 @@ public interface NotificationController {
     @PreAuthorize(value = "isAuthenticated()")
     public @Nullable ResponseEntity<List<NotificationDTO>> findMine(@RequestParam(name = "unreadOnly", required = false) @Nullable Boolean unreadOnly) throws Exception;
 
+    @GetMapping(
+        value = "/me/unread-count"
+    )
+    @PreAuthorize(value = "isAuthenticated()")
+    public ResponseEntity<Integer> unreadCount() throws Exception;
+
+    @PostMapping(
+        value = "/me/read-all"
+    )
+    @PreAuthorize(value = "isAuthenticated()")
+    public ResponseEntity<Integer> markAllRead() throws Exception;
+
     @PostMapping(
         value = "/{id}/read"
     )
@@ -46,4 +59,10 @@ public interface NotificationController {
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_notifications:list')")
     public @Nullable ResponseEntity<List<NotificationDTO>> search(@RequestBody(required = true) @Valid NotificationSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_notifications:list')")
+    public ResponseEntity<Page<NotificationDTO>> pagedSearch(@RequestBody(required = true) @Valid NotificationSearchCriteria criteria) throws Exception;
 }

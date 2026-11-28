@@ -68,6 +68,8 @@ export interface OrganisationUserListDTO {
   status?: UserStatus | null;
   roles?: string[] | null;
   lastLoginAt?: string | null;
+  /** The Keycloak user id, so the web layer can add the details Keycloak owns (job title, roles). */
+  keycloakUserId?: string | null;
 }
 
 export interface OrganisationUserSearchCriteria extends BaseSearchCriteria {

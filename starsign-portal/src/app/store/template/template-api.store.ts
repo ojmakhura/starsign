@@ -4,6 +4,7 @@ import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import {
   SigningTemplateDTO,
+  SigningTemplateListDTO,
   SigningTemplateSearchCriteria,
   TemplateInstantiationDTO,
 } from '@models/template';
@@ -18,12 +19,12 @@ import {
   requestSucceeded,
 } from '../app-state';
 
-export type TemplateApiState = AppState<SigningTemplateDTO, SigningTemplateDTO> & {
+export type TemplateApiState = AppState<SigningTemplateDTO, SigningTemplateListDTO> & {
   signingWorkflow: SigningWorkflowDTO | null;
 };
 
 const initialState = (): TemplateApiState => ({
-  ...initialAppState<SigningTemplateDTO, SigningTemplateDTO>(),
+  ...initialAppState<SigningTemplateDTO, SigningTemplateListDTO>(),
   signingWorkflow: null,
 });
 

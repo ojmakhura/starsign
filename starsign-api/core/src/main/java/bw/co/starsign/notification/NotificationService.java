@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -55,6 +56,19 @@ bw.co.starsign.notification.NotificationService.recordDeliveryReceipt(receipt)
     public List<NotificationDTO> findMine(Boolean unreadOnly) ;
 
     /**
+     * The number of the signed-in user's unread in-app notifications (their Novu inbox when in-app
+     * notifications go through Novu).
+     * @return Integer
+     */
+    public Integer unreadCount() ;
+
+    /**
+     * Marks all of the signed-in user's in-app notifications read, in Novu and in StarSign.
+     * @return Integer the number that were unread
+     */
+    public Integer markAllRead() ;
+
+    /**
      * TODO: Model Documentation for bw.co.starsign.notification.NotificationService.markRead
      * @param id TODO: Model Documentation for bw.co.starsign.notification.NotificationService.markRead(id)
      * @return NotificationDTO
@@ -67,6 +81,13 @@ bw.co.starsign.notification.NotificationService.recordDeliveryReceipt(receipt)
      * @return List<NotificationDTO>
      */
     public List<NotificationDTO> search(@Valid NotificationSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<NotificationDTO>
+     */
+    public Page<NotificationDTO> pagedSearch(@Valid NotificationSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for

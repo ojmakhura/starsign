@@ -43,6 +43,8 @@ PRIMITIVES = {
     'byte[]': 'string', 'Object': 'unknown',
 }
 COLLECTIONS = ('List', 'Set', 'Collection')
+# Hand-written generic models the generated code imports: Spring Data's Page, serialised VIA_DTO.
+GENERIC_MODELS = {'Page': 'page'}
 
 
 def split_generic(java: str) -> tuple[str, str | None]:
@@ -60,6 +62,8 @@ def ts_type(java: str) -> str:
             value = inner.split(',', 1)[1]
             return f'Record<string, {ts_type(value)}>'
         return 'Record<string, unknown>'
+    if inner and outer in GENERIC_MODELS:
+        return f'{outer}<{ts_type(inner)}>'
     return PRIMITIVES.get(outer, outer)
 
 
@@ -217,7 +221,7 @@ class Endpoint:
 
     @property
     def is_read(self) -> bool:
-        return self.verb == 'get' or self.name == 'search'
+        return self.verb == 'get' or self.name in ('search', 'pagedSearch')
 
 
 @dataclass
@@ -308,6 +312,8 @@ def render_service(ctrl: Controller, models: dict[str, Model]) -> str:
         for t in referenced_types(ep.returns) | {t for p in ep.params for t in referenced_types(p.java)}:
             if t in models:
                 needs.setdefault(models[t].package, set()).add(t)
+            elif t in GENERIC_MODELS:
+                needs.setdefault(GENERIC_MODELS[t], set()).add(t)
         path_params = [p for p in ep.params if p.kind == 'Path']
         query = [p for p in ep.params if p.kind == 'Query']
         body = next((p for p in ep.params if p.kind == 'Body'), None)

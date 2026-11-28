@@ -12,6 +12,7 @@ import {
   DocumentUploadDTO,
   DocumentVersionDTO,
 } from '@models/document';
+import { Page } from '@models/page';
 import { Observable, map } from 'rxjs';
 import { toParams } from '../http-params';
 
@@ -131,6 +132,10 @@ export class DocumentApi {
     return this.http
       .post<DocumentListDTO[]>(`${this.path}/search`, criteria)
       .pipe(map((list) => list ?? []));
+  }
+
+  pagedSearch(criteria: DocumentSearchCriteria): Observable<Page<DocumentListDTO>> {
+    return this.http.post<Page<DocumentListDTO>>(`${this.path}/search/paged`, criteria);
   }
 
   streamForPreparationUrl(id: string): string {

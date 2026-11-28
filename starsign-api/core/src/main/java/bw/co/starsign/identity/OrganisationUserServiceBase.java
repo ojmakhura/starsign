@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +41,6 @@ public abstract class OrganisationUserServiceBase
     protected final AuditTrailService auditTrailService;
     protected final OrganisationUserRepository organisationUserRepository;
     protected final OrganisationUserMapper organisationUserMapper;
-    protected final UserRoleRepository userRoleRepository;
-    protected final UserRoleMapper userRoleMapper;
     protected final RoleRepository roleRepository;
     protected final RoleMapper roleMapper;
 
@@ -49,15 +48,13 @@ public abstract class OrganisationUserServiceBase
         @Lazy KeycloakAdminService keycloakAdminService,
         @Lazy AuditTrailService auditTrailService,
         OrganisationUserRepository organisationUserRepository,
-        OrganisationUserMapper organisationUserMapper,         UserRoleRepository userRoleRepository,
-        UserRoleMapper userRoleMapper,         RoleRepository roleRepository,
+        OrganisationUserMapper organisationUserMapper,
+        RoleRepository roleRepository,
         RoleMapper roleMapper    ) {
         this.keycloakAdminService = keycloakAdminService;
         this.auditTrailService = auditTrailService;
         this.organisationUserRepository = organisationUserRepository;
         this.organisationUserMapper = organisationUserMapper;
-        this.userRoleRepository = userRoleRepository;
-        this.userRoleMapper = userRoleMapper;
         this.roleRepository = roleRepository;
         this.roleMapper = roleMapper;
     }
@@ -86,14 +83,6 @@ public abstract class OrganisationUserServiceBase
      */
     public OrganisationUserRepository getOrganisationUserRepository() {
         return organisationUserRepository;
-    }
-
-    /**
-     * Gets the reference to <code>userRole</code>'s repository.
-     * @return userRoleRepository
-     */
-    public UserRoleRepository getUserRoleRepository() {
-        return userRoleRepository;
     }
 
     /**
@@ -217,6 +206,36 @@ OrganisationUserService.findByKeycloakUserId(keycloakUserId)
      * @throws Exception
      */
     protected abstract List<OrganisationUserListDTO> handleSearch(@Valid OrganisationUserSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<OrganisationUserListDTO> pagedSearch(final @Valid OrganisationUserSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.OrganisationUserService.pagedSearch(@Valid OrganisationUserSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("OrganisationUserService.pagedSearch(@Valid OrganisationUserSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid OrganisationUserSearchCriteria)}
+     * @param criteria OrganisationUserSearchCriteria the search criteria, page number and size
+     * @return Page<OrganisationUserListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<OrganisationUserListDTO> handlePagedSearch(@Valid OrganisationUserSearchCriteria criteria)
         throws Exception;
 
     /**

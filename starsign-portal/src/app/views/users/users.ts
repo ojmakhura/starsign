@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
-import { debounce, form, FormField } from '@angular/forms/signals';
+import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { Can } from '@auth/can.directive';
 import { hasPermission } from '@auth/page-permissions';
@@ -17,6 +17,8 @@ import { RoleApi } from '@services/identity/role-api';
 import { UserApi } from '@services/identity/user-api';
 import { OrganisationApi } from '@services/organisation/organisation-api';
 import { UserInvitationApi } from '@services/identity/user-invitation-api';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { StatusChip } from '@shared/status-chip/status-chip';
 import { statusLabel } from '@shared/status-chip/status-meta';
 import { apiErrorMessage } from '@store/app-state';
@@ -31,12 +33,12 @@ interface UserFilter {
 }
 
 /**
- * The organisation's users, searchable by name/email, status and role (POST /users/search),
+ * The organisation's users, searchable by name/email, status and role (POST /users/search/paged),
  * and its open invitations (resend or revoke them).
  */
 @Component({
   selector: 'app-users',
-  imports: [Can, DatePipe, FormField, RouterLink, StatusChip],
+  imports: [Can, DatePipe, FormField, Pager, RouterLink, StatusChip],
   templateUrl: './users.html',
 })
 export class Users implements OnInit {
@@ -46,9 +48,12 @@ export class Users implements OnInit {
   private readonly roleApi = inject(RoleApi);
   private readonly session = inject(SessionStore);
 
-  protected readonly users = signal<OrganisationUserListDTO[]>([]);
+  protected readonly results = new PagedSearch<OrganisationUserSearchCriteria, OrganisationUserListDTO>(
+    (criteria) => this.userApi.pagedSearch(criteria),
+    'Unable to load the users.',
+  );
   protected readonly invitations = signal<UserInvitationDTO[]>([]);
-  protected readonly loading = signal(true);
+  /** An error loading the invitations, or the account not being linked to an organisation. */
   protected readonly error = signal<string | null>(null);
   /** Id of the invitation being resent or revoked. */
   protected readonly busyId = signal<string | null>(null);
@@ -62,12 +67,11 @@ export class Users implements OnInit {
   protected readonly roles = signal<RoleDTO[]>([]);
 
   protected readonly filter = signal<UserFilter>({ text: '', status: '', roleCode: '' });
-  protected readonly filterForm = form(this.filter, (path) => {
-    debounce(path.text, 350);
-  });
+  protected readonly filterForm = form(this.filter);
+  /** Whether the search shown was filtered. */
   protected readonly filtered = computed(() => {
-    const f = this.filter();
-    return !!(f.text.trim() || f.status || f.roleCode);
+    const applied = this.results.applied();
+    return !!(applied?.text || applied?.status || applied?.roleCode);
   });
 
   /** Role filter options: the organisation's roles, or the roles seen on its users. */
@@ -76,7 +80,7 @@ export class Users implements OnInit {
     if (roles.length) {
       return roles.map((role) => ({ code: role.code!, name: role.name || role.code! }));
     }
-    const codes = new Set(this.users().flatMap((user) => user.roles ?? []));
+    const codes = new Set(this.results.items().flatMap((user) => user.roles ?? []));
     const chosen = this.filter().roleCode;
     if (chosen) {
       codes.add(chosen);
@@ -84,27 +88,11 @@ export class Users implements OnInit {
     return [...codes].sort().map((code) => ({ code, name: code }));
   });
 
-  private readonly criteria = computed<OrganisationUserSearchCriteria | null>(() => {
-    const organisationId = this.session.organisationId();
-    if (!organisationId) {
-      return null;
-    }
-    const f = this.filter();
-    return {
-      organisationId,
-      text: f.text.trim() || null,
-      status: f.status || null,
-      roleCode: f.roleCode || null,
-    };
-  });
-
-  /** Ignores responses to searches that a newer one replaced. */
-  private searchVersion = 0;
-
   constructor() {
+    // The first search waits for the session's organisation.
     effect(() => {
-      const criteria = this.criteria();
-      untracked(() => void this.search(criteria));
+      this.session.organisationId();
+      untracked(() => this.search());
     });
   }
 
@@ -115,31 +103,24 @@ export class Users implements OnInit {
 
   protected clearFilter(): void {
     this.filter.set({ text: '', status: '', roleCode: '' });
+    this.search();
   }
 
-  private async search(criteria: OrganisationUserSearchCriteria | null): Promise<void> {
-    const version = ++this.searchVersion;
-    if (!criteria) {
-      this.loading.set(false);
+  /** Runs the search with the filter's criteria, from the first page. */
+  protected search(event?: Event): void {
+    event?.preventDefault();
+    const organisationId = this.session.organisationId();
+    if (!organisationId) {
       this.error.set('Your account is not linked to an organisation.');
       return;
     }
-    this.loading.set(true);
-    this.error.set(null);
-    try {
-      const users = await firstValueFrom(this.userApi.search(criteria));
-      if (version === this.searchVersion) {
-        this.users.set(users);
-      }
-    } catch (error) {
-      if (version === this.searchVersion) {
-        this.error.set(apiErrorMessage(error, 'Unable to load the users.'));
-      }
-    } finally {
-      if (version === this.searchVersion) {
-        this.loading.set(false);
-      }
-    }
+    const f = this.filter();
+    void this.results.search({
+      organisationId,
+      text: f.text.trim() || null,
+      status: f.status || null,
+      roleCode: f.roleCode || null,
+    });
   }
 
   private async loadInvitations(): Promise<void> {

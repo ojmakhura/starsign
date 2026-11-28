@@ -161,6 +161,7 @@ public abstract class WorkflowEngineServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningStageDTO activateNextStage(final String workflowId)
     {
         if (workflowId == null || workflowId.trim().isEmpty())
@@ -192,6 +193,7 @@ WorkflowEngineService.activateNextStage(workflowId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public boolean evaluateStage(final String stageId)
     {
         if (stageId == null || stageId.trim().isEmpty())
@@ -222,6 +224,7 @@ WorkflowEngineService.activateNextStage(workflowId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public void onSignatorySigned(final String signatoryId, final String eventId)
     {
         if (signatoryId == null || signatoryId.trim().isEmpty())
@@ -260,6 +263,7 @@ WorkflowEngineService.onSignatorySigned(eventId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public void onSignatoryDeclined(final String signatoryId, final String eventId)
     {
         if (signatoryId == null || signatoryId.trim().isEmpty())
@@ -298,6 +302,7 @@ WorkflowEngineService.onSignatoryDeclined(eventId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO finalise(final String workflowId)
     {
         if (workflowId == null || workflowId.trim().isEmpty())
@@ -326,8 +331,12 @@ WorkflowEngineService.onSignatoryDeclined(eventId)
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Runs outside a transaction: the scheduled run opens one per workflow, so one failing workflow does not roll
+     * back the others.
      */
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int expireOverdue()
     {
         try
@@ -350,8 +359,12 @@ WorkflowEngineService.onSignatoryDeclined(eventId)
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Runs outside a transaction: the scheduled run opens one per workflow, so one failing workflow does not roll
+     * back the others.
      */
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int recoverStalled()
     {
         try

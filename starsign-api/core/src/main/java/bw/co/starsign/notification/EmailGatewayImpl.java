@@ -54,6 +54,8 @@ public class EmailGatewayImpl
         {
             payload.putAll(hint.payload());
         }
+        // Selects the email step of the event's workflow (the in-app and SMS steps are skipped)
+        payload.put(NovuNotifier.CHANNEL, "EMAIL");
         payload.put("from", from);
         payload.put("subject", subject);
         payload.put("body", htmlBody);

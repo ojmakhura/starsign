@@ -307,10 +307,21 @@ services:
       NOVU_ENABLED: ${NOVU_ENABLED:-false}
       NOVU_API_KEY: ${NOVU_API_KEY:-}
       NOVU_BASE_URL: http://novu-api:3000
+      # Portal inbox (in-app notifications): the webservice reads it and relays Novu's socket to the portal
+      NOVU_APPLICATION_IDENTIFIER: ${NOVU_APPLICATION_IDENTIFIER:-}
+      NOVU_SOCKET_URL: http://novu-ws:3002
+      NOVU_SMS_ENABLED: ${NOVU_SMS_ENABLED:-false}
       # Self-signed dev keystore, kept across restarts in the webservice-data volume
       SIGNING_KEYSTORE_PATH: /home/starsign/signing/starsign-dev.p12
       SIGNING_KEYSTORE_PASSWORD: ${SIGNING_KEYSTORE_PASSWORD:-changeit}
       SIGNING_GENERATE_DEV_KEYSTORE: ${SIGNING_GENERATE_DEV_KEYSTORE:-true}
+      # OpenTelemetry: logs, traces and metrics over OTLP/HTTP to the collector at OTLP_URL
+      OTLP_ENABLED: ${OTLP_ENABLED:-false}
+      OTLP_URL: ${OTLP_URL:-http://host.docker.internal:4318}
+      TRACING_PROBABILITY: ${TRACING_PROBABILITY:-1.0}
+    extra_hosts:
+      # A collector on the host: host.docker.internal on Linux too
+      - "host.docker.internal:host-gateway"
     volumes:
       - webservice-data:/home/starsign
     ports:

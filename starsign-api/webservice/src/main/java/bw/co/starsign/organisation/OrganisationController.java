@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.identity.OrganisationUserListDTO;
 import bw.co.starsign.identity.UserInvitationDTO;
 import bw.co.starsign.identity.UserInvitationRequestDTO;
@@ -88,6 +89,12 @@ public interface OrganisationController {
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_organisations:administer')")
     public @Nullable ResponseEntity<List<OrganisationListDTO>> search(@RequestBody(required = true) @Valid OrganisationSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_organisations:administer')")
+    public ResponseEntity<Page<OrganisationListDTO>> pagedSearch(@RequestBody(required = true) @Valid OrganisationSearchCriteria criteria) throws Exception;
 
     @PutMapping(
         value = "/{id}/notification-settings"

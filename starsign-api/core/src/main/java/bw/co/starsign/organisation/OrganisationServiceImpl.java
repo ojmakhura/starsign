@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.organisation;
 
+import org.springframework.data.domain.Page;
+import bw.co.starsign.common.Pages;
 import bw.co.starsign.StarsignSpecifications;
 import bw.co.starsign.audit.ActorType;
 import bw.co.starsign.audit.AuditEventDTO;
@@ -21,10 +23,8 @@ import bw.co.starsign.identity.KeycloakAdminServiceException;
 import bw.co.starsign.identity.KeycloakUserDTO;
 import bw.co.starsign.identity.OrganisationUser;
 import bw.co.starsign.identity.OrganisationUserRepository;
-import bw.co.starsign.identity.Role;
 import bw.co.starsign.identity.RoleRepository;
-import bw.co.starsign.identity.SystemRole;
-import bw.co.starsign.identity.UserRole;
+import bw.co.starsign.identity.KeycloakAttributes;
 import bw.co.starsign.identity.UserStatus;
 import bw.co.starsign.messaging.OutboxEventDTO;
 import bw.co.starsign.messaging.OutboxService;
@@ -208,6 +208,7 @@ public class OrganisationServiceImpl
         {
             attributes.put("phoneNumber", List.of(registration.getAdminPhoneNumber().trim()));
         }
+        attributes.put(KeycloakAttributes.LOCALE, List.of(organisation.getLocale()));
         admin.setAttributes(attributes);
         admin.setRealmRoles(List.of(ADMIN_ROLE));
         admin.setRequiredActions(ADMIN_ACTIONS);
@@ -222,7 +223,7 @@ public class OrganisationServiceImpl
         {
             keycloakAdminService.addOrganisationMember(keycloakOrganisationId, created.getUserId());
         }
-        addAdministrator(organisation, created, registration, author, now);
+        addAdministrator(organisation, created, author, now);
         organisation = organisationRepository.save(organisation);
 
         startTrial(organisationId);
@@ -323,7 +324,26 @@ public class OrganisationServiceImpl
         throws Exception
     {
         requirePlatformAdministrator("search organisations");
+        return organisationRepository.findListItems(searchSpecification(criteria), SEARCH_SORT);
+    }
 
+    /**
+     * @see bw.co.starsign.organisation.OrganisationService#pagedSearch(OrganisationSearchCriteria)
+     */
+    @Override
+    protected Page<OrganisationListDTO> handlePagedSearch(@Valid OrganisationSearchCriteria criteria)
+        throws Exception
+    {
+        requirePlatformAdministrator("search organisations");
+        return organisationRepository.findListItemPage(searchSpecification(criteria),
+                Pages.request(criteria, 25, 200, SEARCH_SORT));
+    }
+
+    /** Organisations are listed by name. */
+    private static final Sort SEARCH_SORT = Sort.by(Sort.Direction.ASC, "name").and(Sort.by("id"));
+
+    private static Specification<Organisation> searchSpecification(OrganisationSearchCriteria criteria)
+    {
         Specification<Organisation> spec = StarsignSpecifications.findByAttributeNull("deletedAt");
         if (StringUtils.isNotBlank(criteria.getName()))
         {
@@ -350,24 +370,7 @@ public class OrganisationServiceImpl
             spec = spec.and(StarsignSpecifications.findByAttributeLessThan(
                     criteria.getCreatedTo().plusDays(1).atStartOfDay(), "createdAt"));
         }
-
-        List<Organisation> organisations = organisationRepository.findAll(spec, Sort.by(Sort.Direction.ASC, "name"));
-        Map<UUID, Long> userCounts = new HashMap<UUID, Long>();
-        if (!organisations.isEmpty())
-        {
-            for (Object[] row : organisationRepository.countUsers(organisations.stream().map(Organisation::getId).toList()))
-            {
-                userCounts.put((UUID) row[0], (Long) row[1]);
-            }
-        }
-        List<OrganisationListDTO> result = new ArrayList<OrganisationListDTO>();
-        for (Organisation organisation : organisations)
-        {
-            OrganisationListDTO item = organisationMapper.toOrganisationListDTO(organisation);
-            item.setUserCount(userCounts.getOrDefault(organisation.getId(), 0L));
-            result.add(item);
-        }
-        return result;
+        return spec;
     }
 
     /**
@@ -1100,11 +1103,10 @@ public class OrganisationServiceImpl
     }
 
     /**
-     * The local account of the primary administrator, holding the built-in ORGANISATION_ADMIN role. It waits
-     * for the administrator to verify the email address and set a password in Keycloak.
+     * The local anchor of the primary administrator, who waits to verify the email address and set a password in
+     * Keycloak. Keycloak holds their ORGANISATION_ADMIN role and profile attributes.
      */
-    private void addAdministrator(Organisation organisation, KeycloakUserDTO account,
-            OrganisationRegistrationDTO registration, String author, LocalDateTime now)
+    private void addAdministrator(Organisation organisation, KeycloakUserDTO account, String author, LocalDateTime now)
     {
         OrganisationUser user = OrganisationUser.Factory.newInstance();
         user.setKeycloakUserId(account.getUserId());
@@ -1112,35 +1114,10 @@ public class OrganisationServiceImpl
         user.setEmailAddress(account.getEmail());
         user.setFirstName(account.getFirstName());
         user.setLastName(account.getLastName());
-        user.setPhoneNumber(StringUtils.trimToNull(registration.getAdminPhoneNumber()));
         user.setStatus(UserStatus.PENDING_VERIFICATION);
-        user.setEmailVerified(false);
-        user.setMfaEnabled(false);
-        user.setFailedLoginCount(0);
-        user.setLocale(organisation.getLocale());
         user.setOrganisation(organisation);
         user.setCreatedBy(author);
         user.setCreatedAt(now);
-
-        Specification<Role> builtInAdmin = StarsignSpecifications.<Role, Object>findByAttributeNull("organisation")
-                .and(StarsignSpecifications.findByAttributeEquals(SystemRole.ORGANISATION_ADMIN, "systemRole"));
-        List<Role> roles = roleRepository.findAll(builtInAdmin);
-        if (roles.isEmpty())
-        {
-            logger.warn("The built-in ORGANISATION_ADMIN role is not seeded: the administrator of organisation {}"
-                    + " holds it in Keycloak only", organisation.getId());
-        }
-        else
-        {
-            UserRole role = UserRole.Factory.newInstance();
-            role.setRole(roles.get(0));
-            role.setUser(user);
-            role.setAssignedAt(now);
-            role.setAssignedBy(author);
-            role.setCreatedBy(author);
-            role.setCreatedAt(now);
-            user.getRoles().add(role);
-        }
         organisationUserRepository.save(user);
     }
 

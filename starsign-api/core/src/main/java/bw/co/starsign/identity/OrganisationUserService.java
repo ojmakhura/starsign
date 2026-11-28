@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -45,6 +46,13 @@ bw.co.starsign.identity.OrganisationUserService.findByKeycloakUserId(keycloakUse
      * @return List<OrganisationUserListDTO>
      */
     public List<OrganisationUserListDTO> search(@Valid OrganisationUserSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<OrganisationUserListDTO>
+     */
+    public Page<OrganisationUserListDTO> pagedSearch(@Valid OrganisationUserSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for

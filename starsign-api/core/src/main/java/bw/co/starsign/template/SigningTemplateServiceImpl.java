@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.template;
 
+import org.springframework.data.domain.Page;
+import bw.co.starsign.common.Pages;
 import bw.co.starsign.audit.ActorType;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditEventType;
@@ -154,8 +156,23 @@ public class SigningTemplateServiceImpl
      * @see bw.co.starsign.template.SigningTemplateService#search(@Valid SigningTemplateSearchCriteria)
      */
     @Override
-    protected List<SigningTemplateDTO> handleSearch(@Valid SigningTemplateSearchCriteria criteria)
+    protected List<SigningTemplateListDTO> handleSearch(@Valid SigningTemplateSearchCriteria criteria)
         throws Exception
+    {
+        return signingTemplateRepository.findListItems(searchSpecification(criteria), searchRequest(criteria));
+    }
+
+    /**
+     * @see bw.co.starsign.template.SigningTemplateService#pagedSearch(SigningTemplateSearchCriteria)
+     */
+    @Override
+    protected Page<SigningTemplateListDTO> handlePagedSearch(@Valid SigningTemplateSearchCriteria criteria)
+        throws Exception
+    {
+        return signingTemplateRepository.findListItemPage(searchSpecification(criteria), searchRequest(criteria));
+    }
+
+    private Specification<SigningTemplate> searchSpecification(SigningTemplateSearchCriteria criteria)
     {
         List<Specification<SigningTemplate>> specs = new ArrayList<Specification<SigningTemplate>>();
         caller.tenantId().ifPresent(tenant ->
@@ -170,16 +187,15 @@ public class SigningTemplateServiceImpl
             TemplateStatus status = criteria.getStatus();
             specs.add((root, query, cb) -> cb.equal(root.get("status"), status));
         }
+        return Specification.allOf(specs);
+    }
+
+    private static PageRequest searchRequest(SigningTemplateSearchCriteria criteria)
+    {
         String sortField = SORT_FIELDS.getOrDefault(StringUtils.trimToEmpty(criteria.getSortField()), "name");
         Sort.Direction direction = criteria.getSortDirection() == SortDirection.DESC ? Sort.Direction.DESC : Sort.Direction.ASC;
-        int page = criteria.getPageNumber() == null ? 0 : Math.max(0, criteria.getPageNumber());
-        int size = criteria.getPageSize() == null ? DEFAULT_PAGE_SIZE
-                : Math.max(1, Math.min(MAX_PAGE_SIZE, criteria.getPageSize()));
-        return signingTemplateRepository
-                .findAll(Specification.allOf(specs), PageRequest.of(page, size, Sort.by(direction, sortField)))
-                .stream()
-                .map(this::dto)
-                .toList();
+        return Pages.request(criteria, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
+                Sort.by(direction, sortField).and(Sort.by("id")));
     }
 
     /**
@@ -852,68 +868,5 @@ public class SigningTemplateServiceImpl
     private static String text(Enum<?> value)
     {
         return value.name().toLowerCase().replace('_', ' ');
-    }
-
-    // ---------------------------------------------------------------- transaction boundaries
-
-    /*
-     * The generated base class declares the public operations; @Transactional on this class does not reach
-     * methods it inherits, so each operation is redeclared here to run in one transaction.
-     */
-
-    @Override
-    @Transactional
-    public SigningTemplateDTO create(final @Valid SigningTemplateDTO template)
-    {
-        return super.create(template);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public SigningTemplateDTO findById(final String id)
-    {
-        return super.findById(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SigningTemplateDTO> search(final @Valid SigningTemplateSearchCriteria criteria)
-    {
-        return super.search(criteria);
-    }
-
-    @Override
-    @Transactional
-    public SigningTemplateDTO update(final String id, final @Valid SigningTemplateDTO template)
-    {
-        return super.update(id, template);
-    }
-
-    @Override
-    @Transactional
-    public SigningTemplateDTO activate(final String id)
-    {
-        return super.activate(id);
-    }
-
-    @Override
-    @Transactional
-    public SigningTemplateDTO archive(final String id)
-    {
-        return super.archive(id);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO instantiate(final String id, final @Valid TemplateInstantiationDTO instantiation)
-    {
-        return super.instantiate(id, instantiation);
-    }
-
-    @Override
-    @Transactional
-    public SigningTemplateDTO createFromWorkflow(final String workflowId, final String name)
-    {
-        return super.createFromWorkflow(workflowId, name);
     }
 }

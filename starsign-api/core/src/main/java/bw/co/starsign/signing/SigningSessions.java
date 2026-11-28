@@ -4,6 +4,7 @@ import bw.co.starsign.branding.BrandingService;
 import bw.co.starsign.document.DocumentPage;
 import bw.co.starsign.document.DocumentPageDTO;
 import bw.co.starsign.document.DocumentVersion;
+import bw.co.starsign.notification.NovuNotifier;
 import bw.co.starsign.workflow.Signatory;
 import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.SigningField;
@@ -54,19 +55,22 @@ public class SigningSessions
     private final SigningFieldValueRepository signingFieldValueRepository;
     private final SigningEventRecorder signingEventRecorder;
     private final BrandingService brandingService;
+    private final NovuNotifier novuNotifier;
 
     public SigningSessions(
         SignatoryInvitationRepository signatoryInvitationRepository,
         AccessTokenRepository accessTokenRepository,
         SigningFieldValueRepository signingFieldValueRepository,
         SigningEventRecorder signingEventRecorder,
-        @Lazy BrandingService brandingService)
+        @Lazy BrandingService brandingService,
+        NovuNotifier novuNotifier)
     {
         this.signatoryInvitationRepository = signatoryInvitationRepository;
         this.accessTokenRepository = accessTokenRepository;
         this.signingFieldValueRepository = signingFieldValueRepository;
         this.signingEventRecorder = signingEventRecorder;
         this.brandingService = brandingService;
+        this.novuNotifier = novuNotifier;
     }
 
     /** The invitation of a raw link token; only its hash is looked up. */
@@ -255,7 +259,8 @@ public class SigningSessions
         session.setSignatoryEmailMasked(SigningTokens.maskEmail(signatory.getEmailAddress()));
         session.setSignatoryStatus(signatory.getStatus());
         session.setVerificationRequired(invitation != null && verificationRequired(method));
-        session.setVerificationMethod(method);
+        // The method the signatory will use: an SMS code comes by email while text messages are off
+        session.setVerificationMethod(SigningDocuments.deliverable(method, novuNotifier.isSmsEnabled()));
         session.setVerified(verified);
         session.setExpiresAt(invitation != null ? invitation.getExpiresAt()
                 : signatory.getDeadline() != null ? signatory.getDeadline() : workflow.getExpiresAt());

@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.identity;
 
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import bw.co.starsign.auth.Permissions;
 import bw.co.starsign.auth.RoleAssignmentRules;
 import bw.co.starsign.auth.UserAdministrationGuard;
+import bw.co.starsign.context.CallerContext;
 
 @RestController
 @Tag(name = "Users", description = "Organisation user management (Keycloak backed).")
@@ -36,15 +38,21 @@ public class UserControllerImpl implements UserController {
     protected final OrganisationUserService organisationUserService;
     private final RoleService roleService;
     private final UserAdministrationGuard guard;
+    private final KeycloakUserDetails keycloakUserDetails;
+    private final CallerContext caller;
 
     public UserControllerImpl(
         OrganisationUserService organisationUserService,
         RoleService roleService,
-        UserAdministrationGuard guard) {
+        UserAdministrationGuard guard,
+        KeycloakUserDetails keycloakUserDetails,
+        CallerContext caller) {
 
         this.organisationUserService = organisationUserService;
         this.roleService = roleService;
         this.guard = guard;
+        this.keycloakUserDetails = keycloakUserDetails;
+        this.caller = caller;
     }
 
     @Override
@@ -52,7 +60,7 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<OrganisationUserDTO> activate(String id) throws Exception {
 
         checkCanManage(id);
-        return ResponseEntity.ok(organisationUserService.activate(id));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.activate(id)));
     }
 
     @Override
@@ -70,7 +78,7 @@ public class UserControllerImpl implements UserController {
             .toList();
         guard.checkCanAssign(realmRoles);
 
-        return ResponseEntity.ok(organisationUserService.assignRoles(id, assignment));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.assignRoles(id, assignment)));
     }
 
     @Override
@@ -78,14 +86,14 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<OrganisationUserDTO> deactivate(String id, String reason) throws Exception {
 
         checkCanManage(id);
-        return ResponseEntity.ok(organisationUserService.deactivate(id, reason));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.deactivate(id, reason)));
     }
 
     @Override
     @Operation(summary = "Find by id", description = "Find by id")
     public ResponseEntity<OrganisationUserDTO> findById(String id) throws Exception {
 
-        return ResponseEntity.ok(organisationUserService.findById(id));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.findById(id)));
     }
 
     /**
@@ -105,8 +113,9 @@ public class UserControllerImpl implements UserController {
             current = organisationUserService.getCurrentUser();
         }
         current.setPermissions(new ArrayList<>(Permissions.current()));
+        keycloakUserDetails.fill(current);
 
-        // Accounts without a profile whose Keycloak details could not be read still get a name
+        // Accounts whose Keycloak details could not be read still get a name
         OrganisationUserDTO user = current.getUser();
         if (jwt != null && user != null) {
             user.setUsername(StringUtils.defaultIfBlank(user.getUsername(), jwt.getClaimAsString("preferred_username")));
@@ -160,7 +169,18 @@ public class UserControllerImpl implements UserController {
     @Operation(summary = "Search", description = "Search")
     public ResponseEntity<List<OrganisationUserListDTO>> search(@Valid OrganisationUserSearchCriteria criteria) throws Exception {
 
-        return ResponseEntity.ok(organisationUserService.search(criteria));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.search(criteria),
+            listOrganisation(criteria)));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<OrganisationUserListDTO>> pagedSearch(@Valid OrganisationUserSearchCriteria criteria) throws Exception {
+
+        Page<OrganisationUserListDTO> page = organisationUserService.pagedSearch(criteria);
+        keycloakUserDetails.fill(page.getContent(), listOrganisation(criteria));
+        return ResponseEntity.ok(page);
     }
 
     @Override
@@ -176,7 +196,7 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<OrganisationUserDTO> unlock(String id) throws Exception {
 
         checkCanManage(id);
-        return ResponseEntity.ok(organisationUserService.unlock(id));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.unlock(id)));
     }
 
     @Override
@@ -184,7 +204,7 @@ public class UserControllerImpl implements UserController {
     public ResponseEntity<OrganisationUserDTO> updateProfile(String id, @Valid UserProfileUpdateDTO profile) throws Exception {
 
         checkCanManage(id);
-        return ResponseEntity.ok(organisationUserService.updateProfile(id, profile));
+        return ResponseEntity.ok(keycloakUserDetails.fill(organisationUserService.updateProfile(id, profile)));
     }
 
     /**
@@ -196,6 +216,12 @@ public class UserControllerImpl implements UserController {
         OrganisationUserDTO user = organisationUserService.findById(id);
         guard.checkCanManageUser(user.getKeycloakUserId());
         return user;
+    }
+
+    /** The organisation whose roles name the listed users' roles: the caller's own, else the one searched. */
+    private String listOrganisation(OrganisationUserSearchCriteria criteria) {
+
+        return caller.organisationId().orElse(criteria == null ? null : criteria.getOrganisationId());
     }
 
     private static Jwt jwt() {

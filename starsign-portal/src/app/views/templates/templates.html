@@ -28,7 +28,7 @@
     }
   </div>
 
-  <form class="card grid gap-4 md:grid-cols-3" (submit)="$event.preventDefault()" aria-label="Search templates">
+  <form class="card grid gap-4 md:grid-cols-3" (submit)="search($event)" aria-label="Search templates">
     <div class="field md:col-span-2">
       <label for="tpl-name">Name</label>
       <input id="tpl-name" class="field-control" type="search" [formField]="filterForm.name" />
@@ -42,10 +42,17 @@
         <option value="ARCHIVED">Archived</option>
       </select>
     </div>
+    <div class="flex flex-wrap justify-end gap-3 md:col-span-3">
+      <button type="button" class="btn btn--ghost" (click)="reset()">Reset</button>
+      <button type="submit" class="btn btn--primary" [disabled]="results.loading()">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        {{ results.loading() ? 'Searching…' : 'Search' }}
+      </button>
+    </div>
   </form>
 
-  @if (error()) {
-    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  @if (results.error()) {
+    <div class="alert alert--danger" role="alert">{{ results.error() }}</div>
   }
 
   <section class="table-panel" aria-label="Templates">
@@ -62,7 +69,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (tpl of list(); track tpl.id) {
+          @for (tpl of results.items(); track tpl.id) {
             <tr>
               <td>
                 <a class="cell-title" [routerLink]="tpl.id">{{ tpl.name }}</a>
@@ -79,10 +86,10 @@
               <td>
                 <span class="mono text-ink-muted">{{ tpl.executionMode || '—' }}</span>
                 <div class="cell-note">
-                  {{ tpl.signatories?.length ?? 0 }} role(s) · {{ stageCount(tpl) }} stage(s)
+                  {{ tpl.roleCount ?? 0 }} role(s) · {{ tpl.stageCount ?? 0 }} stage(s)
                 </div>
               </td>
-              <td class="mono text-ink-muted">{{ tpl.fields?.length ?? 0 }}</td>
+              <td class="mono text-ink-muted">{{ tpl.fieldCount ?? 0 }}</td>
               <td class="mono text-ink-muted">
                 {{ (tpl.modifiedAt || tpl.createdAt | date: 'dd-MM-yyyy') || '—' }}
               </td>
@@ -105,7 +112,7 @@
                 <div class="empty-state">
                   <i class="bi bi-files" aria-hidden="true"></i>
                   <span>{{
-                    templates.isLoading() ? 'Searching…' : 'No templates match these criteria.'
+                    results.loading() ? 'Searching…' : 'No templates match these criteria.'
                   }}</span>
                 </div>
               </td>
@@ -114,5 +121,15 @@
         </tbody>
       </table>
     </div>
+    <app-pager
+      [pageNumber]="results.pageNumber()"
+      [pageSize]="results.pageSize()"
+      [totalElements]="results.totalElements()"
+      [totalPages]="results.totalPages()"
+      [shown]="results.items().length"
+      [disabled]="results.loading()"
+      (pageChange)="results.goTo($event)"
+      (sizeChange)="results.setPageSize($event)"
+    />
   </section>
 </div>

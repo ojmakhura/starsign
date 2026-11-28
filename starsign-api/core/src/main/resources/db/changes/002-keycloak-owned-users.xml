@@ -1,0 +1,54 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="
+                        http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!--
+        Keycloak owns a user's roles and security state; ORGANISATION_USER keeps only the anchor StarSign
+        references (name, email address, status, last sign-in).
+
+        Every role assignment was also made as a Keycloak realm role, so USER_ROLE goes. The lockout, MFA and
+        email-verification columns copied what Keycloak decides (brute-force detection, credentials, verify-email);
+        they are NOT NULL, so they must go before Hibernate inserts users without them.
+
+        JOB_TITLE, PHONE_NUMBER and LOCALE stay for now: KeycloakProfileBackfill copies their values to the Keycloak
+        user attributes at startup and empties them. A later changeset drops them once every installation has run it.
+        Each table or column is dropped only where it exists (a fresh database gets the slim schema from Hibernate).
+    -->
+    <changeSet id="002-drop-user-role" author="starsign">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="user_role"/>
+        </preConditions>
+        <dropTable tableName="user_role" cascadeConstraints="true"/>
+    </changeSet>
+
+    <changeSet id="002-drop-user-failed-login-count" author="starsign">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="organisation_user" columnName="failed_login_count"/>
+        </preConditions>
+        <dropColumn tableName="organisation_user" columnName="failed_login_count"/>
+    </changeSet>
+
+    <changeSet id="002-drop-user-locked-until" author="starsign">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="organisation_user" columnName="locked_until"/>
+        </preConditions>
+        <dropColumn tableName="organisation_user" columnName="locked_until"/>
+    </changeSet>
+
+    <changeSet id="002-drop-user-mfa-enabled" author="starsign">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="organisation_user" columnName="mfa_enabled"/>
+        </preConditions>
+        <dropColumn tableName="organisation_user" columnName="mfa_enabled"/>
+    </changeSet>
+
+    <changeSet id="002-drop-user-email-verified" author="starsign">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="organisation_user" columnName="email_verified"/>
+        </preConditions>
+        <dropColumn tableName="organisation_user" columnName="email_verified"/>
+    </changeSet>
+</databaseChangeLog>

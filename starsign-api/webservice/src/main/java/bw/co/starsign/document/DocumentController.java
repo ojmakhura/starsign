@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.document;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.AuditEventDTO;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -105,6 +106,12 @@ public interface DocumentController {
     )
     @PreAuthorize(value = "hasAnyAuthority('SCOPE_documents:list', 'SCOPE_documents:list-own')")
     public @Nullable ResponseEntity<List<DocumentListDTO>> search(@RequestBody(required = true) @Valid DocumentSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAnyAuthority('SCOPE_documents:list', 'SCOPE_documents:list-own')")
+    public ResponseEntity<Page<DocumentListDTO>> pagedSearch(@RequestBody(required = true) @Valid DocumentSearchCriteria criteria) throws Exception;
 
     @GetMapping(
         value = "/{id}/content"

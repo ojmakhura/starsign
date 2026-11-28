@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.notification;
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.ActorType;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditEventType;
@@ -17,6 +19,8 @@ import bw.co.starsign.branding.BrandingDTO;
 import bw.co.starsign.branding.BrandingService;
 import bw.co.starsign.common.SortDirection;
 import bw.co.starsign.context.CallerContext;
+import bw.co.starsign.identity.KeycloakAdminService;
+import bw.co.starsign.identity.KeycloakAttributes;
 import bw.co.starsign.identity.OrganisationUser;
 import bw.co.starsign.identity.OrganisationUserRepository;
 import bw.co.starsign.messaging.OutboxEventDTO;
@@ -30,6 +34,7 @@ import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.SigningWorkflow;
 import bw.co.starsign.workflow.SigningWorkflowRepository;
 import bw.co.starsign.workflow.WorkflowStatus;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -82,6 +87,8 @@ public class NotificationServiceImpl
     private static final int MAX_REMINDERS = 20;
     private static final String SYSTEM = "system";
     private static final String PROVIDER = "novu";
+
+    private static final String SMS_OFF = "SMS delivery is turned off (app.novu.sms-enabled=false)";
     private static final String DEFAULT_SENDER = "no-reply@starsign.co.bw";
     private static final String DEFAULT_SMS_SENDER = "StarSign";
 
@@ -105,6 +112,8 @@ public class NotificationServiceImpl
     private final NotificationProviderConfigRepository notificationProviderConfigRepository;
     private final NotificationTemplates templates;
     private final NovuNotifier novuNotifier;
+    private final NovuInbox novuInbox;
+    private final KeycloakAdminService keycloakAdminService;
     private final CallerContext caller;
     private final String portalUrl;
     private final String signingPortalUrl;
@@ -128,7 +137,9 @@ public class NotificationServiceImpl
         NotificationProviderConfigRepository notificationProviderConfigRepository,
         NotificationTemplates templates,
         NovuNotifier novuNotifier,
+        NovuInbox novuInbox,
         @Lazy CallerContext caller,
+        @Lazy KeycloakAdminService keycloakAdminService,
         @Value("${app.portal-url:}") String portalUrl,
         @Value("${app.signing-portal-url:}") String signingPortalUrl,
         @Value("${app.notifications.manual-reminder-cooldown-minutes:60}") long manualReminderCooldownMinutes) {
@@ -151,7 +162,9 @@ public class NotificationServiceImpl
         this.notificationProviderConfigRepository = notificationProviderConfigRepository;
         this.templates = templates;
         this.novuNotifier = novuNotifier;
+        this.novuInbox = novuInbox;
         this.caller = caller;
+        this.keycloakAdminService = keycloakAdminService;
         this.portalUrl = StringUtils.removeEnd(StringUtils.trimToEmpty(portalUrl), "/");
         this.signingPortalUrl = StringUtils.removeEnd(StringUtils.trimToEmpty(signingPortalUrl), "/");
         this.manualReminderCooldown = Duration.ofMinutes(Math.max(0, manualReminderCooldownMinutes));
@@ -189,7 +202,34 @@ public class NotificationServiceImpl
 
         if (notification.getChannel() == NotificationChannel.IN_APP)
         {
-            delivered(notification, now);
+            if (!novuNotifier.isInboxEnabled())
+            {
+                // Queued while the inbox was on: the portal now lists it from StarSign
+                delivered(notification, now);
+                return toDto(notificationRepository.save(notification));
+            }
+            try
+            {
+                String messageId = sendInApp(notification);
+                // Novu accepted it: the message is in the user's inbox
+                delivered(notification, now);
+                notification.setProviderName(PROVIDER);
+                notification.setProviderMessageId(messageId);
+            }
+            catch (RuntimeException e)
+            {
+                failedAttempt(notification, e, now);
+            }
+            return toDto(notificationRepository.save(notification));
+        }
+
+        if (notification.getChannel() == NotificationChannel.SMS && !novuNotifier.isSmsEnabled())
+        {
+            // Queued before SMS was turned off
+            notification.setStatus(NotificationStatus.SUPPRESSED);
+            notification.setLastError(SMS_OFF);
+            notification.setNextAttemptAt(null);
+            redactSecrets(notification);
             return toDto(notificationRepository.save(notification));
         }
 
@@ -314,6 +354,11 @@ public class NotificationServiceImpl
     protected List<NotificationDTO> handleFindMine(Boolean unreadOnly)
         throws Exception
     {
+        if (novuInbox.isEnabled())
+        {
+            // The user's Novu inbox, read as them: ids are Novu message ids (markRead accepts both kinds)
+            return novuInbox.list(caller.userId(), Boolean.TRUE.equals(unreadOnly), MAX_MINE);
+        }
         Optional<OrganisationUser> me = organisationUserRepository.findByKeycloakUserId(caller.userId());
         if (me.isEmpty())
         {
@@ -336,13 +381,88 @@ public class NotificationServiceImpl
     }
 
     /**
+     * @see bw.co.starsign.notification.NotificationService#unreadCount()
+     */
+    @Override
+    protected Integer handleUnreadCount()
+        throws Exception
+    {
+        if (novuInbox.isEnabled())
+        {
+            return novuInbox.unreadCount(caller.userId());
+        }
+        return (int) notificationRepository.count(myUnread());
+    }
+
+    /**
+     * Novu's inbox first (what the user sees), then StarSign's copies, so the organisation view agrees.
+     *
+     * @see bw.co.starsign.notification.NotificationService#markAllRead()
+     */
+    @Override
+    protected Integer handleMarkAllRead()
+        throws Exception
+    {
+        int unread = 0;
+        if (novuInbox.isEnabled())
+        {
+            unread = novuInbox.unreadCount(caller.userId());
+            novuInbox.readAll(caller.userId());
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<Notification> copies = notificationRepository.findAll(myUnread());
+        for (Notification notification : copies)
+        {
+            notification.setReadAt(now);
+            notification.setModifiedAt(now);
+            notification.setModifiedBy(caller.userId());
+        }
+        notificationRepository.saveAll(copies);
+        return novuInbox.isEnabled() ? unread : copies.size();
+    }
+
+    /** The caller's unread in-app notifications in StarSign. */
+    private Specification<Notification> myUnread()
+    {
+        String keycloakUserId = caller.userId();
+        return (root, query, cb) -> cb.and(
+                cb.equal(root.get("recipientUser").get("keycloakUserId"), keycloakUserId),
+                cb.equal(root.get("channel"), NotificationChannel.IN_APP),
+                cb.isNull(root.get("readAt")));
+    }
+
+    /**
      * @see bw.co.starsign.notification.NotificationService#markRead(String)
      */
     @Override
     protected NotificationDTO handleMarkRead(String id)
         throws Exception
     {
-        Notification notification = load(id);
+        if (NovuInbox.isMessageId(id) && novuInbox.isEnabled())
+        {
+            // A message of the caller's own Novu inbox (Novu only finds it in their session), then StarSign's copy
+            JsonNode message = novuInbox.read(caller.userId(), id);
+            String copyId = NovuInbox.notificationId(message);
+            if (copyId != null)
+            {
+                try
+                {
+                    markCopyRead(load(copyId));
+                }
+                catch (NotificationServiceException e)
+                {
+                    // Not (or no longer) in StarSign, or somebody else's: the inbox is what counts
+                    logger.debug("No StarSign copy of Novu message {} to mark read: {}", id, e.getMessage());
+                }
+            }
+            return novuInbox.toDto(message);
+        }
+        return toDto(markCopyRead(load(id)));
+    }
+
+    /** Marks the caller's own StarSign notification read. */
+    private Notification markCopyRead(Notification notification)
+    {
         OrganisationUser recipient = notification.getRecipientUser();
         // Somebody else's notification is reported as missing, not as forbidden
         if (recipient == null || !caller.userId().equals(recipient.getKeycloakUserId()))
@@ -357,7 +477,7 @@ public class NotificationServiceImpl
             notification.setModifiedBy(caller.userId());
             notification = notificationRepository.save(notification);
         }
-        return toDto(notification);
+        return notification;
     }
 
     /**
@@ -369,6 +489,37 @@ public class NotificationServiceImpl
     @Override
     protected List<NotificationDTO> handleSearch(@Valid NotificationSearchCriteria criteria)
         throws Exception
+    {
+        Specification<Notification> matching = searchSpecification(criteria);
+        if (matching == null)
+        {
+            return new ArrayList<NotificationDTO>();
+        }
+        return toDtos(notificationRepository.findAll(matching, searchRequest(criteria)).getContent());
+    }
+
+    /**
+     * @see bw.co.starsign.notification.NotificationService#pagedSearch(NotificationSearchCriteria)
+     */
+    @Override
+    protected Page<NotificationDTO> handlePagedSearch(@Valid NotificationSearchCriteria criteria)
+        throws Exception
+    {
+        PageRequest request = searchRequest(criteria);
+        Specification<Notification> matching = searchSpecification(criteria);
+        if (matching == null)
+        {
+            return Page.empty(request);
+        }
+        Page<Notification> found = notificationRepository.findAll(matching, request);
+        return new PageImpl<NotificationDTO>(toDtos(found.getContent()), request, found.getTotalElements());
+    }
+
+    /**
+     * The search's specification, limited to the caller's organisation and, for owner-scoped callers, their own
+     * notifications; null when an owner-scoped caller has no user account, so has no notifications.
+     */
+    private Specification<Notification> searchSpecification(NotificationSearchCriteria criteria)
     {
         UUID organisationId = null;
         if (caller.tenantId().isPresent())
@@ -392,7 +543,7 @@ public class NotificationServiceImpl
             Optional<OrganisationUser> me = organisationUserRepository.findByKeycloakUserId(caller.userId());
             if (me.isEmpty())
             {
-                return new ArrayList<NotificationDTO>();
+                return null;
             }
             recipientUserId = me.get().getId();
         }
@@ -436,7 +587,11 @@ public class NotificationServiceImpl
             }
             return cb.and(where.toArray(new Predicate[0]));
         };
+        return matching;
+    }
 
+    private static PageRequest searchRequest(NotificationSearchCriteria criteria)
+    {
         String sortField = StringUtils.isNotBlank(criteria.getSortField()) && SORTABLE.contains(criteria.getSortField().trim())
                 ? criteria.getSortField().trim()
                 : "createdAt";
@@ -444,8 +599,7 @@ public class NotificationServiceImpl
                 : Sort.Direction.DESC;
         int page = criteria.getPageNumber() == null || criteria.getPageNumber() < 0 ? 0 : criteria.getPageNumber();
         int size = criteria.getPageSize() == null || criteria.getPageSize() <= 0 ? 50 : Math.min(criteria.getPageSize(), 500);
-        return toDtos(notificationRepository.findAll(matching,
-                PageRequest.of(page, size, Sort.by(direction, sortField))).getContent());
+        return PageRequest.of(page, size, Sort.by(direction, sortField).and(Sort.by("id")));
     }
 
     /**
@@ -687,7 +841,7 @@ public class NotificationServiceImpl
         String address = StringUtils.trimToNull(request.getRecipientAddress());
         if (address == null && recipientUser != null)
         {
-            address = channel == NotificationChannel.SMS ? StringUtils.trimToNull(recipientUser.getPhoneNumber())
+            address = channel == NotificationChannel.SMS ? keycloakAttribute(recipientUser, KeycloakAttributes.PHONE_NUMBER)
                     : channel == NotificationChannel.EMAIL ? StringUtils.trimToNull(recipientUser.getEmailAddress())
                     : recipientUser.getKeycloakUserId();
         }
@@ -705,7 +859,7 @@ public class NotificationServiceImpl
                                 + StringUtils.defaultString(recipientUser.getLastName())));
         String locale = StringUtils.firstNonBlank(request.getLocale(),
                 signatory == null ? null : signatory.getLocale(),
-                recipientUser == null ? null : recipientUser.getLocale(),
+                recipientUser == null ? null : keycloakAttribute(recipientUser, KeycloakAttributes.LOCALE),
                 organisation == null ? null : organisation.getLocale(), "en");
 
         Map<String, Object> model = model(request, organisation, workflow, recipientName);
@@ -733,7 +887,8 @@ public class NotificationServiceImpl
         notification.setCreatedAt(now);
         notification.setCreatedBy(SYSTEM);
 
-        String suppressed = suppressedBy(request.getEventType(), channel, settings(organisation));
+        String suppressed = channel == NotificationChannel.SMS && !novuNotifier.isSmsEnabled() ? SMS_OFF
+                : suppressedBy(request.getEventType(), channel, settings(organisation));
         if (suppressed != null)
         {
             notification.setStatus(NotificationStatus.SUPPRESSED);
@@ -741,8 +896,9 @@ public class NotificationServiceImpl
             redactSecrets(notification);
             return notificationRepository.save(notification);
         }
-        if (channel == NotificationChannel.IN_APP)
+        if (channel == NotificationChannel.IN_APP && !novuNotifier.isInboxEnabled())
         {
+            // No Novu inbox: the portal lists in-app notifications from StarSign, so storing it delivers it
             notification.setAttempts(1);
             delivered(notification, now);
             return notificationRepository.save(notification);
@@ -769,6 +925,38 @@ public class NotificationServiceImpl
         event.setIdempotencyKey("notification:" + notification.getId() + ":" + (notification.getAttempts() + 1));
         event.setCorrelationId(notification.getWorkflow() == null ? null : notification.getWorkflow().getId().toString());
         outboxService.enqueue(event);
+    }
+
+    /**
+     * Puts the notification in the recipient's Novu inbox (the in-app step of the event's workflow) and returns the Novu
+     * transaction id. The subscriber is the user's Keycloak id, which the portal's inbox connects as; the
+     * notification id goes along so the portal can mark the StarSign copy read too.
+     */
+    private String sendInApp(Notification notification)
+    {
+        OrganisationUser user = notification.getRecipientUser();
+        String subscriberId = user != null && StringUtils.isNotBlank(user.getKeycloakUserId())
+                ? user.getKeycloakUserId()
+                : notification.getRecipientAddress();
+        String subject = StringUtils.defaultIfBlank(notification.getSubject(), humanise(notification.getEventType()));
+        String body = StringUtils.defaultIfBlank(NotificationTemplates.toText(
+                StringUtils.defaultString(notification.getBody())), subject);
+
+        Map<String, Object> payload = new HashMap<String, Object>();
+        payload.put(NovuNotifier.CHANNEL, "IN_APP");
+        payload.put("eventType", notification.getEventType().name());
+        payload.put("notificationId", notification.getId().toString());
+        payload.put("subject", subject);
+        payload.put("body", body);
+        payload.put("linkPath", StringUtils.defaultString(notification.getLinkPath()));
+        payload.put("link", StringUtils.defaultString(link(notification.getLinkPath())));
+        if (notification.getWorkflow() != null)
+        {
+            payload.put("workflowId", notification.getWorkflow().getId().toString());
+        }
+        return novuNotifier.trigger(novuNotifier.workflowId(notification.getEventType()), subscriberId,
+                user == null ? null : user.getEmailAddress(), null, notification.getRecipientName(), payload,
+                notification.getId().toString());
     }
 
     /** Sends through the channel's gateway and returns the provider's message id. */
@@ -972,12 +1160,14 @@ public class NotificationServiceImpl
         }
 
         Notification first = null;
-        if (signatory.isNotifyByEmail() && StringUtils.isNotBlank(signatory.getEmailAddress()))
+        // Without SMS, a signatory who only takes text messages is reminded by email
+        boolean byEmail = signatory.isNotifyByEmail() || (signatory.isNotifyBySms() && !novuNotifier.isSmsEnabled());
+        if (byEmail && StringUtils.isNotBlank(signatory.getEmailAddress()))
         {
             first = create(request(NotificationEventType.SIGNING_REMINDER, NotificationChannel.EMAIL, workflow,
                     signatory, null, signatory.getEmailAddress(), model, "reminder:" + reminder.getId() + ":EMAIL"));
         }
-        if (signatory.isNotifyBySms() && StringUtils.isNotBlank(signatory.getPhoneNumber()))
+        if (signatory.isNotifyBySms() && novuNotifier.isSmsEnabled() && StringUtils.isNotBlank(signatory.getPhoneNumber()))
         {
             Notification sms = create(request(NotificationEventType.SIGNING_REMINDER, NotificationChannel.SMS, workflow,
                     signatory, null, signatory.getPhoneNumber(), model, "reminder:" + reminder.getId() + ":SMS"));
@@ -1398,6 +1588,24 @@ public class NotificationServiceImpl
         catch (IllegalArgumentException e)
         {
             throw NotificationServiceException.notFound("'" + id + "' is not the id of a " + what);
+        }
+    }
+
+    /**
+     * A profile attribute of an organisation user, which Keycloak owns (phone number, locale); null when the user
+     * has none or Keycloak cannot be read, so the caller falls back to other sources.
+     */
+    private String keycloakAttribute(OrganisationUser user, String attribute)
+    {
+        try
+        {
+            return KeycloakAttributes.first(keycloakAdminService.findUserById(user.getKeycloakUserId()), attribute);
+        }
+        catch (RuntimeException e)
+        {
+            logger.warn("Could not read the {} of user {} from Keycloak: {}", attribute, user.getKeycloakUserId(),
+                    e.getMessage());
+            return null;
         }
     }
 }

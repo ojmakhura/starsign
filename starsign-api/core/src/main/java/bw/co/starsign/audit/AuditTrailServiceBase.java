@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.audit;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -164,6 +165,36 @@ public abstract class AuditTrailServiceBase
      * @throws Exception
      */
     protected abstract List<AuditEventDTO> handleSearch(@Valid AuditEventSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Page<AuditEventDTO> pagedSearch(final @Valid AuditEventSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.audit.AuditTrailService.pagedSearch(@Valid AuditEventSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("AuditTrailService.pagedSearch(@Valid AuditEventSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid AuditEventSearchCriteria)}
+     * @param criteria AuditEventSearchCriteria the search criteria, page number and size
+     * @return Page<AuditEventDTO>
+     * @throws Exception
+     */
+    protected abstract Page<AuditEventDTO> handlePagedSearch(@Valid AuditEventSearchCriteria criteria)
         throws Exception;
 
     /**

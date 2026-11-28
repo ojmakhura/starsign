@@ -12,15 +12,69 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import bw.co.starsign.common.ListItemQueries;
+import bw.co.starsign.common.ListQuery;
+import org.springframework.data.jpa.domain.Specification;
+import bw.co.starsign.workflow.WorkflowStatus;
 import java.util.Collection;
 import java.util.List;
 
-public interface DocumentRepository extends JpaRepository<Document, UUID>, JpaSpecificationExecutor<Document> {
+public interface DocumentRepository extends JpaRepository<Document, UUID>, JpaSpecificationExecutor<Document>, ListItemQueries {
+
+    /** The display name of the owner {@code o}: first and last name, otherwise the e-mail address. */
+    String OWNER_NAME = "coalesce(nullif(trim(concat(coalesce(trim(o.firstName), ''), ' ', coalesce(trim(o.lastName), ''))), ''),"
+            + " o.emailAddress)";
 
     boolean existsByReferenceNumberIgnoreCase(String referenceNumber);
 
     /** Documents a retention run looks at: not yet deleted and in one of the statuses. */
     @Query("select d.id from Document d where d.deletedAt is null and d.status in :statuses")
     List<UUID> findRetentionCandidates(@Param("statuses") Collection<DocumentStatus> statuses);
+
+    /**
+     * The workflow whose signatories a document's list item counts: its latest active workflow, otherwise its
+     * latest one.
+     */
+    String RELEVANT_WORKFLOW = "select w.id from SigningWorkflow w where w.document = d"
+            + " order by case when w.status in :active then 0 else 1 end, w.createdAt desc nulls last limit 1";
+
+    /**
+     * The list items of the documents, built in one query: a constructor expression the specification filters.
+     * The signatory counts are those of the {@link #RELEVANT_WORKFLOW relevant workflow}.
+     */
+    String LIST_ITEMS = "select new bw.co.starsign.document.DocumentListDTO(cast(d.id as String), d.referenceNumber,"
+            + " d.title, d.status, " + OWNER_NAME + ", d.pageCount, d.createdAt, d.completedAt,"
+            + " cast((select count(s) from Signatory s where s.workflow.id = (" + RELEVANT_WORKFLOW + ")) as Integer),"
+            + " cast((select count(s) from Signatory s where s.workflow.id = (" + RELEVANT_WORKFLOW + ")"
+            + " and s.status = bw.co.starsign.workflow.SignatoryStatus.SIGNED) as Integer))"
+            + " from Document d join d.owner o";
+
+    /** @param active the statuses of an active workflow */
+    default ListQuery<Document, DocumentListDTO> listQuery(Collection<WorkflowStatus> active)
+    {
+        return ListQuery.of(Document.class, DocumentListDTO.class, LIST_ITEMS).with("active", active);
+    }
+
+    /**
+     * The list items of one page of the documents the specification matches.
+     *
+     * @param active the statuses of an active workflow
+     */
+    default List<DocumentListDTO> findListItems(Specification<Document> specification, Pageable page,
+            Collection<WorkflowStatus> active)
+    {
+        return findListItems(listQuery(active), specification, page);
+    }
+
+    /**
+     * One page of the list items of the documents the specification matches, with their number.
+     *
+     * @param active the statuses of an active workflow
+     */
+    default Page<DocumentListDTO> findListItemPage(Specification<Document> specification, Pageable page,
+            Collection<WorkflowStatus> active)
+    {
+        return findListItemPage(listQuery(active), specification, page);
+    }
 
 }

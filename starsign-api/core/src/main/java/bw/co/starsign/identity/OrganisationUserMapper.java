@@ -23,8 +23,15 @@ public abstract class OrganisationUserMapper {
      * @param entity
      * @return OrganisationUserDTO
      */
-    // WARNING! No conversion for target.roles (can't convert source.getRoles():bw.co.starsign.identity.UserRole to java.lang.String)
+    // Keycloak owns these: the web layer fills them in (KeycloakUserDetails)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "jobTitle", ignore = true)
+    @Mapping(target = "phoneNumber", ignore = true)
+    @Mapping(target = "emailVerified", ignore = true)
+    @Mapping(target = "mfaEnabled", ignore = true)
+    @Mapping(target = "locale", ignore = true)
+    @Mapping(target = "organisationId", ignore = true)
+    @Mapping(target = "organisationName", ignore = true)
     public abstract OrganisationUserDTO toOrganisationUserDTO(OrganisationUser entity);
 
      /**
@@ -39,12 +46,10 @@ public abstract class OrganisationUserMapper {
      * @return OrganisationUser
      */
     @InheritInverseConfiguration
-    @Mapping(target = "roles", ignore = true)
     public abstract OrganisationUser organisationUserDTOToEntity(OrganisationUserDTO organisationUserDTO);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @InheritInverseConfiguration
-    @Mapping(target = "roles", ignore = true)
     public abstract void updateOrganisationUserFromOrganisationUserDTO(OrganisationUserDTO organisationUserDTO, @MappingTarget OrganisationUser entity);
 
     /**
@@ -52,8 +57,9 @@ public abstract class OrganisationUserMapper {
      * @param entity
      * @return OrganisationUserListDTO
      */
-    // WARNING! No conversion for target.roles (can't convert source.getRoles():bw.co.starsign.identity.UserRole to java.lang.String)
+    // Keycloak owns these: the web layer fills them in (KeycloakUserDetails)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "jobTitle", ignore = true)
     public abstract OrganisationUserListDTO toOrganisationUserListDTO(OrganisationUser entity);
 
      /**
@@ -68,12 +74,10 @@ public abstract class OrganisationUserMapper {
      * @return OrganisationUser
      */
     @InheritInverseConfiguration
-    @Mapping(target = "roles", ignore = true)
     public abstract OrganisationUser organisationUserListDTOToEntity(OrganisationUserListDTO organisationUserListDTO);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @InheritInverseConfiguration
-    @Mapping(target = "roles", ignore = true)
     public abstract void updateOrganisationUserFromOrganisationUserListDTO(OrganisationUserListDTO organisationUserListDTO, @MappingTarget OrganisationUser entity);
 
 }

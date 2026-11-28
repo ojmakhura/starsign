@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.template;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.workflow.SigningWorkflowDTO;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -35,9 +36,16 @@ public interface SigningTemplateService
     /**
      * TODO: Model Documentation for bw.co.starsign.template.SigningTemplateService.search
      * @param criteria TODO: Model Documentation for bw.co.starsign.template.SigningTemplateService.search(criteria)
-     * @return List<SigningTemplateDTO>
+     * @return List<SigningTemplateListDTO>
      */
-    public List<SigningTemplateDTO> search(@Valid SigningTemplateSearchCriteria criteria) ;
+    public List<SigningTemplateListDTO> search(@Valid SigningTemplateSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<SigningTemplateListDTO>
+     */
+    public Page<SigningTemplateListDTO> pagedSearch(@Valid SigningTemplateSearchCriteria criteria) ;
 
     /**
      * Increments templateVersion; workflows already created keep their own copy.

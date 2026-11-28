@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.workflow;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -202,6 +203,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO create(final @Valid CreateWorkflowDTO workflow)
     {
         if (workflow == null)
@@ -232,6 +234,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public SigningWorkflowDTO findById(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -262,6 +265,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public List<SigningWorkflowListDTO> search(final @Valid SigningWorkflowSearchCriteria criteria)
     {
         if (criteria == null)
@@ -292,6 +296,38 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
+    public Page<SigningWorkflowListDTO> pagedSearch(final @Valid SigningWorkflowSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.workflow.SigningWorkflowService.pagedSearch(@Valid SigningWorkflowSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("SigningWorkflowService.pagedSearch(@Valid SigningWorkflowSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid SigningWorkflowSearchCriteria)}
+     * @param criteria SigningWorkflowSearchCriteria the search criteria, page number and size
+     * @return Page<SigningWorkflowListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<SigningWorkflowListDTO> handlePagedSearch(@Valid SigningWorkflowSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
     public SigningWorkflowDTO update(final String id, final @Valid SigningWorkflowDTO workflow)
     {
         if (id == null || id.trim().isEmpty())
@@ -328,6 +364,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningStageDTO addStage(final String id, final @Valid SigningStageDTO stage)
     {
         if (id == null || id.trim().isEmpty())
@@ -364,6 +401,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningStageDTO updateStage(final String id, final String stageId, final @Valid SigningStageDTO stage)
     {
         if (id == null || id.trim().isEmpty())
@@ -406,6 +444,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public boolean removeStage(final String id, final String stageId)
     {
         if (id == null || id.trim().isEmpty())
@@ -442,6 +481,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public List<SigningStageDTO> reorderStages(final String id, final @Valid ReorderRequestDTO order)
     {
         if (id == null || id.trim().isEmpty())
@@ -478,6 +518,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SignatoryDTO addSignatory(final String id, final @Valid SignatoryDTO signatory)
     {
         if (id == null || id.trim().isEmpty())
@@ -514,6 +555,7 @@ public abstract class SigningWorkflowServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SignatoryDTO updateSignatory(final String id, final String signatoryId, final @Valid SignatoryDTO signatory)
     {
         if (id == null || id.trim().isEmpty())
@@ -558,6 +600,7 @@ SigningWorkflowService.updateSignatory(signatory)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public boolean removeSignatory(final String id, final String signatoryId)
     {
         if (id == null || id.trim().isEmpty())
@@ -595,6 +638,7 @@ SigningWorkflowService.removeSignatory(signatoryId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public List<SignatoryDTO> reorderSignatories(final String id, final @Valid ReorderRequestDTO order)
     {
         if (id == null || id.trim().isEmpty())
@@ -632,6 +676,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public List<SigningFieldDTO> getFields(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -662,6 +707,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public List<SigningFieldDTO> saveFields(final String id, final @Valid List<SigningFieldDTO> fields)
     {
         if (id == null || id.trim().isEmpty())
@@ -693,6 +739,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public boolean removeField(final String id, final String fieldId)
     {
         if (id == null || id.trim().isEmpty())
@@ -729,6 +776,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public WorkflowValidationResultDTO validate(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -759,6 +807,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO initiate(final String id, final @Valid WorkflowInitiationDTO initiation)
     {
         if (id == null || id.trim().isEmpty())
@@ -795,6 +844,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO cancel(final String id, final @Valid WorkflowCancellationDTO cancellation)
     {
         if (id == null || id.trim().isEmpty())
@@ -831,6 +881,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO renew(final String id, final @Valid WorkflowRenewalDTO renewal)
     {
         if (id == null || id.trim().isEmpty())
@@ -867,6 +918,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO amend(final String id, final @Valid WorkflowAmendmentDTO amendment)
     {
         if (id == null || id.trim().isEmpty())
@@ -903,6 +955,7 @@ SigningWorkflowService.reorderSignatories(order)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public void resendInvitation(final String id, final String signatoryId)
     {
         if (id == null || id.trim().isEmpty())
@@ -976,6 +1029,7 @@ SigningWorkflowService.resendInvitation(signatoryId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public List<WorkflowTimelineEntryDTO> getTimeline(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -1006,6 +1060,7 @@ SigningWorkflowService.resendInvitation(signatoryId)
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public List<WorkflowConfigurationChangeDTO> getConfigurationHistory(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -1037,6 +1092,7 @@ SigningWorkflowService.getConfigurationHistory(id)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO createFromTemplate(final String templateId, final @Valid TemplateInstantiationDTO instantiation)
     {
         if (templateId == null || templateId.trim().isEmpty())

@@ -32,6 +32,8 @@ import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
+import bw.co.starsign.common.Pages;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -59,7 +61,6 @@ import bw.co.starsign.storage.StorageService;
 import bw.co.starsign.subscription.SubscriptionService;
 import bw.co.starsign.subscription.UsageMetric;
 import bw.co.starsign.workflow.Signatory;
-import bw.co.starsign.workflow.SignatoryStatus;
 import bw.co.starsign.workflow.SigningWorkflow;
 import bw.co.starsign.workflow.WorkflowStatus;
 import jakarta.persistence.criteria.Predicate;
@@ -219,6 +220,7 @@ public class DocumentServiceImpl
         {
             errors.add("Only PDF files can be uploaded");
         }
+        
         String reference = StringUtils.trimToNull(details.getReferenceNumber());
         if (reference != null && documentRepository.existsByReferenceNumberIgnoreCase(reference))
         {
@@ -351,22 +353,37 @@ public class DocumentServiceImpl
     protected List<DocumentListDTO> handleSearch(@Valid DocumentSearchCriteria criteria)
         throws Exception
     {
-        String tenantId = tenant();
-        String userId = caller.userId();
-        boolean ownOnly = caller.ownRecordsOnly("documents:list");
+        Specification<Document> specification = searchSpecification(criteria);
+        PageRequest request = searchRequest(criteria);
+        return read.execute(status -> documentRepository.findListItems(specification, request, ACTIVE_WORKFLOW));
+    }
 
-        int page = criteria.getPageNumber() == null ? 0 : Math.max(0, criteria.getPageNumber());
-        int size = criteria.getPageSize() == null || criteria.getPageSize() < 1
-                ? DEFAULT_PAGE_SIZE : Math.min(criteria.getPageSize(), MAX_PAGE_SIZE);
+    /**
+     * @see bw.co.starsign.document.DocumentService#pagedSearch(DocumentSearchCriteria)
+     */
+    @Override
+    protected Page<DocumentListDTO> handlePagedSearch(@Valid DocumentSearchCriteria criteria)
+        throws Exception
+    {
+        Specification<Document> specification = searchSpecification(criteria);
+        PageRequest request = searchRequest(criteria);
+        return read.execute(status -> documentRepository.findListItemPage(specification, request, ACTIVE_WORKFLOW));
+    }
+
+    /** The search's specification, limited to the caller's tenant and, for owner-scoped callers, their own. */
+    private Specification<Document> searchSpecification(DocumentSearchCriteria criteria)
+    {
+        boolean ownOnly = caller.ownRecordsOnly("documents:list");
+        return specification(criteria, tenant(), ownOnly ? caller.userId() : null);
+    }
+
+    private static PageRequest searchRequest(DocumentSearchCriteria criteria)
+    {
         String sortField = SORT_FIELDS.getOrDefault(
                 StringUtils.defaultString(criteria.getSortField()).toLowerCase(Locale.ROOT), "createdAt");
         Sort.Direction direction = criteria.getSortDirection() == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
-        PageRequest request = PageRequest.of(page, size, Sort.by(direction, sortField).and(Sort.by("id")));
-
-        Specification<Document> specification = specification(criteria, tenantId, ownOnly ? userId : null);
-        return read.execute(status -> documentRepository.findAll(specification, request).getContent().stream()
-                .map(this::listDto)
-                .toList());
+        return Pages.request(criteria, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
+                Sort.by(direction, sortField).and(Sort.by("id")));
     }
 
     /**
@@ -1070,19 +1087,6 @@ public class DocumentServiceImpl
                 .filter(workflow -> ACTIVE_WORKFLOW.contains(workflow.getStatus()))
                 .ifPresent(workflow -> dto.setActiveWorkflowId(workflow.getId().toString()));
         finalArtifact(document).ifPresent(artifact -> dto.setFinalArtifactId(artifact.getId().toString()));
-        return dto;
-    }
-
-    private DocumentListDTO listDto(Document document)
-    {
-        DocumentListDTO dto = documentMapper.toDocumentListDTO(document);
-        dto.setId(document.getId().toString());
-        dto.setOwnerName(name(document.getOwner()));
-        Optional<SigningWorkflow> workflow = relevantWorkflow(document);
-        dto.setSignatoryCount(workflow.map(found -> found.getSignatories().size()).orElse(0));
-        dto.setSignedCount(workflow.map(found -> (int) found.getSignatories().stream()
-                .filter(signatory -> signatory.getStatus() == SignatoryStatus.SIGNED)
-                .count()).orElse(0));
         return dto;
     }
 

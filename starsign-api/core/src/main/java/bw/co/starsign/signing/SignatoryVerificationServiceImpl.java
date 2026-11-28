@@ -285,11 +285,15 @@ public class SignatoryVerificationServiceImpl
         return invitation;
     }
 
-    /** The signatory cannot pick a weaker method than the one the sender required. */
-    private static VerificationMethod requiredMethod(SignatoryInvitation invitation, VerificationMethod requested)
+    /**
+     * The signatory cannot pick a weaker method than the one the sender required. Without text messages an SMS
+     * code is sent by email (SigningDocuments.deliverable); a page loaded before that may still ask for SMS.
+     */
+    private VerificationMethod requiredMethod(SignatoryInvitation invitation, VerificationMethod requested)
     {
-        VerificationMethod required = SigningDocuments.verificationMethod(invitation.getSignatory());
-        if (requested != null && requested != required)
+        VerificationMethod configured = SigningDocuments.verificationMethod(invitation.getSignatory());
+        VerificationMethod required = SigningDocuments.deliverable(configured, novuNotifier.isSmsEnabled());
+        if (requested != null && requested != required && requested != configured)
         {
             throw new SignatoryVerificationServiceException(
                     "This signing request must be verified with " + describe(required) + ".");

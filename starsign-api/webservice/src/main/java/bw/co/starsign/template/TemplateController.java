@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.template;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.workflow.SigningWorkflowDTO;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -65,7 +66,13 @@ public interface TemplateController {
         value = "/search"
     )
     @PreAuthorize(value = "hasAuthority('SCOPE_templates:list')")
-    public @Nullable ResponseEntity<List<SigningTemplateDTO>> search(@RequestBody(required = true) @Valid SigningTemplateSearchCriteria criteria) throws Exception;
+    public @Nullable ResponseEntity<List<SigningTemplateListDTO>> search(@RequestBody(required = true) @Valid SigningTemplateSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAuthority('SCOPE_templates:list')")
+    public ResponseEntity<Page<SigningTemplateListDTO>> pagedSearch(@RequestBody(required = true) @Valid SigningTemplateSearchCriteria criteria) throws Exception;
 
     @PutMapping(
         value = "/{id}"

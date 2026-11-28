@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.audit;
 
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.core.io.Resource;
@@ -31,6 +32,13 @@ public interface AuditTrailService
      * @return List<AuditEventDTO>
      */
     public List<AuditEventDTO> search(@Valid AuditEventSearchCriteria criteria) ;
+
+    /**
+     * One page of the search results, with the number of matches over all pages.
+     * @param criteria the search criteria, page number and size
+     * @return Page<AuditEventDTO>
+     */
+    public Page<AuditEventDTO> pagedSearch(@Valid AuditEventSearchCriteria criteria) ;
 
     /**
      * TODO: Model Documentation for bw.co.starsign.audit.AuditTrailService.findByWorkflow

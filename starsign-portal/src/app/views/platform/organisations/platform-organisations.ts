@@ -1,8 +1,7 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { debounce, form, FormField, validate } from '@angular/forms/signals';
+import { Component, inject, signal } from '@angular/core';
+import { form, FormField, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import { SortDirection } from '@models/common';
 import {
   OrganisationListDTO,
   OrganisationSearchCriteria,
@@ -10,8 +9,8 @@ import {
 } from '@models/organisation';
 import { OrganisationApi } from '@services/organisation/organisation-api';
 import { FieldErrors } from '@shared/field-errors/field-errors';
-import { apiErrorMessage } from '@store/app-state';
-import { firstValueFrom } from 'rxjs';
+import { Pager } from '@shared/pagination/pager';
+import { PagedSearch } from '@shared/pagination/pagination';
 import { endOfDay, humanise, startOfDay } from '../platform-format';
 import { organisationTone } from './organisation-status';
 
@@ -23,12 +22,18 @@ interface OrganisationFilter {
   createdTo: string;
 }
 
-const PAGE_SIZE = 25;
+const EMPTY: OrganisationFilter = {
+  name: '',
+  registrationNumber: '',
+  status: '',
+  createdFrom: '',
+  createdTo: '',
+};
 
-/** Every organisation on the platform (POST /organisations/search), with filters and paging. */
+/** Every organisation on the platform (POST /organisations/search/paged), with filters and paging. */
 @Component({
   selector: 'app-platform-organisations',
-  imports: [DatePipe, FieldErrors, FormField, RouterLink],
+  imports: [DatePipe, FieldErrors, FormField, Pager, RouterLink],
   templateUrl: './platform-organisations.html',
 })
 export class PlatformOrganisations {
@@ -37,18 +42,9 @@ export class PlatformOrganisations {
   protected readonly statuses = Object.values(OrganisationStatus);
   protected readonly humanise = humanise;
   protected readonly tone = organisationTone;
-  protected readonly pageSize = PAGE_SIZE;
 
-  protected readonly filter = signal<OrganisationFilter>({
-    name: '',
-    registrationNumber: '',
-    status: '',
-    createdFrom: '',
-    createdTo: '',
-  });
+  protected readonly filter = signal<OrganisationFilter>({ ...EMPTY });
   protected readonly filterForm = form(this.filter, (path) => {
-    debounce(path.name, 350);
-    debounce(path.registrationNumber, 350);
     validate(path.createdTo, ({ value, valueOf }) => {
       const from = valueOf(path.createdFrom);
       return from && value() && value() < from
@@ -57,76 +53,33 @@ export class PlatformOrganisations {
     });
   });
 
-  protected readonly page = signal(0);
-  protected readonly organisations = signal<OrganisationListDTO[]>([]);
-  protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
-  protected readonly hasNext = computed(() => this.organisations().length === PAGE_SIZE);
+  protected readonly results = new PagedSearch<OrganisationSearchCriteria, OrganisationListDTO>(
+    (criteria) => this.organisationApi.pagedSearch(criteria),
+    'Unable to search the organisations.',
+  );
 
-  private readonly criteria = computed<OrganisationSearchCriteria | null>(() => {
+  constructor() {
+    this.search();
+  }
+
+  /** Runs the search with the filter's criteria, from the first page. */
+  protected search(event?: Event): void {
+    event?.preventDefault();
     if (this.filterForm().invalid()) {
-      return null;
+      return;
     }
     const f = this.filter();
-    return {
+    void this.results.search({
       name: f.name.trim() || null,
       registrationNumber: f.registrationNumber.trim() || null,
       status: f.status || null,
       createdFrom: startOfDay(f.createdFrom),
       createdTo: endOfDay(f.createdTo),
-      pageSize: PAGE_SIZE,
-      sortField: 'createdAt',
-      sortDirection: SortDirection.DESC,
-    };
-  });
-
-  /** Search sequence number: a slow, stale response never overwrites a newer one. */
-  private requestId = 0;
-
-  constructor() {
-    // A changed filter starts again from the first page.
-    effect(() => {
-      this.criteria();
-      untracked(() => this.page.set(0));
-    });
-    effect(() => {
-      const criteria = this.criteria();
-      const page = this.page();
-      if (criteria) {
-        untracked(() => void this.search({ ...criteria, pageNumber: page }));
-      }
     });
   }
 
   protected reset(): void {
-    this.filter.set({ name: '', registrationNumber: '', status: '', createdFrom: '', createdTo: '' });
-  }
-
-  protected reload(): void {
-    const criteria = this.criteria();
-    if (criteria) {
-      void this.search({ ...criteria, pageNumber: this.page() });
-    }
-  }
-
-  private async search(criteria: OrganisationSearchCriteria): Promise<void> {
-    const id = ++this.requestId;
-    this.loading.set(true);
-    this.error.set(null);
-    try {
-      const organisations = await firstValueFrom(this.organisationApi.search(criteria));
-      if (id === this.requestId) {
-        this.organisations.set(organisations);
-      }
-    } catch (error) {
-      if (id === this.requestId) {
-        this.organisations.set([]);
-        this.error.set(apiErrorMessage(error, 'Unable to search the organisations.'));
-      }
-    } finally {
-      if (id === this.requestId) {
-        this.loading.set(false);
-      }
-    }
+    this.filterForm().reset({ ...EMPTY });
+    this.search();
   }
 }

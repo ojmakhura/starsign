@@ -9,6 +9,7 @@
  */
 package bw.co.starsign.template;
 
+import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -110,6 +111,7 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningTemplateDTO create(final @Valid SigningTemplateDTO template)
     {
         if (template == null)
@@ -140,6 +142,7 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
     public SigningTemplateDTO findById(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -170,7 +173,8 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
-    public List<SigningTemplateDTO> search(final @Valid SigningTemplateSearchCriteria criteria)
+    @Transactional(readOnly = true)
+    public List<SigningTemplateListDTO> search(final @Valid SigningTemplateSearchCriteria criteria)
     {
         if (criteria == null)
         {
@@ -190,16 +194,48 @@ public abstract class SigningTemplateServiceBase
     /**
      * Performs the core logic for {@link #search(@Valid SigningTemplateSearchCriteria)}
      * @param criteria SigningTemplateSearchCriteria TODO: Model Documentation for SigningTemplateService.search(criteria)
-     * @return List<SigningTemplateDTO>
+     * @return List<SigningTemplateListDTO>
      * @throws Exception
      */
-    protected abstract List<SigningTemplateDTO> handleSearch(@Valid SigningTemplateSearchCriteria criteria)
+    protected abstract List<SigningTemplateListDTO> handleSearch(@Valid SigningTemplateSearchCriteria criteria)
         throws Exception;
 
     /**
      * {@inheritDoc}
      */
     @Override
+    @Transactional(readOnly = true)
+    public Page<SigningTemplateListDTO> pagedSearch(final @Valid SigningTemplateSearchCriteria criteria)
+    {
+        if (criteria == null)
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.template.SigningTemplateService.pagedSearch(@Valid SigningTemplateSearchCriteria criteria) - 'criteria' can not be null");
+        }
+        try
+        {
+            return this.handlePagedSearch(criteria);
+        }
+        catch (Throwable th)
+        {
+            throw failure("SigningTemplateService.pagedSearch(@Valid SigningTemplateSearchCriteria criteria)", th);
+        }
+    }
+
+    /**
+     * Performs the core logic for {@link #pagedSearch(@Valid SigningTemplateSearchCriteria)}
+     * @param criteria SigningTemplateSearchCriteria the search criteria, page number and size
+     * @return Page<SigningTemplateListDTO>
+     * @throws Exception
+     */
+    protected abstract Page<SigningTemplateListDTO> handlePagedSearch(@Valid SigningTemplateSearchCriteria criteria)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
     public SigningTemplateDTO update(final String id, final @Valid SigningTemplateDTO template)
     {
         if (id == null || id.trim().isEmpty())
@@ -236,6 +272,7 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningTemplateDTO activate(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -266,6 +303,7 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningTemplateDTO archive(final String id)
     {
         if (id == null || id.trim().isEmpty())
@@ -296,6 +334,7 @@ public abstract class SigningTemplateServiceBase
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningWorkflowDTO instantiate(final String id, final @Valid TemplateInstantiationDTO instantiation)
     {
         if (id == null || id.trim().isEmpty())
@@ -333,6 +372,7 @@ SigningTemplateService.instantiate(instantiation)
      * {@inheritDoc}
      */
     @Override
+    @Transactional
     public SigningTemplateDTO createFromWorkflow(final String workflowId, final String name)
     {
         if (workflowId == null || workflowId.trim().isEmpty())

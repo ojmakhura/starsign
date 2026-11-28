@@ -5,6 +5,7 @@
 //
 package bw.co.starsign.template;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.workflow.SigningWorkflowDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -74,8 +75,15 @@ public class TemplateControllerImpl implements TemplateController {
 
     @Override
     @Operation(summary = "Search", description = "Search")
-    public ResponseEntity<List<SigningTemplateDTO>> search(@Valid SigningTemplateSearchCriteria criteria) throws Exception {
+    public ResponseEntity<List<SigningTemplateListDTO>> search(@Valid SigningTemplateSearchCriteria criteria) throws Exception {
         return ResponseEntity.ok(signingTemplateService.search(criteria == null ? new SigningTemplateSearchCriteria() : criteria));
+    }
+
+
+    @Override
+    @Operation(summary = "Paged search", description = "One page of the search results, with the number of matches.")
+    public ResponseEntity<Page<SigningTemplateListDTO>> pagedSearch(@Valid SigningTemplateSearchCriteria criteria) throws Exception {
+        return ResponseEntity.ok(signingTemplateService.pagedSearch(criteria == null ? new SigningTemplateSearchCriteria() : criteria));
     }
 
 

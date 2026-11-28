@@ -8,6 +8,8 @@
  */
 package bw.co.starsign.audit;
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import bw.co.starsign.common.SortDirection;
 import bw.co.starsign.context.CallerContext;
 import bw.co.starsign.messaging.OutboxService;
@@ -164,6 +166,22 @@ public class AuditTrailServiceImpl
         Specification<AuditEvent> filter = filter(criteria, who);
         Pageable page = page(criteria);
         return readOnly.execute(status -> present(auditEventRepository.findAll(filter, page).getContent(), who));
+    }
+
+    /**
+     * @see bw.co.starsign.audit.AuditTrailService#pagedSearch(AuditEventSearchCriteria)
+     */
+    @Override
+    protected Page<AuditEventDTO> handlePagedSearch(@Valid AuditEventSearchCriteria criteria)
+        throws Exception
+    {
+        Who who = who();
+        Specification<AuditEvent> filter = filter(criteria, who);
+        Pageable page = page(criteria);
+        return readOnly.execute(status -> {
+            Page<AuditEvent> events = auditEventRepository.findAll(filter, page);
+            return new PageImpl<AuditEventDTO>(present(events.getContent(), who), page, events.getTotalElements());
+        });
     }
 
     /**

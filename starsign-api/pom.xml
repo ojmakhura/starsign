@@ -6,13 +6,13 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.1</version>
+        <version>4.2.0</version>
         <relativePath />
     </parent>
     <groupId>bw.co.starsign</groupId>
     <artifactId>starsign</artifactId>
     <packaging>pom</packaging>
-    <version>1.1.0</version>
+    <version>1.1.3</version>
     <name>StarSign</name>
     <description>The StarSign electronic document signing platform.</description>
     <dependencyManagement>
@@ -30,7 +30,7 @@
             <!-- Mockito for mocking objects in tests -->
             <dependency>
                 <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
+                <artifactId>mockito-core</artifactId> 
                 <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -105,6 +105,26 @@
                 <artifactId>novu-java</artifactId>
                 <version>${novu.version}</version>
             </dependency>
+            <!-- socket.io client: the webservice relays each signed-in user's Novu inbox socket to the portal -->
+            <dependency>
+                <groupId>io.socket</groupId>
+                <artifactId>socket.io-client</artifactId>
+                <version>${socket.io-client.version}</version>
+            </dependency>
+            <!-- socket.io-client asks for org.json 20090211, which has known parsing flaws -->
+            <dependency>
+                <groupId>org.json</groupId>
+                <artifactId>json</artifactId>
+                <version>${org-json.version}</version>
+            </dependency>
+            <!-- OpenTelemetry instrumentation (the Logback appender that sends the logs over OTLP) -->
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom-alpha</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <modules>
@@ -129,6 +149,12 @@
         <pdfbox.version>3.0.8</pdfbox.version>
         <bouncycastle.version>1.84</bouncycastle.version>
         <novu.version>3.19.0</novu.version>
+        <!-- socket.io-client 2.x speaks socket.io v3/v4, which Novu's ws service runs -->
+        <socket.io-client.version>2.1.2</socket.io-client.version>
+        <org-json.version>20250517</org-json.version>
+        <!-- Pairs with the OpenTelemetry SDK managed by Spring Boot (opentelemetry.version 1.68.0 in Boot 4.2.0);
+             move both together -->
+        <opentelemetry-instrumentation.version>2.34.0-alpha</opentelemetry-instrumentation.version>
     </properties>
     <build>
         <plugins>

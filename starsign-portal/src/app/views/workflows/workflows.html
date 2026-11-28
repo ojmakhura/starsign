@@ -7,7 +7,8 @@
       </nav>
       <h1 class="page-title">Signing workflows</h1>
       <p class="page-subtitle">
-        {{ counts().active }} in progress · {{ counts().expiringSoon }} expiring within 3 days
+        {{ results.totalElements() }} {{ results.totalElements() === 1 ? 'workflow' : 'workflows' }}
+        match the search
       </p>
     </div>
     <a *appCan="'workflows:edit'" class="btn btn--primary" routerLink="new"
@@ -30,7 +31,7 @@
 
   <form
     class="card grid gap-4 md:grid-cols-2 xl:grid-cols-5"
-    (submit)="$event.preventDefault()"
+    (submit)="search($event)"
     aria-label="Search workflows"
   >
     <div class="field xl:col-span-2">
@@ -55,10 +56,17 @@
       <input id="wf-to" class="field-control" type="date" [formField]="filterForm.createdTo" />
       <app-field-errors [field]="filterForm.createdTo" />
     </div>
+    <div class="flex flex-wrap justify-end gap-3 md:col-span-2 xl:col-span-5">
+      <button type="button" class="btn btn--ghost" (click)="reset()">Reset</button>
+      <button type="submit" class="btn btn--primary" [disabled]="results.loading()">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        {{ results.loading() ? 'Searching…' : 'Search' }}
+      </button>
+    </div>
   </form>
 
-  @if (store.error()) {
-    <div class="alert alert--danger" role="alert">{{ store.messages()[0] }}</div>
+  @if (results.error()) {
+    <div class="alert alert--danger" role="alert">{{ results.error() }}</div>
   }
 
   <section class="table-panel" aria-label="Workflows">
@@ -74,7 +82,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (wf of store.dataList(); track wf.id) {
+          @for (wf of results.items(); track wf.id) {
             <tr>
               <td>
                 <a class="cell-title" [routerLink]="wf.id">{{ wf.title }}</a>
@@ -110,7 +118,7 @@
                 <div class="empty-state">
                   <i class="bi bi-diagram-3" aria-hidden="true"></i>
                   <span>{{
-                    store.loading() ? 'Searching…' : 'No workflows match these criteria.'
+                    results.loading() ? 'Searching…' : 'No workflows match these criteria.'
                   }}</span>
                 </div>
               </td>
@@ -119,5 +127,15 @@
         </tbody>
       </table>
     </div>
+    <app-pager
+      [pageNumber]="results.pageNumber()"
+      [pageSize]="results.pageSize()"
+      [totalElements]="results.totalElements()"
+      [totalPages]="results.totalPages()"
+      [shown]="results.items().length"
+      [disabled]="results.loading()"
+      (pageChange)="results.goTo($event)"
+      (sizeChange)="results.setPageSize($event)"
+    />
   </section>
 </div>

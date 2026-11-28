@@ -4,6 +4,7 @@
 //
 package bw.co.starsign.workflow;
 
+import org.springframework.data.domain.Page;
 import bw.co.starsign.audit.AuditEventDTO;
 import bw.co.starsign.audit.AuditEvidenceExportDTO;
 import bw.co.starsign.notification.SigningReminderDTO;
@@ -172,6 +173,12 @@ public interface WorkflowController {
     )
     @PreAuthorize(value = "hasAnyAuthority('SCOPE_workflows:list', 'SCOPE_workflows:list-own')")
     public @Nullable ResponseEntity<List<SigningWorkflowListDTO>> search(@RequestBody(required = true) @Valid SigningWorkflowSearchCriteria criteria) throws Exception;
+
+    @PostMapping(
+        value = "/search/paged"
+    )
+    @PreAuthorize(value = "hasAnyAuthority('SCOPE_workflows:list', 'SCOPE_workflows:list-own')")
+    public ResponseEntity<Page<SigningWorkflowListDTO>> pagedSearch(@RequestBody(required = true) @Valid SigningWorkflowSearchCriteria criteria) throws Exception;
 
     @PatchMapping(
         value = "/{id}"

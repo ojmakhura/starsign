@@ -32,6 +32,7 @@ import bw.co.starsign.security.PermissionService;
 import bw.co.starsign.security.PublicEndpoints;
 import bw.co.starsign.security.SigningPortalHeadersFilter;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 @EnableWebSecurity
@@ -59,6 +60,9 @@ public class SpringSecurityConfig {
                     authz.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                             "/actuator/health", "/actuator/health/**", "/actuator/info", "/error").permitAll();
                     authz.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    // Server-Sent Events (/notifications/me/stream) finish on an async dispatch; the request
+                    // itself was authorised, and a stateless chain has no authentication left to check there
+                    authz.dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll();
                     for (PublicEndpoints.Endpoint endpoint : PublicEndpoints.PROTECTED_OVERLAPS) {
                         authz.requestMatchers(endpoint.method(), endpoint.pattern()).authenticated();
                     }

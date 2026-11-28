@@ -200,7 +200,7 @@
             </div>
             <div>
               <dt class="eyebrow">Two-factor authentication</dt>
-              <dd class="m-0">{{ u.mfaEnabled ? 'Required' : 'Not required' }}</dd>
+              <dd class="m-0">{{ u.mfaEnabled ? 'Set up' : 'Not set up' }}</dd>
             </div>
             <div>
               <dt class="eyebrow">Last sign-in</dt>
@@ -216,7 +216,7 @@
         @if (canManage()) {
           <section class="card flex flex-col gap-3" aria-labelledby="actions-title">
             <h2 id="actions-title" class="eyebrow m-0">Account actions</h2>
-            @if (u.status !== UserStatus.ACTIVE) {
+            @if (u.status !== UserStatus.ACTIVE && u.status !== UserStatus.LOCKED) {
               <button
                 type="button"
                 class="btn btn--primary btn--block"

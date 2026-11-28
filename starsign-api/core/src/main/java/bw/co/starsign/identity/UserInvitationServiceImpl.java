@@ -326,21 +326,10 @@ public class UserInvitationServiceImpl
         user.setEmailAddress(invitation.getEmailAddress());
         user.setFirstName(StringUtils.defaultIfBlank(account.getFirstName(), invitation.getFirstName()));
         user.setLastName(StringUtils.defaultIfBlank(account.getLastName(), invitation.getLastName()));
-        if (invitation.getJobTitle() != null)
-        {
-            user.setJobTitle(invitation.getJobTitle());
-        }
         user.setStatus(UserStatus.ACTIVE);
-        user.setEmailVerified(Boolean.TRUE.equals(account.getEmailVerified()));
         user.setOrganisation(organisation);
         user.setDeletedAt(null);
         user.setDeactivatedAt(null);
-        user.setLockedUntil(null);
-        user.setFailedLoginCount(0);
-        if (user.getLocale() == null)
-        {
-            user.setLocale(organisation.getLocale());
-        }
         if (user.getCreatedAt() == null)
         {
             user.setCreatedAt(now);
@@ -352,12 +341,6 @@ public class UserInvitationServiceImpl
             user.setModifiedBy(userId);
         }
 
-        String assignedBy = invitation.getInvitedBy() == null ? userId : invitation.getInvitedBy().getKeycloakUserId();
-        user.getRoles().clear();
-        for (Role role : invitation.getRoles())
-        {
-            user.addRoles(UserRole.Factory.newInstance(now, assignedBy, now, assignedBy, user, role));
-        }
         user = organisationUserRepository.save(user);
 
         invitation.setStatus(UserInvitationStatus.ACCEPTED);
@@ -374,9 +357,20 @@ public class UserInvitationServiceImpl
         event.setEntityId(user.getId().toString());
         auditTrailService.record(event);
 
-        // Tenant claims and roles take effect with the user's next token
-        keycloakAdminService.updateUser(tenantAttributes(userId, organisation));
-        keycloakAdminService.assignRealmRoles(userId, UserRoles.keycloakRoles(invitation.getRoles()));
+        // Keycloak owns the roles and profile attributes; the tenant claims and roles take effect with the user's
+        // next token. Realm roles from an earlier membership are replaced by the invitation's.
+        KeycloakUserDTO membership = tenantAttributes(userId, organisation);
+        membership.getAttributes().putAll(KeycloakAttributes.changes(null, invitation.getJobTitle(),
+            KeycloakAttributes.first(account, KeycloakAttributes.LOCALE) == null ? organisation.getLocale() : null));
+        keycloakAdminService.updateUser(membership);
+        List<String> granted = UserRoles.keycloakRoles(invitation.getRoles());
+        List<String> stale = userRoles.held(account.getRealmRoles(), organisation).stream()
+            .map(Role::getKeycloakRoleName)
+            .filter(name -> !granted.contains(name))
+            .distinct()
+            .toList();
+        keycloakAdminService.removeRealmRoles(userId, stale);
+        keycloakAdminService.assignRealmRoles(userId, granted);
         if (StringUtils.isNotBlank(organisation.getKeycloakOrganisationId()))
         {
             keycloakAdminService.addOrganisationMember(organisation.getKeycloakOrganisationId(), userId);
@@ -385,7 +379,7 @@ public class UserInvitationServiceImpl
         OrganisationUserDTO dto = organisationUserMapper.toOrganisationUserDTO(user);
         dto.setOrganisationId(organisationId);
         dto.setOrganisationName(organisation.getName());
-        dto.setRoles(user.getRoles().stream().map(userRole -> userRole.getRole().getCode()).sorted().toList());
+        dto.setRoles(invitation.getRoles().stream().map(Role::getCode).sorted().toList());
         return dto;
     }
 

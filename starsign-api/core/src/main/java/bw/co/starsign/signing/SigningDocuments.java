@@ -168,6 +168,15 @@ final class SigningDocuments
                 : Objects.requireNonNullElse(signatory.getWorkflow().getVerificationMethod(), VerificationMethod.EMAIL_LINK);
     }
 
+    /**
+     * The method the signatory actually verifies with: an SMS code goes by email while text messages are turned
+     * off (app.novu.sms-enabled=false). Every signatory has an email address, and a code by email is as strong.
+     */
+    static VerificationMethod deliverable(VerificationMethod method, boolean smsEnabled)
+    {
+        return method == VerificationMethod.SMS_OTP && !smsEnabled ? VerificationMethod.EMAIL_OTP : method;
+    }
+
     /** The options of a radio group field, from its JSON array of strings. */
     static List<String> options(String optionsJson)
     {

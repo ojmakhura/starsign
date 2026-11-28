@@ -70,6 +70,8 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import bw.co.starsign.common.Pages;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -217,6 +219,22 @@ public class SigningWorkflowServiceImpl
     protected List<SigningWorkflowListDTO> handleSearch(@Valid SigningWorkflowSearchCriteria criteria)
         throws Exception
     {
+        return signingWorkflowRepository.findListItems(searchSpecification(criteria), searchRequest(criteria));
+    }
+
+    /**
+     * @see bw.co.starsign.workflow.SigningWorkflowService#pagedSearch(SigningWorkflowSearchCriteria)
+     */
+    @Override
+    protected Page<SigningWorkflowListDTO> handlePagedSearch(@Valid SigningWorkflowSearchCriteria criteria)
+        throws Exception
+    {
+        return signingWorkflowRepository.findListItemPage(searchSpecification(criteria), searchRequest(criteria));
+    }
+
+    /** The search's specification: the caller's tenant and, for owner-scoped callers, workflows they own or sign. */
+    private Specification<SigningWorkflow> searchSpecification(SigningWorkflowSearchCriteria criteria)
+    {
         List<Specification<SigningWorkflow>> specs = new ArrayList<Specification<SigningWorkflow>>();
         caller.tenantId().ifPresent(tenant ->
                 specs.add((root, query, cb) -> cb.equal(root.get("organisation").get("tenantId"), tenant)));
@@ -277,19 +295,17 @@ public class SigningWorkflowServiceImpl
             LocalDateTime before = criteria.getExpiringBefore();
             specs.add((root, query, cb) -> cb.lessThan(root.get("expiresAt"), before));
         }
+        return Specification.allOf(specs);
+    }
 
+    private static PageRequest searchRequest(SigningWorkflowSearchCriteria criteria)
+    {
         String sortField = SORT_FIELDS.getOrDefault(StringUtils.trimToEmpty(criteria.getSortField()), "createdAt");
         Sort.Direction direction = criteria.getSortDirection() == SortDirection.ASC
                 || (criteria.getSortDirection() == null && criteria.getSortField() != null)
                 ? Sort.Direction.ASC : Sort.Direction.DESC;
-        int page = criteria.getPageNumber() == null ? 0 : Math.max(0, criteria.getPageNumber());
-        int size = criteria.getPageSize() == null ? DEFAULT_PAGE_SIZE
-                : Math.max(1, Math.min(MAX_PAGE_SIZE, criteria.getPageSize()));
-        return signingWorkflowRepository
-                .findAll(Specification.allOf(specs), PageRequest.of(page, size, Sort.by(direction, sortField)))
-                .stream()
-                .map(views::listItem)
-                .toList();
+        return Pages.request(criteria, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
+                Sort.by(direction, sortField).and(Sort.by("id")));
     }
 
     /**
@@ -2304,180 +2320,5 @@ public class SigningWorkflowServiceImpl
     private static String text(Enum<?> value)
     {
         return value == null ? "unknown" : value.name().toLowerCase().replace('_', ' ');
-    }
-
-    // ---------------------------------------------------------------- transaction boundaries
-
-    /*
-     * The generated base class declares the public operations; @Transactional on this class does not reach
-     * methods it inherits, so each operation is redeclared here to run in one transaction.
-     */
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO create(final @Valid CreateWorkflowDTO workflow)
-    {
-        return super.create(workflow);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public SigningWorkflowDTO findById(final String id)
-    {
-        return super.findById(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SigningWorkflowListDTO> search(final @Valid SigningWorkflowSearchCriteria criteria)
-    {
-        return super.search(criteria);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO update(final String id, final @Valid SigningWorkflowDTO workflow)
-    {
-        return super.update(id, workflow);
-    }
-
-    @Override
-    @Transactional
-    public SigningStageDTO addStage(final String id, final @Valid SigningStageDTO stage)
-    {
-        return super.addStage(id, stage);
-    }
-
-    @Override
-    @Transactional
-    public SigningStageDTO updateStage(final String id, final String stageId, final @Valid SigningStageDTO stage)
-    {
-        return super.updateStage(id, stageId, stage);
-    }
-
-    @Override
-    @Transactional
-    public boolean removeStage(final String id, final String stageId)
-    {
-        return super.removeStage(id, stageId);
-    }
-
-    @Override
-    @Transactional
-    public List<SigningStageDTO> reorderStages(final String id, final @Valid ReorderRequestDTO order)
-    {
-        return super.reorderStages(id, order);
-    }
-
-    @Override
-    @Transactional
-    public SignatoryDTO addSignatory(final String id, final @Valid SignatoryDTO signatory)
-    {
-        return super.addSignatory(id, signatory);
-    }
-
-    @Override
-    @Transactional
-    public SignatoryDTO updateSignatory(final String id, final String signatoryId, final @Valid SignatoryDTO signatory)
-    {
-        return super.updateSignatory(id, signatoryId, signatory);
-    }
-
-    @Override
-    @Transactional
-    public boolean removeSignatory(final String id, final String signatoryId)
-    {
-        return super.removeSignatory(id, signatoryId);
-    }
-
-    @Override
-    @Transactional
-    public List<SignatoryDTO> reorderSignatories(final String id, final @Valid ReorderRequestDTO order)
-    {
-        return super.reorderSignatories(id, order);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SigningFieldDTO> getFields(final String id)
-    {
-        return super.getFields(id);
-    }
-
-    @Override
-    @Transactional
-    public List<SigningFieldDTO> saveFields(final String id, final @Valid List<SigningFieldDTO> fields)
-    {
-        return super.saveFields(id, fields);
-    }
-
-    @Override
-    @Transactional
-    public boolean removeField(final String id, final String fieldId)
-    {
-        return super.removeField(id, fieldId);
-    }
-
-    @Override
-    @Transactional
-    public WorkflowValidationResultDTO validate(final String id)
-    {
-        return super.validate(id);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO initiate(final String id, final @Valid WorkflowInitiationDTO initiation)
-    {
-        return super.initiate(id, initiation);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO cancel(final String id, final @Valid WorkflowCancellationDTO cancellation)
-    {
-        return super.cancel(id, cancellation);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO renew(final String id, final @Valid WorkflowRenewalDTO renewal)
-    {
-        return super.renew(id, renewal);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO amend(final String id, final @Valid WorkflowAmendmentDTO amendment)
-    {
-        return super.amend(id, amendment);
-    }
-
-    @Override
-    @Transactional
-    public void resendInvitation(final String id, final String signatoryId)
-    {
-        super.resendInvitation(id, signatoryId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<WorkflowTimelineEntryDTO> getTimeline(final String id)
-    {
-        return super.getTimeline(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<WorkflowConfigurationChangeDTO> getConfigurationHistory(final String id)
-    {
-        return super.getConfigurationHistory(id);
-    }
-
-    @Override
-    @Transactional
-    public SigningWorkflowDTO createFromTemplate(final String templateId, final @Valid TemplateInstantiationDTO instantiation)
-    {
-        return super.createFromTemplate(templateId, instantiation);
     }
 }

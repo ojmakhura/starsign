@@ -561,6 +561,102 @@ KeycloakAdminService.removeOrganisationMember(userId)
         throws Exception;
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isMfaConfigured(final String userId)
+    {
+        if (userId == null || userId.trim().isEmpty())
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.KeycloakAdminService.isMfaConfigured(String userId) - 'userId' can not be null or empty");
+        }
+        try
+        {
+            return this.handleIsMfaConfigured(userId);
+        }
+        catch (Throwable th)
+        {
+            throw failure("KeycloakAdminService.isMfaConfigured(String userId)", th);
+        }
+    }
+
+    protected abstract boolean handleIsMfaConfigured(String userId)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isLockedOut(final String userId)
+    {
+        if (userId == null || userId.trim().isEmpty())
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.KeycloakAdminService.isLockedOut(String userId) - 'userId' can not be null or empty");
+        }
+        try
+        {
+            return this.handleIsLockedOut(userId);
+        }
+        catch (Throwable th)
+        {
+            throw failure("KeycloakAdminService.isLockedOut(String userId)", th);
+        }
+    }
+
+    protected abstract boolean handleIsLockedOut(String userId)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void clearLoginFailures(final String userId)
+    {
+        if (userId == null || userId.trim().isEmpty())
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.KeycloakAdminService.clearLoginFailures(String userId) - 'userId' can not be null or empty");
+        }
+        try
+        {
+            this.handleClearLoginFailures(userId);
+        }
+        catch (Throwable th)
+        {
+            throw failure("KeycloakAdminService.clearLoginFailures(String userId)", th);
+        }
+    }
+
+    protected abstract void handleClearLoginFailures(String userId)
+        throws Exception;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<String> findRealmRoleMemberIds(final String roleName)
+    {
+        if (roleName == null || roleName.trim().isEmpty())
+        {
+            throw new IllegalArgumentException(
+                "bw.co.starsign.identity.KeycloakAdminService.findRealmRoleMemberIds(String roleName) - 'roleName' can not be null or empty");
+        }
+        try
+        {
+            return this.handleFindRealmRoleMemberIds(roleName);
+        }
+        catch (Throwable th)
+        {
+            throw failure("KeycloakAdminService.findRealmRoleMemberIds(String roleName)", th);
+        }
+    }
+
+    protected abstract List<String> handleFindRealmRoleMemberIds(String roleName)
+        throws Exception;
+
+    /**
      * Gets the current <code>principal</code> if one has been set,
      * otherwise returns <code>null</code>.
      *

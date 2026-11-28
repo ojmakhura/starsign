@@ -7,7 +7,8 @@
       </nav>
       <h1 class="page-title">Users</h1>
       <p class="page-subtitle">
-        {{ users().length }} {{ users().length === 1 ? 'user' : 'users' }}{{ filtered() ? ' found' : '' }}
+        {{ results.totalElements() }} {{ results.totalElements() === 1 ? 'user' : 'users'
+        }}{{ filtered() ? ' found' : '' }}
         @if (canListInvitations()) {
           · {{ invitations().length }} pending {{ invitations().length === 1 ? 'invitation' : 'invitations' }}
         }
@@ -20,7 +21,7 @@
 
   <form
     class="card grid gap-4 md:grid-cols-2 xl:grid-cols-4"
-    (submit)="$event.preventDefault()"
+    (submit)="search($event)"
     aria-label="Search users"
   >
     <div class="field xl:col-span-2">
@@ -45,20 +46,22 @@
         }
       </select>
     </div>
-    @if (filtered()) {
-      <div class="md:col-span-2 xl:col-span-4 flex justify-end">
-        <button type="button" class="btn btn--ghost" (click)="clearFilter()">
-          <i class="bi bi-x-lg" aria-hidden="true"></i> Clear filters
-        </button>
-      </div>
-    }
+    <div class="md:col-span-2 xl:col-span-4 flex justify-end gap-3">
+      <button type="button" class="btn btn--ghost" (click)="clearFilter()">Reset</button>
+      <button type="submit" class="btn btn--primary" [disabled]="results.loading()">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        {{ results.loading() ? 'Searching…' : 'Search' }}
+      </button>
+    </div>
   </form>
 
-  @if (error()) {
-    <div class="alert alert--danger" role="alert">{{ error() }}</div>
+  @for (message of [results.error(), error()]; track $index) {
+    @if (message) {
+      <div class="alert alert--danger" role="alert">{{ message }}</div>
+    }
   }
 
-  <section class="table-panel" aria-label="Users" [attr.aria-busy]="loading()">
+  <section class="table-panel" aria-label="Users" [attr.aria-busy]="results.loading()">
     <div class="table-scroll">
       <table class="data-table">
         <thead>
@@ -70,7 +73,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (user of users(); track user.id) {
+          @for (user of results.items(); track user.id) {
             <tr>
               <td>
                 <a class="cell-title" [routerLink]="[user.id]">{{ fullName(user) }}</a>
@@ -89,13 +92,23 @@
           } @empty {
             <tr>
               <td colspan="4" class="text-center text-ink-muted">
-                {{ loading() ? 'Loading users…' : filtered() ? 'No users match the filters.' : 'No users yet.' }}
+                {{ results.loading() ? 'Loading users…' : filtered() ? 'No users match the filters.' : 'No users yet.' }}
               </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
+    <app-pager
+      [pageNumber]="results.pageNumber()"
+      [pageSize]="results.pageSize()"
+      [totalElements]="results.totalElements()"
+      [totalPages]="results.totalPages()"
+      [shown]="results.items().length"
+      [disabled]="results.loading()"
+      (pageChange)="results.goTo($event)"
+      (sizeChange)="results.setPageSize($event)"
+    />
   </section>
 
   @if (canListInvitations()) {
@@ -152,7 +165,7 @@
             } @empty {
               <tr>
                 <td colspan="5" class="text-center text-ink-muted">
-                  {{ loading() ? 'Loading invitations…' : 'No pending invitations.' }}
+                  No pending invitations.
                 </td>
               </tr>
             }
